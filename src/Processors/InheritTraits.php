@@ -16,7 +16,7 @@ class InheritTraits
 {
     public function __invoke(Analysis $analysis)
     {
-        $schemas = $analysis->getAnnotationsOfType(Schema::class);
+        $schemas = $analysis->getAnnotationsOfType(Schema::class, true);
         foreach ($schemas as $schema) {
             if ($schema->_context->is('class') || $schema->_context->is('trait')) {
                 $source = $schema->_context->class ?: $schema->_context->trait;

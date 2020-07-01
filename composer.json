@@ -43,7 +43,7 @@
   },
   "autoload": {
     "psr-4": {
-      "OpenApi\\": "src"
+      "OpenApi\\": "src/"
     },
     "files": [
       "src/functions.php"
