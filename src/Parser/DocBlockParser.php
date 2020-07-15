@@ -4,18 +4,20 @@
  * @license Apache 2.0
  */
 
-namespace OpenApi;
+namespace OpenApi\Parser;
 
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\DocParser;
+use OpenApi\Context;
+use OpenApi\Logger;
 
 if (class_exists(AnnotationRegistry::class, true)) {
     AnnotationRegistry::registerLoader(
         function (string $class): bool {
-            if (Analyser::$whitelist === false) {
+            if (DocBlockParser::$whitelist === false) {
                 $whitelist = ['OpenApi\Annotations\\'];
             } else {
-                $whitelist = Analyser::$whitelist;
+                $whitelist = DocBlockParser::$whitelist;
             }
             foreach ($whitelist as $namespace) {
                 if (strtolower(substr($class, 0, strlen($namespace))) === strtolower($namespace)) {
@@ -23,7 +25,7 @@ if (class_exists(AnnotationRegistry::class, true)) {
                     if (!$loaded && $namespace === 'OpenApi\Annotations\\') {
                         if (in_array(strtolower(substr($class, 20)), ['definition', 'path'])) {
                             // Detected an 2.x annotation?
-                            throw new \Exception('The annotation @SWG\\'.substr($class, 20).'() is deprecated. Found in '.Analyser::$context."\nFor more information read the migration guide: https://github.com/zircote/swagger-php/blob/master/docs/Migrating-to-v3.md");
+                            throw new \Exception('The annotation @SWG\\'.substr($class, 20).'() is deprecated. Found in '.DocBlockParser::$context."\nFor more information read the migration guide: https://github.com/zircote/swagger-php/blob/master/docs/Migrating-to-v3.md");
                         }
                     }
 
@@ -37,9 +39,9 @@ if (class_exists(AnnotationRegistry::class, true)) {
 }
 
 /**
- * Extract swagger-php annotations from a [PHPDoc](http://en.wikipedia.org/wiki/PHPDoc) using Doctrine's DocParser.
+ * Doctrine annotations based dock block parser.
  */
-class Analyser
+class DocBlockParser
 {
     /**
      * List of namespaces that should be detected by the doctrine annotation parser.

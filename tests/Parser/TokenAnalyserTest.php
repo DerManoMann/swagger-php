@@ -4,15 +4,17 @@
  * @license Apache 2.0
  */
 
-namespace OpenApi\Tests;
+namespace OpenApi\Tests\Parser;
 
-use OpenApi\Analyser;
+use OpenApi\Annotations\Operation;
 use OpenApi\Annotations\Schema;
 use OpenApi\Context;
-use OpenApi\StaticAnalyser;
+use OpenApi\Parser\DocBlockParser;
+use OpenApi\Parser\TokenAnalyser;
 use OpenApi\Tests\Fixtures\Parser\User;
+use OpenApi\Tests\OpenApiTestCase;
 
-class StaticAnalyserTest extends OpenApiTestCase
+class TokenAnalyserTest extends OpenApiTestCase
 {
     public function singleDefinitionCases()
     {
@@ -110,32 +112,31 @@ class StaticAnalyserTest extends OpenApiTestCase
 
     public function testWrongCommentType()
     {
-        $analyser = new StaticAnalyser();
+        $analyser = new TokenAnalyser();
         $this->assertOpenApiLogEntryContains('Annotations are only parsed inside `/**` DocBlocks');
         $analyser->fromCode("<?php\n/*\n * @OA\Parameter() */", new Context());
     }
 
     public function testIndentationCorrection()
     {
-        $analysis = $this->analysisFromFixtures('StaticAnalyser/routes.php');
+        $analysis = $this->analysisFromFixtures('Analysers/routes.php');
         $this->assertCount(20, $analysis->annotations);
     }
 
     public function testThirdPartyAnnotations()
     {
-        $backup = Analyser::$whitelist;
-        Analyser::$whitelist = ['OpenApi\Annotations\\'];
-        $analyser = new StaticAnalyser();
-        $defaultAnalysis = $analyser->fromFile(__DIR__.'/Fixtures/ThirdPartyAnnotations.php');
+        $backup = DocBlockParser::$whitelist;
+        DocBlockParser::$whitelist = ['OpenApi\Annotations\\'];
+        $defaultAnalysis = $this->analysisFromFixtures('ThirdPartyAnnotations.php');
         $this->assertCount(3, $defaultAnalysis->annotations, 'Only read the @OA annotations, skip the others.');
 
         // Allow the analyser to parse 3rd party annotations, which might
         // contain useful info that could be extracted with a custom processor
-        Analyser::$whitelist[] = 'AnotherNamespace\Annotations';
-        $openapi = \OpenApi\scan(__DIR__.'/Fixtures/ThirdPartyAnnotations.php');
+        DocBlockParser::$whitelist[] = 'AnotherNamespace\Annotations';
+        $openapi = \OpenApi\scan($this->fixtures('ThirdPartyAnnotations.php'));
         $this->assertSame('api/3rd-party', $openapi->paths[0]->path);
         $this->assertCount(4, $openapi->_unmerged);
-        Analyser::$whitelist = $backup;
+        DocBlockParser::$whitelist = $backup;
         $analysis = $openapi->_analysis;
         $annotations = $analysis->getAnnotationsOfType('AnotherNamespace\Annotations\Unrelated');
         $this->assertCount(4, $annotations);
@@ -146,10 +147,10 @@ class StaticAnalyserTest extends OpenApiTestCase
         $this->assertCount(1, $context->annotations);
     }
 
-    public function testAnonymousClassProducesNoError()
+    public function testSyntaxPhp7()
     {
         try {
-            $analyser = new StaticAnalyser($this->fixtures('StaticAnalyser/php7.php')[0]);
+            $analyser = (new TokenAnalyser())->fromFile($this->fixtures('Analysers/php7.php')[0]);
             $this->assertNotNull($analyser);
         } catch (\Throwable $t) {
             $this->fail("Analyser produced an error: {$t->getMessage()}");
@@ -227,5 +228,15 @@ class StaticAnalyserTest extends OpenApiTestCase
 
         $this->assertCount(1, $schemas);
         $this->assertEquals(User::CONSTANT, $schemas[0]->example);
+    }
+
+    public function testSingleFile()
+    {
+        $analysis = $this->analysisFromFixtures('Apis/basic.php');
+        $analysis->process();
+        $operations = $analysis->getAnnotationsOfType(Operation::class);
+        $this->assertIsArray($operations);
+
+        $this->assertTrue($analysis->validate());
     }
 }

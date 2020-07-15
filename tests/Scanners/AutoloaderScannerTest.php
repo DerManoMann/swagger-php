@@ -4,11 +4,11 @@
  * @license Apache 2.0
  */
 
-namespace OpenApiTests\Scanners;
+namespace OpenApi\Tests\Scanners;
 
 use Composer\Autoload\ClassLoader;
 use OpenApi\Scanners\AutoloaderScanner;
-use OpenApiTests\OpenApiTestCase;
+use OpenApi\Tests\OpenApiTestCase;
 
 class AutoloaderScannerTest extends OpenApiTestCase
 {
@@ -17,22 +17,22 @@ class AutoloaderScannerTest extends OpenApiTestCase
         parent::setUp();
 
         $classMap = [
-            'OpenApiTests\\Scanners\\Foo' => __FILE__,
-            'OpenApiTests\\Scanners\\Bar' => __FILE__,
+            'OpenApi\Tests\\Scanners\\Foo' => __FILE__,
+            'OpenApi\Tests\\Scanners\\Bar' => __FILE__,
             'Other\\Duh' => __FILE__,
         ];
         $mockClassloader  = new ClassLoader();
         $mockClassloader->addClassMap($classMap);
-        spl_autoload_register(array($mockClassloader, 'findFile'), true, true);
+        spl_autoload_register([$mockClassloader, 'findFile'], true, true);
     }
 
     public function testComposerClassloader()
     {
         $expected = [
-            'OpenApiTests\\Scanners\\Foo',
-            'OpenApiTests\\Scanners\\Bar',
+            'OpenApi\Tests\\Scanners\\Foo',
+            'OpenApi\Tests\\Scanners\\Bar',
         ];
-        $result = (new AutoloaderScanner())->scan('OpenApiTests');
+        $result = (new AutoloaderScanner())->scan('OpenApi\Tests');
         $this->assertEquals($expected, $result);
     }
 }

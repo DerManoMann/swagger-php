@@ -301,7 +301,7 @@ class Analysis
     }
 
     /**
-     * @param bool $strict innon-strict mode childclasses are also detected
+     * @param bool $strict in non-strict mode child classes are also detected
      */
     public function getAnnotationsOfType(string $class, bool $strict = false): array
     {

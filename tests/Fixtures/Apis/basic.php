@@ -4,7 +4,7 @@
  * Single file API.
  */
 
-namespace OpenApiTests\Fixtures\Apis;
+namespace OpenApi\Tests\Fixtures\Apis;
 
 use OpenApi\Annotations as OA;
 
@@ -65,6 +65,10 @@ class ProductController
      *       response=200,
      *       description="successful operation",
      *       @OA\JsonContent(ref="#/components/schemas/Product")
+     *   ),
+     *   @OA\Response(
+     *       response=401,
+     *       description="oops"
      *   )
      * )
      */

@@ -6,7 +6,7 @@
 
 namespace OpenApi\Tests\Annotations;
 
-use OpenApi\StaticAnalyser;
+use OpenApi\Parser\TokenAnalyser;
 use OpenApi\Tests\OpenApiTestCase;
 
 class ItemsTest extends OpenApiTestCase
@@ -33,7 +33,7 @@ class ItemsTest extends OpenApiTestCase
 
     public function testRefDefinitionInProperty()
     {
-        $analyser = new StaticAnalyser();
+        $analyser = new TokenAnalyser();
         $analysis = $analyser->fromFile($this->fixtures('UsingVar.php')[0]);
         $analysis->process();
 

@@ -4,41 +4,42 @@
  * @license Apache 2.0
  */
 
-namespace OpenApiTests\Scanners;
+namespace OpenApi\Tests\Scanners;
 
 use OpenApi\Scanners\FileScanner;
+use OpenApi\Tests\OpenApiTestCase;
 use OpenApi\Util;
-use OpenApiTests\OpenApiTestCase;
 
 class FileScannerTest extends OpenApiTestCase
 {
     public function testBasic()
     {
+        $fixtures = $this->fixtures('Apis/basic.php');
         $expected = [
             'classes' => [
-                'OpenApiTests\\Fixtures\\Apis\\Api',
-                'OpenApiTests\\Fixtures\\Apis\\Product',
-                'OpenApiTests\\Fixtures\\Apis\\ProductController',
+                'OpenApi\Tests\\Fixtures\\Apis\\Api' => $fixtures[0],
+                'OpenApi\Tests\\Fixtures\\Apis\\Product' => $fixtures[0],
+                'OpenApi\Tests\\Fixtures\\Apis\\ProductController' => $fixtures[0],
             ],
             'interfaces' => [
-                'OpenApiTests\\Fixtures\\Apis\\ProductInterface',
+                'OpenApi\Tests\\Fixtures\\Apis\\ProductInterface' => $fixtures[0],
             ],
             'traits' => [
-                'OpenApiTests\\Fixtures\\Apis\\NameTrait',
+                'OpenApi\Tests\\Fixtures\\Apis\\NameTrait' => $fixtures[0],
             ],
         ];
-        $result = (new FileScanner())->scan(Util::finder($this->fixtures('Apis/basic.php')));
+        $result = (new FileScanner())->scan(Util::finder($fixtures));
         $this->assertEquals($expected, $result);
     }
 
-    public function testPHP7()
+    public function testSyntaxPhp7()
     {
         $expected = [
             'classes' => [],
             'interfaces' => [],
             'traits' => [],
         ];
-        $result = (new FileScanner())->scan(Util::finder($this->fixtures('StaticAnalyser/php7.php')));
+        $result = (new FileScanner())->scan(Util::finder($this->fixtures('Analysers/php7.php')));
         $this->assertEquals($expected, $result);
     }
 }

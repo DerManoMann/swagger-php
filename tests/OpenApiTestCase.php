@@ -9,7 +9,6 @@ namespace OpenApi\Tests;
 use Closure;
 use DirectoryIterator;
 use Exception;
-use OpenApi\Analyser;
 use OpenApi\Analysis;
 use OpenApi\Annotations\AbstractAnnotation;
 use OpenApi\Annotations\Info;
@@ -17,7 +16,8 @@ use OpenApi\Annotations\OpenApi;
 use OpenApi\Annotations\PathItem;
 use OpenApi\Context;
 use OpenApi\Logger;
-use OpenApi\StaticAnalyser;
+use OpenApi\Parser\DocBlockParser;
+use OpenApi\Parser\TokenAnalyser;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
@@ -154,10 +154,10 @@ class OpenApiTestCase extends TestCase
      */
     protected function parseComment($comment)
     {
-        $analyser = new Analyser();
+        $docBlockParser = new DocBlockParser();
         $context = Context::detect(1);
 
-        return $analyser->fromComment("<?php\n/**\n * ".implode("\n * ", explode("\n", $comment))."\n*/", $context);
+        return $docBlockParser->fromComment("<?php\n/**\n * ".implode("\n * ", explode("\n", $comment))."\n*/", $context);
     }
 
     /**
@@ -194,7 +194,7 @@ class OpenApiTestCase extends TestCase
 
     public function analysisFromFixtures($files): Analysis
     {
-        $analyser = new StaticAnalyser();
+        $analyser = new TokenAnalyser();
         $analysis = new Analysis();
 
         foreach ((array) $files as $file) {
@@ -206,12 +206,12 @@ class OpenApiTestCase extends TestCase
 
     public function analysisFromCode(string $code, ?Context $context = null)
     {
-        return (new StaticAnalyser())->fromCode("<?php\n".$code, $context ?: new Context());
+        return (new TokenAnalyser())->fromCode("<?php\n".$code, $context ?: new Context());
     }
 
     public function analysisFromDockBlock($comment)
     {
-        return (new Analyser())->fromComment($comment, null);
+        return (new DocBlockParser())->fromComment($comment, null);
     }
 
     /**

@@ -1,0 +1,40 @@
+openapi: 3.0.0
+info:
+  title: 'Basic single file API'
+  version: 1.0.0
+paths:
+  '/products/{product_id}':
+    get:
+      tags:
+        - Products
+      operationId: 'OpenApi\Tests\Fixtures\Apis\ProductController::getProduct'
+      responses:
+        '200':
+          description: 'successful operation'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          description: oops
+components:
+  schemas:
+    Product:
+      title: Product
+      description: Product
+      allOf:
+        -
+          $ref: '#/components/schemas/NameTrait'
+        -
+          properties:
+            id:
+              description: 'The id.'
+              format: int64
+              example: 1
+            name:
+              description: 'The name.'
+    NameTrait:
+      properties:
+        name:
+          description: 'The name.'
+      type: object

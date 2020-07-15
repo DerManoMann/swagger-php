@@ -7,6 +7,7 @@
 namespace OpenApi;
 
 use OpenApi\Annotations\OpenApi;
+use OpenApi\Parser\TokenAnalyser;
 use Symfony\Component\Finder\Finder;
 
 if (defined('OpenApi\UNDEFINED') === false) {
@@ -42,7 +43,7 @@ if (function_exists('OpenApi\scan') === false) {
      */
     function scan($directory, $options = [])
     {
-        $analyser = array_key_exists('analyser', $options) ? $options['analyser'] : new StaticAnalyser();
+        $analyser = array_key_exists('analyser', $options) ? $options['analyser'] : new TokenAnalyser();
         $analysis = array_key_exists('analysis', $options) ? $options['analysis'] : new Analysis();
         $processors = array_key_exists('processors', $options) ? $options['processors'] : Analysis::processors();
         $exclude = array_key_exists('exclude', $options) ? $options['exclude'] : null;

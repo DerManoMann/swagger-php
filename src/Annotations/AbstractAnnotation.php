@@ -6,9 +6,9 @@
 
 namespace OpenApi\Annotations;
 
-use OpenApi\Analyser;
 use OpenApi\Context;
 use OpenApi\Logger;
+use OpenApi\Parser\DocBlockParser;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -87,8 +87,8 @@ abstract class AbstractAnnotation implements \JsonSerializable
         if (isset($properties['_context'])) {
             $this->_context = $properties['_context'];
             unset($properties['_context']);
-        } elseif (Analyser::$context) {
-            $this->_context = Analyser::$context;
+        } elseif (DocBlockParser::$context) {
+            $this->_context = DocBlockParser::$context;
         } else {
             $this->_context = Context::detect(1);
         }
@@ -513,6 +513,7 @@ abstract class AbstractAnnotation implements \JsonSerializable
     }
 
     /**
+<<<<<<< HEAD
      * Find matching nested details.
      *
      * @param string $class the class to match
@@ -538,6 +539,38 @@ abstract class AbstractAnnotation implements \JsonSerializable
 
     /**
      * Helper for generating the identity().
+<<<<<<< HEAD
+=======
+=======
+     * Get `_nested` property for the given class.
+>>>>>>> Update for apha2
+     *
+     * Non strict lookups will only consider annotation classes outside of `OpenApi\Annotations\`.
+     * This will ensure we only match against actual extensions, not subclassing within the annotations namespace.
+     */
+    public static function nestedProperty(string $class, bool $strict = false)
+    {
+        foreach (static::$_nested as $type => $property) {
+            if ($type === $class) {
+                return $property;
+            }
+        }
+        if (!$strict) {
+            foreach (static::$_nested as $type => $property) {
+                if (is_subclass_of($class, $type) && false === strpos($class, 'OpenApi\\Annotations\\')) {
+                    return $property;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Helper for generating the identity().
+     *
+     * @return string
+>>>>>>> Update for apha2
      */
     protected function _identity(array $properties): string
     {

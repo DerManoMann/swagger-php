@@ -6,19 +6,20 @@
 
 namespace OpenApi\Tests;
 
-use OpenApi\Analyser;
 
-class AnalyserTest extends OpenApiTestCase
+use OpenApi\Parser\DocBlockParser;
+
+class DocBlockParserTest extends OpenApiTestCase
 {
     protected function setUp(): void
     {
         parent::setUp();
-        Analyser::$defaultImports['swg'] = 'OpenApi\Annotations';
+        DocBlockParser::$defaultImports['swg'] = 'OpenApi\Annotations';
     }
 
     protected function tearDown(): void
     {
-        unset(Analyser::$defaultImports['swg']);
+        unset(DocBlockParser::$defaultImports['swg']);
         parent::tearDown();
     }
 

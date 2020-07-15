@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
  * @license Apache 2.0
@@ -13,14 +13,12 @@ use Symfony\Component\Finder\Finder;
  */
 class FileScanner
 {
-
     /**
      * Scans files for all classes, interfaces and traits.
      *
-     * @param Finder $finder
-     * @return string[] List of code entities.
+     * @return string[] list of code entities
      */
-    public function scan(Finder $finder): array
+    public function scan(Finder $finder, bool $load = false): array
     {
         $units = [
             'classes' => [],
@@ -29,20 +27,24 @@ class FileScanner
         ];
 
         foreach ($finder as $file) {
-            $units = array_merge($units, $this->scanTokens(token_get_all(file_get_contents($file->getPathname()))));
+            $fileUnits = $this->scanFile($pathname = $file->getPathname());
+            if ($load) {
+                require_once ($pathname);
+            }
+            $units = array_merge_recursive($units, $fileUnits);
         }
 
         return $units;
     }
 
     /**
-     * Scan tokens for all classes, interfaces and traits.
+     * Scan file for all classes, interfaces and traits.
      *
-     * @param string $filename
-     * @return string[] List of code entities.
+     * @return string[] list of code entities
      */
-    protected function scanTokens(array $tokens): array
+    protected function scanFile(string $filename): array
     {
+        $tokens = token_get_all(file_get_contents($filename));
         $units = [
             'classes' => [],
             'interfaces' => [],
@@ -76,17 +78,17 @@ class FileScanner
                         break;
                     }
 
-                    $name = $namespace . '\\' . $token[1];
+                    $name = $namespace.'\\'.$token[1];
                     $units['classes'][] = $name;
                     break;
                 case T_INTERFACE:
                     $token = $this->nextToken($tokens);
-                    $name = $namespace . '\\' . $token[1];
+                    $name = $namespace.'\\'.$token[1];
                     $units['interfaces'][] = $name;
                     break;
                 case T_TRAIT:
                     $token = $this->nextToken($tokens);
-                    $name = $namespace . '\\' . $token[1];
+                    $name = $namespace.'\\'.$token[1];
                     $units['traits'][] = $name;
                     break;
             }
@@ -138,5 +140,4 @@ class FileScanner
 
         return $word;
     }
-
 }

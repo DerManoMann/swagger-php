@@ -1,31 +1,32 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
  * @license Apache 2.0
  */
 
-namespace OpenApi\Analysers;
+namespace OpenApi\Parser;
 
-use OpenApi\Analyser;
 use OpenApi\Analysis;
 use OpenApi\Context;
 
 /**
- * OpenApi dockblock analyser using reflection.
+ * OpenApi docblock analyser using reflection.
  */
 class ReflectionAnalyser
 {
     protected $analysis;
-    protected $analyser;
+    protected $annotationFactory;
 
-    public function __construct(?Analysis $analysis = null, ?Analyser $analyser = null)
+    public function __construct(?AnnotationFactoryInterface $annotationFactory = null, ?Analysis $analysis = null)
     {
+        $this->annotationFactory = $annotationFactory ?: new DocBlockAnnotationFactory();
         $this->analysis = $analysis ?: new Analysis();
-        $this->analyser = $analyser ?: new Analyser();
     }
 
-    public function analyse(string $fqdn): Analysis
+    public function fromFqdn(string $fqdn): Analysis
     {
+        $analysis = $this->analysis;
+
         $rc = new \ReflectionClass($fqdn);
 
         $contextType = $this->contextType($rc);
@@ -44,23 +45,27 @@ class ReflectionAnalyser
             'methods' => [],
             'context' => $context,
         ];
-        $this->analyseComment($context, $rc->getDocComment());
+        $analysis->addAnnotations($this->annotationFactory->build($rc, $context), $context);
 
         if ($parentClass = $rc->getParentClass()) {
-            $definition['extends'] = '\\' . $parentClass->getName();
+            $definition['extends'] = '\\'.$parentClass->getName();
         }
 
         if ($interfaceNames = $rc->getInterfaceNames()) {
-            $definition['implements'] = array_map(function ($name) { return '\\'.$name; }, $interfaceNames);
+            $definition['implements'] = array_map(function ($name) {
+                return '\\'.$name;
+            }, $interfaceNames);
         }
 
         if ($traitNames = $rc->getTraitNames()) {
-            $definition['traits'] = array_map(function ($name) { return '\\'.$name; }, $traitNames);
+            $definition['traits'] = array_map(function ($name) {
+                return '\\'.$name;
+            }, $traitNames);
         }
 
         foreach ($rc->getMethods() as $method) {
             $definition['methods'][$method->getName()] = $ctx = new Context(['method' => $method->getName()], $context);
-            $this->analyseComment($ctx, $method->getDocComment());
+            $analysis->addAnnotations($this->annotationFactory->build($method, $ctx), $ctx);
         }
 
         foreach ($rc->getProperties() as $property) {
@@ -70,10 +75,10 @@ class ReflectionAnalyser
             if ($property->isStatic()) {
                 $ctx->static = true;
             }
-            $this->analyseComment($ctx, $property->getDocComment());
+            $analysis->addAnnotations($this->annotationFactory->build($property, $ctx), $ctx);
         }
 
-        $addDefinition = 'add' . ucfirst($contextType).'Definition';
+        $addDefinition = 'add'.ucfirst($contextType).'Definition';
         $this->analysis->{$addDefinition}($definition);
 
         return $this->analysis;
@@ -83,12 +88,4 @@ class ReflectionAnalyser
     {
         return $rc->isInterface() ? 'interface' : ($rc->isTrait() ? 'trait' : 'class');
     }
-
-    protected function analyseComment(Context $context, $comment)
-    {
-        if ($comment) {
-            $this->analysis->addAnnotations($this->analyser->fromComment($comment, $context), $context);
-        }
-    }
-
 }

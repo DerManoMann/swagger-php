@@ -4,12 +4,17 @@
  * @license Apache 2.0
  */
 
-namespace OpenApi;
+namespace OpenApi\Parser;
+
+use OpenApi\Analysis;
+use OpenApi\Context;
+use OpenApi\Logger;
+use const OpenApi\UNDEFINED;
 
 /**
- * OpenApi\StaticAnalyser extracts swagger-php annotations from php code using static analysis.
+ * OpenApi docblock analyser using tokenization.
  */
-class StaticAnalyser
+class TokenAnalyser
 {
     /**
      * Extract and process all doc-comments from a file.
@@ -53,21 +58,21 @@ class StaticAnalyser
      */
     protected function fromTokens(array $tokens, Context $parseContext): Analysis
     {
-        $analyser = new Analyser();
+        $docBlockParser = new DocBlockParser();
         $analysis = new Analysis();
 
         reset($tokens);
         $token = '';
 
-        $imports = Analyser::$defaultImports;
+        $imports = DocBlockParser::$defaultImports;
 
         $parseContext->uses = [];
         // default to parse context to start with
         $schemaContext = $parseContext;
 
-        $classDefinition = false;
-        $interfaceDefinition = false;
-        $traitDefinition = false;
+        $classDefinition = null;
+        $interfaceDefinition = null;
+        $traitDefinition = null;
         $comment = false;
 
         $line = 0;
@@ -85,7 +90,7 @@ class StaticAnalyser
             if ($token[0] === T_DOC_COMMENT) {
                 if ($comment) {
                     // 2 Doc-comments in succession?
-                    $this->analyseComment($analysis, $analyser, $comment, new Context(['line' => $line], $schemaContext));
+                    $this->analyseComment($analysis, $docBlockParser, $comment, new Context(['line' => $line], $schemaContext));
                 }
                 $comment = $token[1];
                 $line = $token[2] + $lineOffset;
@@ -116,8 +121,14 @@ class StaticAnalyser
                     continue;
                 }
 
-                $interfaceDefinition = false;
-                $traitDefinition = false;
+                if ($interfaceDefinition) {
+                    $analysis->addInterfaceDefinition($interfaceDefinition);
+                }
+                if ($traitDefinition) {
+                    $analysis->addTraitDefinition($traitDefinition);
+                }
+                $interfaceDefinition = null;
+                $traitDefinition = null;
 
                 $schemaContext = new Context(['class' => $token[1], 'line' => $token[2]], $parseContext);
                 if ($classDefinition) {
@@ -145,7 +156,7 @@ class StaticAnalyser
 
                 if ($comment) {
                     $schemaContext->line = $line;
-                    $this->analyseComment($analysis, $analyser, $comment, $schemaContext);
+                    $this->analyseComment($analysis, $docBlockParser, $comment, $schemaContext);
                     $comment = false;
                     continue;
                 }
@@ -154,8 +165,14 @@ class StaticAnalyser
             }
 
             if ($token[0] === T_INTERFACE) { // Doc-comment before an interface?
-                $classDefinition = false;
-                $traitDefinition = false;
+                if ($classDefinition) {
+                    $analysis->addClassDefinition($classDefinition);
+                }
+                if ($traitDefinition) {
+                    $analysis->addTraitDefinition($traitDefinition);
+                }
+                $classDefinition = null;
+                $traitDefinition = null;
 
                 $token = $this->nextToken($tokens, $parseContext);
                 $schemaContext = new Context(['interface' => $token[1], 'line' => $token[2]], $parseContext);
@@ -179,7 +196,7 @@ class StaticAnalyser
 
                 if ($comment) {
                     $schemaContext->line = $line;
-                    $this->analyseComment($analysis, $analyser, $comment, $schemaContext);
+                    $this->analyseComment($analysis, $docBlockParser, $comment, $schemaContext);
                     $comment = false;
                     continue;
                 }
@@ -188,8 +205,14 @@ class StaticAnalyser
             }
 
             if ($token[0] === T_TRAIT) {
-                $classDefinition = false;
-                $interfaceDefinition = false;
+                if ($classDefinition) {
+                    $analysis->addClassDefinition($classDefinition);
+                }
+                if ($interfaceDefinition) {
+                    $analysis->addInterfaceDefinition($interfaceDefinition);
+                }
+                $classDefinition = null;
+                $interfaceDefinition = null;
 
                 $token = $this->nextToken($tokens, $parseContext);
                 $schemaContext = new Context(['trait' => $token[1], 'line' => $token[2]], $parseContext);
@@ -205,7 +228,7 @@ class StaticAnalyser
 
                 if ($comment) {
                     $schemaContext->line = $line;
-                    $this->analyseComment($analysis, $analyser, $comment, $schemaContext);
+                    $this->analyseComment($analysis, $docBlockParser, $comment, $schemaContext);
                     $comment = false;
                     continue;
                 }
@@ -233,7 +256,7 @@ class StaticAnalyser
                         $traitDefinition['properties'][$propertyContext->property] = $propertyContext;
                     }
                     if ($comment) {
-                        $this->analyseComment($analysis, $analyser, $comment, $propertyContext);
+                        $this->analyseComment($analysis, $docBlockParser, $comment, $propertyContext);
                         $comment = false;
                     }
                     continue;
@@ -264,7 +287,7 @@ class StaticAnalyser
                         $traitDefinition['properties'][$propertyContext->property] = $propertyContext;
                     }
                     if ($comment) {
-                        $this->analyseComment($analysis, $analyser, $comment, $propertyContext);
+                        $this->analyseComment($analysis, $docBlockParser, $comment, $propertyContext);
                         $comment = false;
                     }
                 } elseif ($token[0] === T_FUNCTION) {
@@ -288,7 +311,7 @@ class StaticAnalyser
                             $traitDefinition['methods'][$token[1]] = $methodContext;
                         }
                         if ($comment) {
-                            $this->analyseComment($analysis, $analyser, $comment, $methodContext);
+                            $this->analyseComment($analysis, $docBlockParser, $comment, $methodContext);
                             $comment = false;
                         }
                     }
@@ -315,7 +338,7 @@ class StaticAnalyser
                         $traitDefinition['methods'][$token[1]] = $methodContext;
                     }
                     if ($comment) {
-                        $this->analyseComment($analysis, $analyser, $comment, $methodContext);
+                        $this->analyseComment($analysis, $docBlockParser, $comment, $methodContext);
                         $comment = false;
                     }
                 }
@@ -325,7 +348,7 @@ class StaticAnalyser
                 // Skip "use" & "namespace" to prevent "never imported" warnings)
                 if ($comment) {
                     // Not a doc-comment for a class, property or method?
-                    $this->analyseComment($analysis, $analyser, $comment, new Context(['line' => $line], $schemaContext));
+                    $this->analyseComment($analysis, $docBlockParser, $comment, new Context(['line' => $line], $schemaContext));
                     $comment = false;
                 }
             }
@@ -333,7 +356,7 @@ class StaticAnalyser
             if ($token[0] === T_NAMESPACE) {
                 $parseContext->namespace = $this->parseNamespace($tokens, $token, $parseContext);
                 $imports['__NAMESPACE__'] = $parseContext->namespace;
-                $analyser->docParser->setImports($imports);
+                $docBlockParser->docParser->setImports($imports);
                 continue;
             }
 
@@ -350,17 +373,17 @@ class StaticAnalyser
                         // not a trait use
                         $parseContext->uses[$alias] = $target;
 
-                        if (Analyser::$whitelist === false) {
+                        if (DocBlockParser::$whitelist === false) {
                             $imports[strtolower($alias)] = $target;
                         } else {
-                            foreach (Analyser::$whitelist as $namespace) {
+                            foreach (DocBlockParser::$whitelist as $namespace) {
                                 if (strcasecmp(substr($target, 0, strlen($namespace)), $namespace) === 0) {
                                     $imports[strtolower($alias)] = $target;
                                     break;
                                 }
                             }
                         }
-                        $analyser->docParser->setImports($imports);
+                        $docBlockParser->docParser->setImports($imports);
                     }
                 }
             }
@@ -368,7 +391,7 @@ class StaticAnalyser
 
         // cleanup final comment and definition
         if ($comment) {
-            $this->analyseComment($analysis, $analyser, $comment, new Context(['line' => $line], $schemaContext));
+            $this->analyseComment($analysis, $docBlockParser, $comment, new Context(['line' => $line], $schemaContext));
         }
         if ($classDefinition) {
             $analysis->addClassDefinition($classDefinition);
@@ -386,9 +409,9 @@ class StaticAnalyser
     /**
      * Parse comment and add annotations to analysis.
      */
-    private function analyseComment(Analysis $analysis, Analyser $analyser, string $comment, Context $context): void
+    private function analyseComment(Analysis $analysis, DocBlockParser $docBlockParser, string $comment, Context $context): void
     {
-        $analysis->addAnnotations($analyser->fromComment($comment, $context), $context);
+        $analysis->addAnnotations($docBlockParser->fromComment($comment, $context), $context);
     }
 
     /**
