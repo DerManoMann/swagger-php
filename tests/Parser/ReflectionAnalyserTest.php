@@ -23,7 +23,8 @@ class ReflectionAnalyserTest extends OpenApiTestCase
 
         $analyser = new ReflectionAnalyser();
         foreach ($sources as $type => $fqdnList) {
-            foreach ($fqdnList as $fqdn) {
+            foreach ($fqdnList as $fqdn => $filename) {
+                require_once $filename;
                 $analysis = $analyser->fromFqdn($fqdn);
             }
         }
@@ -87,7 +88,8 @@ components:
         $sources = (new FileScanner())->scan(Util::finder($this->fixtures('Apis/basic_php8.php')), true);
         $analyser = new ReflectionAnalyser(new AttributeAnnotationFactory());
         foreach ($sources as $type => $fqdnList) {
-            foreach ($fqdnList as $fqdn) {
+            foreach ($fqdnList as $fqdn => $filename) {
+                require_once $filename;
                 $analysis = $analyser->fromFqdn($fqdn);
             }
         }
