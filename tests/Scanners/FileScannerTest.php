@@ -17,15 +17,15 @@ class FileScannerTest extends OpenApiTestCase
         $fixtures = $this->fixtures('Apis/basic.php');
         $expected = [
             'classes' => [
-                'OpenApi\Tests\\Fixtures\\Apis\\Api' => $fixtures[0],
-                'OpenApi\Tests\\Fixtures\\Apis\\Product' => $fixtures[0],
-                'OpenApi\Tests\\Fixtures\\Apis\\ProductController' => $fixtures[0],
+                'OpenApi\\Tests\\Fixtures\\Apis\\Api' => $fixtures[0],
+                'OpenApi\\Tests\\Fixtures\\Apis\\Product' => $fixtures[0],
+                'OpenApi\\Tests\\Fixtures\\Apis\\ProductController' => $fixtures[0],
             ],
             'interfaces' => [
-                'OpenApi\Tests\\Fixtures\\Apis\\ProductInterface' => $fixtures[0],
+                'OpenApi\\Tests\\Fixtures\\Apis\\ProductInterface' => $fixtures[0],
             ],
             'traits' => [
-                'OpenApi\Tests\\Fixtures\\Apis\\NameTrait' => $fixtures[0],
+                'OpenApi\\Tests\\Fixtures\\Apis\\NameTrait' => $fixtures[0],
             ],
         ];
         $result = (new FileScanner())->scan(Util::finder($fixtures));

@@ -2,6 +2,8 @@
 
 $finder = PhpCsFixer\Finder::create()
     ->path('src')->name('*.php')
+    // TODO conditional for PHP8 once supported
+    ->notPath('src/Attributes')
     ->path('tests')->name('*.php')
     ->notPath('tests/Fixtures')
     ->in(__DIR__)

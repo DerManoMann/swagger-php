@@ -22,9 +22,10 @@ class ReflectionAnalyserTest extends OpenApiTestCase
         $sources = $scanner->scan($fixtures = Util::finder($this->fixtures('Apis/basic.php')), true);
 
         $analyser = new ReflectionAnalyser();
+        var_dump($sources);
         foreach ($sources as $type => $fqdnList) {
             foreach ($fqdnList as $fqdn => $filename) {
-                require_once $filename;
+                include_once $filename;
                 $analysis = $analyser->fromFqdn($fqdn);
             }
         }

@@ -71,7 +71,7 @@ class ConstantsTest extends OpenApiTestCase
         $backup = DocBlockParser::$defaultImports;
         DocBlockParser::$defaultImports = [
             'contact' => 'OpenApi\Annotations\Contact', // use OpenApi\Annotations\Contact;
-            'ctest' => 'OpenApi\Tests\ConstantsTesT', // use OpenApi\Tests\ConstantsTesT as CTest;
+            'ctest' => 'OpenApi\Tests\ConstantsTest', // use OpenApi\Tests\ConstantsTest as CTest;
         ];
         $annotations = $this->parseComment('@Contact(url=CTest::URL)');
         $this->assertSame('http://example.com', $annotations[0]->url);

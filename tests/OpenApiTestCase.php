@@ -204,22 +204,20 @@ class OpenApiTestCase extends TestCase
         return $analysis;
     }
 
-    public function analysisFromCode(string $code, ?Context $context = null)
+    public function analysisFromCode(string $code, ?Context $context = null): Analysis
     {
         return (new TokenAnalyser())->fromCode("<?php\n".$code, $context ?: new Context());
     }
 
-    public function analysisFromDockBlock($comment)
+    public function analysisFromDockBlock($comment): array
     {
         return (new DocBlockParser())->fromComment($comment, null);
     }
 
     /**
      * Collect list of all non abstract annotation classes.
-     *
-     * @return array
      */
-    public function allAnnotationClasses()
+    public function allAnnotationClasses(): array
     {
         $classes = [];
         $dir = new DirectoryIterator(__DIR__.'/../src/Annotations');

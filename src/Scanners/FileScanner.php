@@ -79,17 +79,17 @@ class FileScanner
                     }
 
                     $name = $namespace.'\\'.$token[1];
-                    $units['classes'][] = $name;
+                    $units['classes'][$name] = $filename;
                     break;
                 case T_INTERFACE:
                     $token = $this->nextToken($tokens);
                     $name = $namespace.'\\'.$token[1];
-                    $units['interfaces'][] = $name;
+                    $units['interfaces'][$name] = $filename;
                     break;
                 case T_TRAIT:
                     $token = $this->nextToken($tokens);
                     $name = $namespace.'\\'.$token[1];
-                    $units['traits'][] = $name;
+                    $units['traits'][$name] = $filename;
                     break;
             }
             $lastToken = $token;
