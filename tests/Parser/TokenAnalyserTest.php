@@ -164,7 +164,7 @@ class TokenAnalyserTest extends OpenApiTestCase
         }
 
         try {
-            $analyser = (new TokenAnalyser())->fromFile($this->fixtures('Apis/basic_php8.php')[0]);
+            $analyser = (new TokenAnalyser())->fromFile($this->fixtures('Analysers/php8.php')[0]);
             $this->assertNotNull($analyser);
         } catch (\Throwable $t) {
             $this->fail("Analyser produced an error: {$t->getMessage()}");
