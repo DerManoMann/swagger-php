@@ -157,6 +157,20 @@ class TokenAnalyserTest extends OpenApiTestCase
         }
     }
 
+    public function testSyntaxPhp8()
+    {
+        if (PHP_MAJOR_VERSION < 8) {
+            $this->markTestSkipped('Requires PHP8');
+        }
+
+        try {
+            $analyser = (new TokenAnalyser())->fromFile($this->fixtures('Apis/basic_php8.php')[0]);
+            $this->assertNotNull($analyser);
+        } catch (\Throwable $t) {
+            $this->fail("Analyser produced an error: {$t->getMessage()}");
+        }
+    }
+
     /**
      * dataprovider.
      */
