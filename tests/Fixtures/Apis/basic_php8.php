@@ -8,7 +8,7 @@ namespace OpenApi\Tests\Fixtures\Apis;
 
 use OpenApi\Attributes as OAT;
 
-@@OAT\Info(['version' => '1.0.0', 'title' => 'Basic single file PHP8 API'])
+@@OAT\Info(version:'1.0.0', title:'Basic single file PHP8 API')
 class Php8Api
 {
 
