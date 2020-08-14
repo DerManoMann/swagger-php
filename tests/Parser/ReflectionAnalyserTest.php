@@ -19,7 +19,7 @@ class ReflectionAnalyserTest extends OpenApiTestCase
     public function testSingleFileDocBlock()
     {
         $scanner = new FileScanner();
-        $sources = $scanner->scan($fixtures = Util::finder($this->fixtures('Apis/basic.php')), true);
+        $sources = $scanner->scan(Util::finder($this->fixtures('Apis/basic.php')), true);
 
         $analyser = new ReflectionAnalyser();
         foreach ($sources as $type => $fqdnList) {

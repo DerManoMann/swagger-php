@@ -257,6 +257,6 @@ class Parameter extends AbstractAnnotation
      */
     public function identity(): string
     {
-        return parent::_identity(['name', 'in']);
+        return parent::identity(array_merge($properties, ['name', 'in']));
     }
 }

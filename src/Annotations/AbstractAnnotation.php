@@ -214,7 +214,7 @@ abstract class AbstractAnnotation implements \JsonSerializable
                 if ($defaultValues[$property] === $value) { // but is the same as the default?
                     continue; // Keep current, no notice
                 }
-                $identity = method_exists($object, 'identity') ? $object->identity() : get_class($object);
+                $identity = $object instanceof AbstractAnnotation ? $object->identity() : get_class($object);
                 $context1 = $this->_context;
                 $context2 = property_exists($object, '_context') ? $object->_context : 'unknown';
                 if (is_object($this->$property) && $this->{$property} instanceof AbstractAnnotation) {
@@ -358,9 +358,9 @@ abstract class AbstractAnnotation implements \JsonSerializable
             if ($details = static::matchNested($class)) {
                 $property = $details->value;
                 if (is_array($property)) {
-                    Logger::notice('Only one '.Logger::shorten(get_class($annotation)).'() allowed for '.$this->identity().' multiple found, skipped: '.$annotation->_context);
+                    Logger::notice('Only one '.Logger::shorten($class).'() allowed for '.$this->identity().' multiple found, skipped: '.$annotation->_context);
                 } else {
-                    Logger::notice('Only one '.Logger::shorten(get_class($annotation)).'() allowed for '.$this->identity()." multiple found in:\n    Using: ".$this->$property->_context."\n  Skipped: ".$annotation->_context);
+                    Logger::notice('Only one '.Logger::shorten($class).'() allowed for '.$this->identity()." multiple found in:\n    Using: ".$this->$property->_context."\n  Skipped: ".$annotation->_context);
                 }
             } elseif ($annotation instanceof AbstractAnnotation) {
                 $message = 'Unexpected '.$annotation->identity();
@@ -371,7 +371,6 @@ abstract class AbstractAnnotation implements \JsonSerializable
             }
             $valid = false;
         }
-
         // Report conflicting key
         foreach (static::$_nested as $annotationClass => $nested) {
             if (is_string($nested) || count($nested) === 1) {
@@ -390,7 +389,7 @@ abstract class AbstractAnnotation implements \JsonSerializable
                 } elseif ($item->$keyField === UNDEFINED) {
                     Logger::warning($item->identity().' is missing key-field: "'.$keyField.'" in '.$item->_context);
                 } elseif (isset($keys[$item->$keyField])) {
-                    Logger::warning('Multiple '.$item->_identity([]).' with the same '.$keyField.'="'.$item->$keyField."\":\n  ".$item->_context."\n  ".$keys[$item->$keyField]->_context);
+                    Logger::warning('Multiple '.$item->identity().' with the same '.$keyField.'="'.$item->$keyField."\":\n  ".$item->_context."\n  ".$keys[$item->$keyField]->_context);
                 } else {
                     $keys[$item->$keyField] = $item;
                 }
@@ -513,7 +512,6 @@ abstract class AbstractAnnotation implements \JsonSerializable
     }
 
     /**
-<<<<<<< HEAD
      * Find matching nested details.
      *
      * @param string $class the class to match
@@ -540,10 +538,12 @@ abstract class AbstractAnnotation implements \JsonSerializable
     /**
      * Helper for generating the identity().
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
+=======
+>>>>>>> Some code cleanup
      * Get `_nested` property for the given class.
->>>>>>> Update for apha2
      *
      * Non strict lookups will only consider annotation classes outside of `OpenApi\Annotations\`.
      * This will ensure we only match against actual extensions, not subclassing within the annotations namespace.
@@ -566,12 +566,6 @@ abstract class AbstractAnnotation implements \JsonSerializable
         return null;
     }
 
-    /**
-     * Helper for generating the identity().
-     *
-     * @return string
->>>>>>> Update for apha2
-     */
     protected function _identity(array $properties): string
     {
         $fields = [];

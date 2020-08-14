@@ -246,7 +246,7 @@ class TokenAnalyserTest extends OpenApiTestCase
 
     public function testSingleFile()
     {
-        $analysis = $this->analysisFromFixtures('Apis/basic.php');
+        $analysis = $this->analysisFromFixtures('Apis/basic_docblock.php');
         $analysis->process();
         $operations = $analysis->getAnnotationsOfType(Operation::class);
         $this->assertIsArray($operations);

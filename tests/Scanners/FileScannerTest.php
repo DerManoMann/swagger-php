@@ -14,7 +14,7 @@ class FileScannerTest extends OpenApiTestCase
 {
     public function testBasic()
     {
-        $fixtures = $this->fixtures('Apis/basic.php');
+        $fixtures = $this->fixtures('Apis/basic_docblock.php');
         $expected = [
             'classes' => [
                 'OpenApi\\Tests\\Fixtures\\Apis\\Api' => $fixtures[0],
