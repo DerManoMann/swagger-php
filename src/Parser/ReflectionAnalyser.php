@@ -11,6 +11,9 @@ use OpenApi\Context;
 
 /**
  * OpenApi docblock analyser using reflection.
+ *
+ * Due to the nature of reflection this requires all related classes
+ * to be auto-loadable.
  */
 class ReflectionAnalyser
 {
