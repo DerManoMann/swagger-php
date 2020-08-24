@@ -10,7 +10,7 @@ use OpenApi\Annotations\OpenApi;
 use OpenApi\Parser\TokenAnalyser;
 use Symfony\Component\Finder\Finder;
 
-if (defined('OpenApi\UNDEFINED') === false) {
+if (false === defined('OpenApi\UNDEFINED')) {
     /*
      * Special value to differentiate between null and undefined.
      */

@@ -19,7 +19,7 @@ use OpenApi\Util;
  */
 class AugmentProperties
 {
-    public static $types = [
+    protected static $TYPES = [
         'array' => 'array',
         'byte' => ['string', 'byte'],
         'boolean' => 'boolean',
@@ -69,8 +69,8 @@ class AugmentProperties
                     $property->nullable = true;
                 }
                 $type = strtolower($context->type);
-                if (isset(self::$types[$type])) {
-                    $this->applyType($property, static::$types[$type]);
+                if (isset(self::$TYPES[$type])) {
+                    $this->applyType($property, static::$TYPES[$type]);
                 } else {
                     $key = strtolower($context->fullyQualifiedName($type));
                     if ($property->ref === UNDEFINED && array_key_exists($key, $refs)) {
@@ -83,7 +83,7 @@ class AugmentProperties
                     preg_match('/^([^\[]+)(.*$)/', trim($varMatches['type']), $typeMatches);
                     $isNullable = $this->isNullable($typeMatches[1]);
                     $type = $this->stripNull($typeMatches[1]);
-                    if (array_key_exists(strtolower($type), static::$types) === false) {
+                    if (array_key_exists(strtolower($type), static::$TYPES) === false) {
                         $key = strtolower($context->fullyQualifiedName($type));
                         if ($property->ref === UNDEFINED && $typeMatches[2] === '' && array_key_exists($key, $refs)) {
                             if ($isNullable) {
@@ -100,7 +100,7 @@ class AugmentProperties
                             continue;
                         }
                     } else {
-                        $type = static::$types[strtolower($type)];
+                        $type = static::$TYPES[strtolower($type)];
                         if (is_array($type)) {
                             if ($property->format === UNDEFINED) {
                                 $property->format = $type[1];
