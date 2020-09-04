@@ -536,6 +536,7 @@ abstract class AbstractAnnotation implements \JsonSerializable
     }
 
     /**
+<<<<<<< HEAD
      * Helper for generating the identity().
 <<<<<<< HEAD
 <<<<<<< HEAD
