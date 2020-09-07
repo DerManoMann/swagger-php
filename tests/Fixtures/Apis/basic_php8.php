@@ -6,9 +6,9 @@
 
 namespace OpenApi\Tests\Fixtures\Apis;
 
-use OpenApi\Attributes as OAT;
+use OpenApi\Attributes as OT;
 
-@@OAT\Info(version:'1.0.0', title:'Basic single file PHP8 API')
+@@OT\Info(version:'1.0.0', title:'Basic single file PHP8 API')
 class Php8Api
 {
 
@@ -18,17 +18,17 @@ interface Php8ProductInterface {
 
 }
 
-@@OAT\Schema([])
+@@OT\Schema([])
 trait Php8NameTrait {
     /**
      * The name.
      */
-    @@OAT\Property([])
+    @@OT\Property([])
     public $name;
 
 }
 
-@@OAT\Schema(['title' => 'Product', 'description' => 'Product'])
+@@OT\Schema(['title' => 'Product', 'description' => 'Product'])
 class Php8Product implements Php8ProductInterface
 {
     use Php8NameTrait;
@@ -36,16 +36,16 @@ class Php8Product implements Php8ProductInterface
     /**
      * The id.
      */
-    @@OAT\Property(['format' => 'int64', 'example' => 1])
+    @@OT\Property(['format' => 'int64', 'example' => 1])
     public $id;
 }
 
 class Php8ProductController
 {
 
-    @@OAT\Get(['tags' => ['Products'], 'path' => '/products/{product_id}'])
-        @@OAT\Response(['response' => 200, 'description' => 'successful operation'])
-        @@OAT\Response(['response' => 401, 'description' => 'oops'])
+    @@OT\Get(['tags' => ['Products'], 'path' => '/products/{product_id}'])
+        @@OT\Response(['response' => 200, 'description' => 'successful operation'])
+        @@OT\Response(['response' => 401, 'description' => 'oops'])
     public function getProduct($id)
     {
     }

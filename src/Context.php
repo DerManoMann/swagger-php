@@ -32,6 +32,8 @@ namespace OpenApi;
  * @property string                           $method
  * @property string                           $property
  * @property string                           $type
+ * @property bool                             $static
+ * @property bool                             $nullable
  * @property string                           $trait
  * @property string                           $interface
  * @property bool                             $static  Indicate a static method
