@@ -26,14 +26,12 @@ class ReflectionAnalyser
         $this->analysis = $analysis ?: new Analysis();
     }
 
-    public function fromFqdn(string $fqdn): Analysis
+    public function fromFqdn(string $fqdn, ?Analysis $analysis = null): Analysis
     {
-        $analysis = $this->analysis;
+        $analysis = $analysis ?: $this->analysis;
 
         $rc = new \ReflectionClass($fqdn);
-
         $contextType = $this->contextType($rc);
-
         $context = new Context([$contextType => $rc->getShortName()]);
         if ($namespace = $rc->getNamespaceName()) {
             $context->namespace = $namespace;
@@ -72,11 +70,15 @@ class ReflectionAnalyser
         }
 
         foreach ($rc->getProperties() as $property) {
-            // static, type, nullable
-
             $definition['properties'][$property->getName()] = $ctx = new Context(['property' => $property->getName()], $context);
             if ($property->isStatic()) {
                 $ctx->static = true;
+            }
+            if (\PHP_VERSION_ID >= 70400 && ($type = $property->getType())) {
+                $ctx->nullable = $type->allowsNull();
+                if ($type instanceof \ReflectionNamedType) {
+                    $ctx->type = $type->getName();
+                }
             }
             $analysis->addAnnotations($this->annotationFactory->build($property, $ctx), $ctx);
         }
