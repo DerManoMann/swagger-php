@@ -520,7 +520,17 @@ abstract class AbstractAnnotation implements \JsonSerializable
      */
     public static function matchNested(string $class)
     {
+        $debug = false;
+        if ($debug) {
+            echo '===================================='.PHP_EOL;
+            echo 'can match nested? self='.static::class.'; nested='.$class.PHP_EOL;
+            var_dump(static::$_nested);
+        }
         if (array_key_exists($class, static::$_nested)) {
+            if ($debug) {
+                echo '=> exact match!'.PHP_EOL;
+            }
+
             return (object) ['key' => $class, 'value' => static::$_nested[$class]];
         }
 
@@ -528,6 +538,10 @@ abstract class AbstractAnnotation implements \JsonSerializable
         // only consider the immediate OpenApi parent
         while (0 !== strpos($parent, 'OpenApi\\Annotations\\') && $parent = get_parent_class($parent)) {
             if ($kvp = static::matchNested($parent)) {
+                if ($debug) {
+                    echo '=> NESTED match on: '.$kvp->key.PHP_EOL;
+                }
+
                 return $kvp;
             }
         }
