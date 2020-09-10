@@ -71,7 +71,7 @@ END;
 )
 END;
         $annotations = $this->parseComment($comment);
-        $this->assertOpenApiLogEntryContains('Multiple @OA\Header() with the same header="X-CSRF-Token":');
+        $this->assertOpenApiLogEntryContains('Multiple @OA\Header(header="X-CSRF-Token") with the same header="X-CSRF-Token":');
         $annotations[0]->validate();
     }
 

@@ -501,7 +501,7 @@ abstract class AbstractAnnotation implements \JsonSerializable
         $properties = [];
         foreach (static::$_parents as $parent) {
             foreach ($parent::$_nested as $annotationClass => $entry) {
-                if ($annotationClass === $class && is_array($entry) && $this->{$entry[1]} !== UNDEFINED) {
+                if ($annotationClass === $class && is_array($entry) && 1 < count($entry) && $this->{$entry[1]} !== UNDEFINED) {
                     $properties[] = $entry[1];
                     break 2;
                 }

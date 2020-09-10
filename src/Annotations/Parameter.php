@@ -255,8 +255,8 @@ class Parameter extends AbstractAnnotation
     /**
      * {@inheritdoc}
      */
-    public function identity(): string
+    public function _identity(array $properties = []): string
     {
-        return parent::identity(array_merge($properties, ['name', 'in']));
+        return parent::_identity(array_merge($properties, ['name', 'in']));
     }
 }

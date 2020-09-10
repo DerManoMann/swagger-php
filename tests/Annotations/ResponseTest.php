@@ -10,22 +10,19 @@ use OpenApi\Tests\OpenApiTestCase;
 
 class ResponseTest extends OpenApiTestCase
 {
-    public function testMisspelledDefault()
+    public function responses()
     {
-        $this->validateMisspelledAnnotation('Default');
+        return [
+            'misspelled-default' => ['Default'],
+            'misspelled-range-definition' => ['5xX'],
+            'wrong-range-definition' => ['6XX'],
+        ];
     }
 
-    public function testMisspelledRangeDefinition()
-    {
-        $this->validateMisspelledAnnotation('5xX');
-    }
-
-    public function testWrongRangeDefinition()
-    {
-        $this->validateMisspelledAnnotation('6XX');
-    }
-
-    protected function validateMisspelledAnnotation(string $response = '')
+    /**
+     * @dataProvider responses
+     */
+    public function testMisspelledResponse(string $response = '')
     {
         $annotations = $this->parseComment(
             '@OA\Get(@OA\Response(response="'.$response.'", description="description"))'
@@ -34,8 +31,7 @@ class ResponseTest extends OpenApiTestCase
          * @see Annotations/Operation.php:187
          */
         $this->assertOpenApiLogEntryContains(
-            'Invalid value "'.$response.'" for @OA\Response()->response, expecting "default"'
-            .', a HTTP Status Code or HTTP '
+            'Invalid value "'.$response.'" for @OA\Response(response="'.$response.'")->response, expecting "default", a HTTP Status Code or HTTP Status Code range definition'
         );
         $annotations[0]->validate();
     }
