@@ -8,7 +8,7 @@ namespace OpenApi\Attributes;
 
 use OpenApi\Annotations as OA;
 
-@@\Attribute(\Attribute::TARGET_METHOD|\Attribute::TARGET_PROPERTY)
+#[\Attribute(\Attribute::TARGET_METHOD|\Attribute::TARGET_PROPERTY)]
 class Property extends OA\Property
 {
     // trait?

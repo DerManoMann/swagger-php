@@ -8,7 +8,7 @@ namespace OpenApi\Attributes;
 
 use OpenApi\Annotations as OA;
 
-@@\Attribute(\Attribute::TARGET_METHOD)
+#[\Attribute(\Attribute::TARGET_METHOD)]
 class Get extends OA\Get
 {
     // trait?

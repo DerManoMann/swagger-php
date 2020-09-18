@@ -1,24 +1,24 @@
 <?php
 
 
-@@\Attribute(\Attribute::TARGET_METHOD)
+#[\Attribute(\Attribute::TARGET_METHOD)]
 class MethodAttr {
 }
 
-@@\Attribute
+#[\Attribute]
 class GenericAttr {
     public function __construct($name = null) {
 
     }
 }
 
-@@GenericAttr(name: 'example')
+#[GenericAttr(name: 'example')]
 class Decorated {
 
-    @@MethodAttr
+    #[MethodAttr]
     public function foo () {
     }
 
-    public function bar (@@GenericAttr string $ding) {
+    public function bar (#[GenericAttr] string $ding) {
     }
 }

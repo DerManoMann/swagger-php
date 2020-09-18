@@ -8,7 +8,7 @@ namespace OpenApi\Attributes;
 
 use OpenApi\Annotations as OA;
 
-@@\Attribute(\Attribute::TARGET_CLASS)
+#[\Attribute(\Attribute::TARGET_CLASS)]
 class Schema extends OA\Schema
 {
     // trait?

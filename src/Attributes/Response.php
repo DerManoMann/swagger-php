@@ -8,7 +8,7 @@ namespace OpenApi\Attributes;
 
 use OpenApi\Annotations as OA;
 
-@@\Attribute(\Attribute::TARGET_METHOD|\Attribute::IS_REPEATABLE)
+#[\Attribute(\Attribute::TARGET_METHOD|\Attribute::IS_REPEATABLE)]
 class Response extends OA\Response
 {
     // trait?
