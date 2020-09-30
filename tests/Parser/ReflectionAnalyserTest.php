@@ -79,11 +79,11 @@ components:
         */
     }
 
+    /**
+     * @requires PHP 8
+     */
     public function testSingleFileAttributes()
     {
-        if (PHP_MAJOR_VERSION < 8) {
-            $this->markTestSkipped('Requires PHP8');
-        }
 
         $sources = (new FileScanner())->scan(Util::finder($this->fixtures('Apis/basic_php8.php')), true);
         $analyser = new ReflectionAnalyser(new AttributeAnnotationFactory());
