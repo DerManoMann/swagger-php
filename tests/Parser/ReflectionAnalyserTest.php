@@ -8,6 +8,7 @@ namespace OpenApi\Tests\Parser;
 
 use OpenApi\Annotations\Operation;
 use OpenApi\Parser\AttributeAnnotationFactory;
+use OpenApi\Parser\DocBlockAnnotationFactory;
 use OpenApi\Parser\ReflectionAnalyser;
 use OpenApi\Processors\OperationId;
 use OpenApi\Scanners\FileScanner;
@@ -21,7 +22,7 @@ class ReflectionAnalyserTest extends OpenApiTestCase
         $scanner = new FileScanner();
         $sources = $scanner->scan(Util::finder($this->fixtures('Apis/basic.php')), true);
 
-        $analyser = new ReflectionAnalyser();
+        $analyser = new ReflectionAnalyser(new DocBlockAnnotationFactory());
         foreach ($sources as $type => $fqdnList) {
             foreach ($fqdnList as $fqdn => $filename) {
                 include_once $filename;
@@ -34,49 +35,8 @@ class ReflectionAnalyserTest extends OpenApiTestCase
         $this->assertIsArray($operations);
 
         $this->assertTrue($analysis->validate());
-        //echo PHP_EOL.$analysis->openapi->toYaml().PHP_EOL;
-        /*
-
-openapi: 3.0.0
-info:
-  title: 'Basic single file API'
-  version: 1.0.0
-paths:
-  '/products/{product_id}':
-    get:
-      tags:
-        - Products
-      operationId: 'OpenApi\Tests\Fixtures\Apis\ProductController::getProduct'
-      responses:
-        '200':
-          description: 'successful operation'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-components:
-  schemas:
-    Product:
-      title: Product
-      description: Product
-      allOf:
-        -
-          $ref: '#/components/schemas/NameTrait'
-        -
-          properties:
-            id:
-              description: 'The id.'
-              format: int64
-              example: 1
-            name:
-              description: 'The name.'
-    NameTrait:
-      properties:
-        name:
-          description: 'The name.'
-      type: object
-
-        */
+        file_put_contents(__DIR__.'/single_doc_block.yml', $analysis->openapi->toYaml());
+        echo PHP_EOL.$analysis->openapi->toYaml().PHP_EOL;
     }
 
     /**
@@ -98,36 +58,8 @@ components:
         $operations = $analysis->getAnnotationsOfType(Operation::class);
         $this->assertIsArray($operations);
 
-        //echo PHP_EOL . $analysis->openapi->toYaml() . PHP_EOL;
-        /*
-
-info:
-  title: 'Basic single file PHP8 API'
-  version: 1.0.0
-paths:
-  '/products/{product_id}':
-    get:
-      tags:
-        - Products
-      operationId: 'OpenApi\Tests\Fixtures\Apis\Php8ProductController::getProduct'
-      responses:
-        '200':
-          description: 'successful operation'
-        '401':
-          description: oops
-components:
-  schemas:
-    Php8Product:
-      title: Product
-      description: Product
-    Php8NameTrait: {  }
-  responses:
-    '200':
-      description: 'successful operation'
-    '401':
-      description: oops
-
-         */
         $this->assertTrue($analysis->validate());
+        file_put_contents(__DIR__.'/single_attributes.yml', $analysis->openapi->toYaml());
+        echo PHP_EOL . $analysis->openapi->toYaml() . PHP_EOL;
     }
 }

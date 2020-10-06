@@ -8,7 +8,7 @@ namespace OpenApi\Tests\Fixtures\Apis;
 
 use OpenApi\Attributes as OT;
 
-#[OT\Info(version:'1.0.0', title:'Basic single file PHP8 API')]
+#[OT\Info(version:'1.0.0', title:'Basic single file Php8 API')]
 class Php8Api
 {
 
@@ -20,10 +20,7 @@ interface Php8ProductInterface {
 
 #[OT\Schema([])]
 trait Php8NameTrait {
-    /**
-     * The name.
-     */
-    #[OT\Property([])]
+    #[OT\Property(['description' => 'The name.'])]
     public $name;
 
 }
@@ -33,10 +30,7 @@ class Php8Product implements Php8ProductInterface
 {
     use Php8NameTrait;
 
-    /**
-     * The id.
-     */
-    #[OT\Property(['format' => 'int64', 'example' => 1])]
+    #[OT\Property(['description' => 'The id.', 'format' => 'int64', 'example' => 1])]
     public $id;
 }
 

@@ -45,6 +45,8 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
             }
         }
 
+        $context->annotations = $annotations;
+
         return array_filter($annotations, fn ($a) => $a !== null);
     }
 }
