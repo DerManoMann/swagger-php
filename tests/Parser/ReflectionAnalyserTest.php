@@ -34,7 +34,7 @@ class ReflectionAnalyserTest extends OpenApiTestCase
         $this->assertIsArray($operations);
 
         $this->assertTrue($analysis->validate());
-        file_put_contents(__DIR__.'/single_doc_block.yml', $analysis->openapi->toYaml());
+        //file_put_contents(__DIR__.'/single_doc_block.yml', $analysis->openapi->toYaml());
         echo PHP_EOL.$analysis->openapi->toYaml().PHP_EOL;
     }
 
@@ -58,7 +58,7 @@ class ReflectionAnalyserTest extends OpenApiTestCase
         $this->assertIsArray($operations);
 
         $this->assertTrue($analysis->validate());
-        file_put_contents(__DIR__.'/single_attributes.yml', $analysis->openapi->toYaml());
+        //file_put_contents(__DIR__.'/single_attributes.yml', $analysis->openapi->toYaml());
         echo PHP_EOL.$analysis->openapi->toYaml().PHP_EOL;
     }
 }
