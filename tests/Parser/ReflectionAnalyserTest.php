@@ -10,7 +10,6 @@ use OpenApi\Annotations\Operation;
 use OpenApi\Parser\AttributeAnnotationFactory;
 use OpenApi\Parser\DocBlockAnnotationFactory;
 use OpenApi\Parser\ReflectionAnalyser;
-use OpenApi\Processors\OperationId;
 use OpenApi\Scanners\FileScanner;
 use OpenApi\Tests\OpenApiTestCase;
 use OpenApi\Util;
@@ -60,6 +59,6 @@ class ReflectionAnalyserTest extends OpenApiTestCase
 
         $this->assertTrue($analysis->validate());
         file_put_contents(__DIR__.'/single_attributes.yml', $analysis->openapi->toYaml());
-        echo PHP_EOL . $analysis->openapi->toYaml() . PHP_EOL;
+        echo PHP_EOL.$analysis->openapi->toYaml().PHP_EOL;
     }
 }
