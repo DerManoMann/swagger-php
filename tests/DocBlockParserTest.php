@@ -6,7 +6,6 @@
 
 namespace OpenApi\Tests;
 
-
 use OpenApi\Parser\DocBlockParser;
 
 class DocBlockParserTest extends OpenApiTestCase
