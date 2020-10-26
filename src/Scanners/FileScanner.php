@@ -29,7 +29,7 @@ class FileScanner
         foreach ($finder as $file) {
             $fileUnits = $this->scanFile($pathname = $file->getPathname());
             if ($load) {
-                require_once ($pathname);
+                require_once($pathname);
             }
             $units = array_merge_recursive($units, $fileUnits);
         }

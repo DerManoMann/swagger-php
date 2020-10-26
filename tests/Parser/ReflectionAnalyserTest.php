@@ -19,7 +19,7 @@ class ReflectionAnalyserTest extends OpenApiTestCase
     public function testSingleFileDocBlock()
     {
         $scanner = new FileScanner();
-        $sources = $scanner->scan(Util::finder($this->fixtures('Apis/basic.php')), true);
+        $sources = $scanner->scan(Util::finder($this->fixtures('Apis/basic_docblock.php')), true);
 
         $analyser = new ReflectionAnalyser(new DocBlockAnnotationFactory());
         foreach ($sources as $type => $fqdnList) {
@@ -35,7 +35,7 @@ class ReflectionAnalyserTest extends OpenApiTestCase
 
         $this->assertTrue($analysis->validate());
         //file_put_contents(__DIR__.'/single_doc_block.yml', $analysis->openapi->toYaml());
-        echo PHP_EOL.$analysis->openapi->toYaml().PHP_EOL;
+        //echo PHP_EOL.$analysis->openapi->toYaml().PHP_EOL;
     }
 
     /**
@@ -43,7 +43,6 @@ class ReflectionAnalyserTest extends OpenApiTestCase
      */
     public function testSingleFileAttributes()
     {
-
         $sources = (new FileScanner())->scan(Util::finder($this->fixtures('Apis/basic_php8.php')), true);
         $analyser = new ReflectionAnalyser(new AttributeAnnotationFactory());
         foreach ($sources as $type => $fqdnList) {
@@ -59,6 +58,6 @@ class ReflectionAnalyserTest extends OpenApiTestCase
 
         $this->assertTrue($analysis->validate());
         //file_put_contents(__DIR__.'/single_attributes.yml', $analysis->openapi->toYaml());
-        echo PHP_EOL.$analysis->openapi->toYaml().PHP_EOL;
+        //echo PHP_EOL.$analysis->openapi->toYaml().PHP_EOL;
     }
 }
