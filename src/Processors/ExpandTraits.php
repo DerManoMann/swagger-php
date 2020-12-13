@@ -18,7 +18,7 @@ class ExpandTraits
 {
     public function __invoke(Analysis $analysis)
     {
-        $schemas = $analysis->getAnnotationsOfType(Schema::class);
+        $schemas = $analysis->getAnnotationsOfType(Schema::class, true);
         foreach ($schemas as $schema) {
             if ($schema->_context->is('class') || $schema->_context->is('trait')) {
                 $source = $schema->_context->class ?: $schema->_context->trait;
@@ -29,9 +29,7 @@ class ExpandTraits
                     if ($traitSchema) {
                         $this->inheritTrait($schema, $trait, $traitSchema);
                     } else {
-                        if ($schema->_context->is('class')) {
-                            $this->mergeTrait($schema, $trait, $existing);
-                        }
+                        $this->mergeTrait($schema, $trait, $existing);
                     }
                 }
             }

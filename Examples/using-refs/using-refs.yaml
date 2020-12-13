@@ -48,18 +48,30 @@ paths:
                 $ref: '#/components/responses/product'
 components:
   schemas:
+    BaseProduct:
+      description: 'Base Product'
+      allOf:
+        -
+          $ref: '#/components/schemas/Model'
+        - {  }
+    Model:
+      description: Model
     Product:
       title: 'Product model'
       description: 'Product model'
-      properties:
-        id:
-          description: 'The unique identifier of a product in our catalog.'
-          type: integer
-          format: int64
-          example: 1
-        status:
-          $ref: '#/components/schemas/product_status'
-      type: object
+      allOf:
+        -
+          $ref: '#/components/schemas/BaseProduct'
+        -
+          properties:
+            id:
+              description: 'The unique identifier of a product in our catalog.'
+              type: integer
+              format: int64
+              example: 1
+            status:
+              $ref: '#/components/schemas/product_status'
+          type: object
     product_status:
       description: 'The status of a product'
       type: string

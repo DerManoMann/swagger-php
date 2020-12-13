@@ -32,7 +32,7 @@ class InheritPropertiesTest extends OpenApiTestCase
         $analysis->validate();
     }
 
-    public function testInheritProperties()
+    public function testInheritPropertiesX()
     {
         $analysis = $this->analysisFromFixtures(
             [

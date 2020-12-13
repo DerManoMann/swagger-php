@@ -22,14 +22,14 @@ class InheritProperties
 {
     public function __invoke(Analysis $analysis)
     {
-        /* @var  $schemas Schema[] */
-        $schemas = $analysis->getAnnotationsOfType(Schema::class);
+        /* @var Schema[] */
+        $schemas = $analysis->getAnnotationsOfType(Schema::class, true);
         $processed = [];
 
         foreach ($schemas as $schema) {
             if ($schema->_context->is('class')) {
                 if (in_array($schema->_context, $processed, true)) {
-                    // we should process only first schema in the same context
+                    // we should process schema once
                     continue;
                 }
 
@@ -43,6 +43,7 @@ class InheritProperties
                         }
                     }
                 }
+
                 $classes = $analysis->getSuperClasses($schema->_context->fullyQualifiedName($schema->_context->class));
                 foreach ($classes as $class) {
                     if ($class['context']->annotations) {
@@ -97,6 +98,7 @@ class InheritProperties
                 $to->allOf[] = $clone;
             }
         }
+
         $append = true;
         foreach ($to->allOf as $entry) {
             if ($entry->ref !== UNDEFINED && $entry->ref === Components::SCHEMA_REF.Util::refEncode($from->schema)) {

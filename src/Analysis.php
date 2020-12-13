@@ -205,6 +205,7 @@ class Analysis
             return [];
         }
 
+        //return [$extends => $extendsDefinition];
         return array_merge([$extends => $extendsDefinition], $this->getSuperClasses($extends));
     }
 

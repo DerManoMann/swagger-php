@@ -16,7 +16,7 @@ class ExpandInterfaces
 {
     public function __invoke(Analysis $analysis)
     {
-        $schemas = $analysis->getAnnotationsOfType(Schema::class);
+        $schemas = $analysis->getAnnotationsOfType(Schema::class, true);
         foreach ($schemas as $schema) {
             if ($schema->_context->is('class')) {
                 $interfaces = $analysis->getInterfacesOfClass($schema->_context->fullyQualifiedName($schema->_context->class), true);
