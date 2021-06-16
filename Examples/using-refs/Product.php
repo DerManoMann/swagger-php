@@ -22,7 +22,7 @@ class Product {
     public $id;
 
     /**
-     * @OA\Property(ref="#/components/schemas/product_status")
+     * @OA\Property(ref="#/components/schemas/product_status", nullable=true)
      */
     public $status;
 }

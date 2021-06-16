@@ -25,6 +25,9 @@ class Generator
     /** @var string Magic value to differentiate between null and undefined. */
     public const UNDEFINED = '@OA\Generator::UNDEFINED🙈';
 
+    /** @var string Default OpenApi version being used if none given. */
+    public const DEFAULT_VERSION = '3.0.0';
+
     /** @var array Map of namespace aliases to be supported by doctrine. */
     protected $aliases = null;
 
@@ -40,11 +43,16 @@ class Generator
     /** @var null|LoggerInterface PSR logger. */
     protected $logger = null;
 
+    /** @var string OpenApi version generated. */
+    protected $version = self::DEFAULT_VERSION;
+
+    /** Backup of static properties modified during a run. */
     private $configStack;
 
-    public function __construct(?LoggerInterface $logger = null)
+    public function __construct(?LoggerInterface $logger = null, ?string $version = null)
     {
         $this->logger = $logger;
+        $this->version = $version ?: $this->version;
 
         // kinda config stack to stay BC...
         $this->configStack = new class() {
@@ -189,6 +197,7 @@ class Generator
      *                          analysis:   null|Analysis                 Defaults to a new `Analysis`.
      *                          processors: null|array                    Defaults to `Analysis::processors()`.
      *                          validate:   bool                          Defaults to `true`.
+     *                          version:    string                        Defaults to '3.0.0'
      *                          logger:     null|\Psr\Log\LoggerInterface If not set logging will use \OpenApi\Logger as before.
      */
     public static function scan(iterable $sources, array $options = []): OpenApi
@@ -201,6 +210,7 @@ class Generator
                 'analysis' => null,
                 'processors' => null,
                 'validate' => true,
+                'version' => self::DEFAULT_VERSION,
             ];
 
         return (new Generator())
@@ -208,7 +218,7 @@ class Generator
             ->setNamespaces($config['namespaces'])
             ->setAnalyser($config['analyser'])
             ->setProcessors($config['processors'])
-            ->generate($sources, $config['analysis'], $config['validate']);
+            ->generate($sources, $config['analysis'], $config['validate'], $config['version']);
     }
 
     /**
@@ -221,8 +231,9 @@ class Generator
      *                                * \Symfony\Component\Finder\Finder
      * @param null|Analysis $analysis custom analysis instance
      * @param bool          $validate flag to enable/disable validation of the returned spec
+     * @param string        $version  OpenApi version to genereate
      */
-    public function generate(iterable $sources, ?Analysis $analysis = null, bool $validate = true): OpenApi
+    public function generate(iterable $sources, ?Analysis $analysis = null, bool $validate = true, string $version = '3.0.0'): OpenApi
     {
         $analysis = $analysis ?: new Analysis([], new Context());
 
@@ -232,6 +243,8 @@ class Generator
 
             // post processing
             $analysis->process($this->getProcessors());
+
+            $analysis->openapi->openapi = $version;
 
             // validation
             if ($validate) {

@@ -68,9 +68,11 @@
     ],
     "phpstan": "phpstan analyze --level=3 src | grep -v 'does not accept default value of type string'",
     "psalm": "psalm",
+    "spectral": "spectral lint Examples/**/*.yaml Examples/**/**/*.yaml",
     "analyse": [
       "@phpstan",
-      "@psalm"
+      "@psalm",
+      "@spectral"
     ],
     "validate-examples": "for ff in `find Examples -name *.yaml`; do spectral lint $ff; done",
     "docs": "./docs/node_modules/.bin/vuepress dev docs/",
