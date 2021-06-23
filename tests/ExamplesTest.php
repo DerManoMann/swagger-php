@@ -70,12 +70,12 @@ class ExamplesTest extends OpenApiTestCase
      */
     public function testExamples(string $example, array $specs)
     {
-        $path = __DIR__.'/../Examples/'.$example;
+        $path = __DIR__ . '/../Examples/' . $example;
 
         foreach ($specs as $version => $spec) {
             $openapi = Generator::scan([$path], ['version' => $version]);
-            file_put_contents($path.'/'.$spec, $openapi->toYaml());
-            $this->assertSpecEquals(file_get_contents($path.'/'.$spec), $openapi, 'Examples/'.$example.'/'.$spec);
+            file_put_contents($path . '/' . $spec, $openapi->toYaml());
+            $this->assertSpecEquals(file_get_contents($path . '/' . $spec), $openapi, 'Examples/' . $example . '/' . $spec);
         }
     }
 }
