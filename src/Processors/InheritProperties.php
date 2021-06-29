@@ -23,7 +23,7 @@ class InheritProperties
     public function __invoke(Analysis $analysis)
     {
         /* @var $schemas Schema[] */
-        $schemas = $analysis->getAnnotationsOfType(Schema::class);
+        $schemas = $analysis->getAnnotationsOfType(Schema::class, true);
         $processed = [];
 
         foreach ($schemas as $schema) {
