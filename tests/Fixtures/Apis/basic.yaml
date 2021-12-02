@@ -58,12 +58,13 @@ components:
           description: 'The name.'
       type: object
     Product:
+      required:
+        - id
+        - name
       title: Product
       description: Product
       allOf:
         -
-          required:
-            - id
           properties:
             id:
               description: 'The id.'

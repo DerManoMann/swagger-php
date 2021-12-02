@@ -388,6 +388,7 @@ abstract class AbstractSchema extends AbstractAnnotation
     #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {
+        // move into processor?
         if (is_array($this->properties)) {
             foreach ($this->properties as $property) {
                 if ($property->required !== Generator::UNDEFINED && $property->required) {
@@ -395,9 +396,22 @@ abstract class AbstractSchema extends AbstractAnnotation
                     $this->required[] = $property->property;
                 }
             }
-            if (is_array($this->required)) {
-                $this->required = array_unique($this->required);
+        }
+        if (is_array($this->allOf)) {
+            foreach ($this->allOf as $allOfSchema) {
+                if (is_array($allOfSchema->properties)) {
+                    foreach ($allOfSchema->properties as $property) {
+                        if ($property->required !== Generator::UNDEFINED && $property->required) {
+                            $this->required = is_array($this->required) ? $this->required : [];
+                            $this->required[] = $property->property;
+                        }
+                    }
+                }
             }
+        }
+
+        if (is_array($this->required)) {
+            $this->required = array_unique($this->required);
         }
 
         $json = parent::jsonSerialize();
