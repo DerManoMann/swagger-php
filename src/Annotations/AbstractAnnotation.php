@@ -269,9 +269,7 @@ abstract class AbstractAnnotation implements \JsonSerializable
         return $properties;
     }
 
-    /**
-     * Customize the way json_encode() renders the annotations.
-     */
+    /** @inheritdoc */
     #[\ReturnTypeWillChange]
     public function jsonSerialize()
     {

@@ -28,6 +28,12 @@ abstract class AbstractProperty extends Schema
     public $nullable = Generator::UNDEFINED;
 
     /**
+     * Same as adding to Schema::$required
+     * @var bool
+     */
+    public $required = Generator::UNDEFINED;
+
+    /**
      * @inheritdoc
      */
     public static $_parents = [
@@ -51,6 +57,41 @@ abstract class AbstractProperty extends Schema
         AdditionalProperties::class => 'additionalProperties',
         Attachable::class => ['attachables'],
     ];
+
+    /**
+     * @inheritdoc
+     */
+    public static $_types = [
+        'title' => 'string',
+        'description' => 'string',
+        'required' => 'boolean',
+        'format' => 'string',
+        'collectionFormat' => ['csv', 'ssv', 'tsv', 'pipes', 'multi'],
+        'maximum' => 'number',
+        'exclusiveMaximum' => 'boolean',
+        'minimum' => 'number',
+        'exclusiveMinimum' => 'boolean',
+        'maxLength' => 'integer',
+        'minLength' => 'integer',
+        'pattern' => 'string',
+        'maxItems' => 'integer',
+        'minItems' => 'integer',
+        'uniqueItems' => 'boolean',
+        'multipleOf' => 'integer',
+        'allOf' => '[' . Schema::class . ']',
+        'oneOf' => '[' . Schema::class . ']',
+        'anyOf' => '[' . Schema::class . ']',
+    ];
+
+    /** @inheritdoc */
+    #[\ReturnTypeWillChange]
+    public function jsonSerialize()
+    {
+        $json = parent::jsonSerialize();
+        unset($json->required);
+
+        return $json;
+    }
 }
 
 if (\PHP_VERSION_ID >= 80100) {
@@ -68,6 +109,7 @@ if (\PHP_VERSION_ID >= 80100) {
             string $type = Generator::UNDEFINED,
             string $format = Generator::UNDEFINED,
             string $ref = Generator::UNDEFINED,
+            ?bool $required = null,
             ?array $allOf = null,
             ?array $anyOf = null,
             ?array $oneOf = null,
@@ -89,6 +131,7 @@ if (\PHP_VERSION_ID >= 80100) {
                     'deprecated' => $deprecated ?? Generator::UNDEFINED,
                     'example' => $example,
                     'ref' => $ref,
+                    'required' => $this->required !== Generator::UNDEFINED ? $this->required : ($required ?? Generator::UNDEFINED),
                     'allOf' => $allOf ?? Generator::UNDEFINED,
                     'anyOf' => $anyOf ?? Generator::UNDEFINED,
                     'oneOf' => $oneOf ?? Generator::UNDEFINED,

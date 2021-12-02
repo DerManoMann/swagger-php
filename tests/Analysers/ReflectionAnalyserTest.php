@@ -121,7 +121,7 @@ class ReflectionAnalyserTest extends OpenApiTestCase
         $this->assertIsArray($operations);
 
         $spec = $this->fixture('Apis/basic.yaml');
-        file_put_contents($spec, $analysis->openapi->toYaml());
+        //file_put_contents($spec, $analysis->openapi->toYaml());
         $this->assertTrue($analysis->validate());
         $this->assertSpecEquals($analysis->openapi, file_get_contents($spec));
 

@@ -26,7 +26,7 @@ interface ProductInterface
 }
 
 /**
- * @OA\Schema()
+ * @OA\Schema(required={"name"})
  */
 trait NameTrait
 {
@@ -52,7 +52,7 @@ class Product implements ProductInterface
     /**
      * The id.
      *
-     * @OA\Property(format="int64", example=1)
+     * @OA\Property(format="int64", example=1, required=true)
      */
     public $id;
 }

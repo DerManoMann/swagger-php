@@ -31,7 +31,7 @@ trait NameTrait
     /**
      * The name.
      */
-    #[OA\Property()]
+    #[OA\Property(required: true)]
     public $name;
 
 }
@@ -44,7 +44,7 @@ class Product implements ProductInterface
     /**
      * The id.
      *
-     * @OA\Property(format="int64", example=1, @OA\Attachable())
+     * @OA\Property(format="int64", example=1, required=true, @OA\Attachable())
      */
     public $id;
 }

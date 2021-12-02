@@ -21,7 +21,7 @@ interface ProductInterface
 
 }
 
-#[OA\Schema([])]
+#[OA\Schema(['required' => ['name']])]
 trait NameTrait
 {
     #[OA\Property(description: 'The name.')]
@@ -34,7 +34,7 @@ class Product implements ProductInterface
 {
     use NameTrait;
 
-    #[OA\Property(description: 'The id.', format: 'int64', example: 1)]
+    #[OA\Property(description: 'The id.', format: 'int64', example: 1, required: true)]
     public $id;
 }
 

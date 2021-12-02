@@ -51,6 +51,8 @@ paths:
 components:
   schemas:
     NameTrait:
+      required:
+        - name
       properties:
         name:
           description: 'The name.'
@@ -60,6 +62,8 @@ components:
       description: Product
       allOf:
         -
+          required:
+            - id
           properties:
             id:
               description: 'The id.'

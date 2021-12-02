@@ -383,6 +383,27 @@ abstract class AbstractSchema extends AbstractAnnotation
 
         return parent::validate($parents, $skip, $ref);
     }
+
+    /** @inheritdoc */
+    #[\ReturnTypeWillChange]
+    public function jsonSerialize()
+    {
+        if (is_array($this->properties)) {
+            foreach ($this->properties as $property) {
+                if ($property->required !== Generator::UNDEFINED && $property->required) {
+                    $this->required = is_array($this->required) ? $this->required : [];
+                    $this->required[] = $property->property;
+                }
+            }
+            if (is_array($this->required)) {
+                $this->required = array_unique($this->required);
+            }
+        }
+
+        $json = parent::jsonSerialize();
+
+        return $json;
+    }
 }
 
 if (\PHP_VERSION_ID >= 80100) {

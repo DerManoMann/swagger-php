@@ -3,7 +3,7 @@
 namespace OpenApi\Examples\PetstoreSwaggerIo;
 
 /**
- * @OA\Schema(required={"name", "photoUrls"}, @OA\Xml(name="Pet"))
+ * @OA\Schema(@OA\Xml(name="Pet"))
  */
 class Pet
 {
@@ -15,7 +15,7 @@ class Pet
     public $id;
 
     /**
-     * @OA\Property(example="doggie")
+     * @OA\Property(required=true, example="doggie")
      * @var string
      */
     public $name;
@@ -28,7 +28,7 @@ class Pet
 
     /**
      * @var string[]
-     * @OA\Property(@OA\Xml(name="photoUrl", wrapped=true))
+     * @OA\Property(required=true, @OA\Xml(name="photoUrl", wrapped=true))
      */
     public $photoUrls;
 
