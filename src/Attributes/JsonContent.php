@@ -15,6 +15,7 @@ class JsonContent extends \OpenApi\Annotations\JsonContent
      * @param array<string,Examples>                    $examples
      * @param string[]                                  $required
      * @param Property[]                                $properties
+     * @param string|array<string>|null                 $type
      * @param int|float                                 $maximum
      * @param int|float                                 $minimum
      * @param string[]|int[]|float[]                    $enum
@@ -33,7 +34,7 @@ class JsonContent extends \OpenApi\Annotations\JsonContent
         ?string $description = null,
         ?array $required = null,
         ?array $properties = null,
-        ?string $type = null,
+        string|array|null $type = null,
         ?string $format = null,
         ?Items $items = null,
         ?string $collectionFormat = null,

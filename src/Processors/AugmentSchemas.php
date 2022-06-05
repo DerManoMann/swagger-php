@@ -107,7 +107,7 @@ class AugmentSchemas
                     $schema->type = 'object';
                 }
             } else {
-                if ($typeSchema = $analysis->getSchemaForSource($schema->type)) {
+                if (is_string($schema->type) && $typeSchema = $analysis->getSchemaForSource($schema->type)) {
                     if (Generator::isDefault($schema->format)) {
                         $schema->ref = Components::ref($typeSchema);
                         $schema->type = Generator::UNDEFINED;

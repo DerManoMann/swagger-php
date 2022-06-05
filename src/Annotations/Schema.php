@@ -86,7 +86,7 @@ class Schema extends AbstractAnnotation
      * The type of the schema/property. The value MUST be one of "string", "number", "integer", "boolean", "array" or
      * "object".
      *
-     * @var string
+     * @var string|array<string>
      */
     public $type = Generator::UNDEFINED;
 

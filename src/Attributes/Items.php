@@ -14,6 +14,7 @@ class Items extends \OpenApi\Annotations\Items
     /**
      * @param string[]                                  $required
      * @param Property[]                                $properties
+     * @param string|array<string>|null                 $type
      * @param int|float                                 $maximum
      * @param int|float                                 $minimum
      * @param string[]|int[]|float[]                    $enum
@@ -31,7 +32,7 @@ class Items extends \OpenApi\Annotations\Items
         ?string $description = null,
         ?array $required = null,
         ?array $properties = null,
-        ?string $type = null,
+        string|array|null $type = null,
         ?string $format = null,
         ?Items $items = null,
         ?string $collectionFormat = null,

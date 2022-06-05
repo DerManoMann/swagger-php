@@ -14,6 +14,7 @@ class XmlContent extends \OpenApi\Annotations\XmlContent
     /**
      * @param array<string,Examples>                    $examples
      * @param string[]                                  $required
+     * @param string|array<string>|null                 $type
      * @param int|float                                 $maximum
      * @param int|float                                 $minimum
      * @param Property[]                                $properties
@@ -33,7 +34,7 @@ class XmlContent extends \OpenApi\Annotations\XmlContent
         ?string $description = null,
         ?array $required = null,
         ?array $properties = null,
-        ?string $type = null,
+        string|array|null $type = null,
         ?string $format = null,
         ?Items $items = null,
         ?string $collectionFormat = null,
