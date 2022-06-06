@@ -50,7 +50,7 @@ class ExpandEnums
 
                     return $case->name;
                 }, $re->getCases());
-                Util::mapNativeType($schema, $type);
+                Util::mapSchemaNativeType($schema, $type);
             }
         }
     }

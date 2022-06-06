@@ -102,7 +102,7 @@ class Product implements ProductInterface
     use NameTrait;
 
     /** @OA\Property */
-    public int $quantity;
+    public int|float $quantity;
 
     /** @OA\Property(nullable=true, default=null, example=null) */
     public string $brand;

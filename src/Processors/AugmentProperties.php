@@ -54,7 +54,7 @@ class AugmentProperties
             if (Generator::isDefault($property->type)) {
                 $this->augmentType($analysis, $property, $context, $refs, $varMatches);
             } else {
-                Util::mapNativeType($property, $property->type);
+                Util::mapSchemaNativeType($property, $property->type);
             }
 
             if (Generator::isDefault($property->description) && isset($varMatches['description'])) {
@@ -92,7 +92,7 @@ class AugmentProperties
             $type = $typeMatches[1];
 
             // finalise property type/ref
-            if (!Util::mapNativeType($property, $type)) {
+            if (!Util::mapSchemaNativeType($property, $type)) {
                 $refKey = $this->toRefKey($context, $type);
                 if (Generator::isDefault($property->ref) && array_key_exists($refKey, $refs)) {
                     $property->ref = $refs[$refKey];
@@ -136,7 +136,7 @@ class AugmentProperties
                 $property->nullable = true;
             }
             $type = strtolower($context->type);
-            if (!Util::mapNativeType($property, $type)) {
+            if (!Util::mapSchemaNativeType($property, $type)) {
                 $refKey = $this->toRefKey($context, $type);
                 if (Generator::isDefault($property->ref) && array_key_exists($refKey, $refs)) {
                     $this->applyRef($analysis, $property, $refs[$refKey]);
@@ -152,7 +152,7 @@ class AugmentProperties
         }
 
         if (!Generator::isDefault($property->const) && Generator::isDefault($property->type)) {
-            if (!Util::mapNativeType($property, gettype($property->const))) {
+            if (!Util::mapSchemaNativeType($property, gettype($property->const))) {
                 $property->type = Generator::UNDEFINED;
             }
         }

@@ -29,7 +29,7 @@ paths:
           description: 'the product id'
           required: false
           schema:
-            type: int
+            type: integer
       responses:
         '200':
           description: 'successful operation'
@@ -136,7 +136,9 @@ components:
         -
           properties:
             quantity:
-              type: integer
+              type:
+                - float
+                - integer
             brand:
               type:
                 - string
@@ -145,12 +147,12 @@ components:
               example: null
             colour:
               $ref: '#/components/schemas/Colour'
+            releasedAt:
+              type: string
             id:
               description: 'The id.'
               format: int64
               example: 1
-            releasedAt:
-              type: string
             kind:
               description: 'The kind.'
               type: string

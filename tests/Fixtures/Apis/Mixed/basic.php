@@ -103,7 +103,7 @@ class Product implements ProductInterface
     public \DateTimeInterface $releasedAt;
 
     #[OAT\Property()]
-    public int $quantity;
+    public int|float $quantity;
 
     #[OAT\Property(nullable: true, default: null, example: null)]
     public string $brand;

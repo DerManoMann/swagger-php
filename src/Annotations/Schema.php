@@ -414,6 +414,11 @@ class Schema extends AbstractAnnotation
     {
         $data = parent::jsonSerialize();
 
+        if (isset($data->type) && is_string($data->type)) {
+            if (false !== strpos($data->type, '|')) {
+                $data->type = explode('|', $data->type);
+            }
+        }
         if (isset($data->const)) {
             if ($this->_context->isVersion(OpenApi::VERSION_3_0_0)) {
                 $data->enum = [$data->const];

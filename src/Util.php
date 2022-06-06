@@ -37,7 +37,7 @@ class Util
         'object' => 'object',
     ];
 
-    public static function mapNativeType(Schema $schema, string $type): bool
+    public static function mapSchemaNativeType(Schema $schema, string $type): bool
     {
         if (!array_key_exists($type, self::$NATIVE_TYPE_MAP)) {
             return false;
@@ -54,6 +54,22 @@ class Util
         $schema->type = $type;
 
         return true;
+    }
+
+    public static function mapNativeType(string $type): ?string
+    {
+        $unionTypes = [];
+
+        foreach (explode('|', $type) as $unionType) {
+            if (array_key_exists($unionType, self::$NATIVE_TYPE_MAP)) {
+                $typeDetails = self::$NATIVE_TYPE_MAP[$unionType];
+                $unionTypes[] = is_array($typeDetails) ? $typeDetails[1] : $typeDetails;
+            } else {
+                $unionTypes[] = $unionType;
+            }
+        }
+
+        return implode('|', $unionTypes);
     }
 
     /**

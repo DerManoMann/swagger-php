@@ -14,6 +14,7 @@ use OpenApi\Attributes\PathParameter;
 use OpenApi\Attributes\Property;
 use OpenApi\Context;
 use OpenApi\Generator;
+use OpenApi\Util;
 
 class AttributeAnnotationFactory implements AnnotationFactoryInterface
 {
@@ -59,8 +60,8 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
                     foreach ([Property::class, Parameter::class, PathParameter::class] as $attributeName) {
                         foreach ($rp->getAttributes($attributeName) as $attribute) {
                             $instance = $attribute->newInstance();
-                            $type = (($rnt = $rp->getType()) && $rnt instanceof \ReflectionNamedType) ? $rnt->getName() : Generator::UNDEFINED;
-                            $nullable = $rnt ? $rnt->allowsNull() : true;
+                            $type = Util::mapNativeType($this->typeForParameter($rp));
+                            $nullable = $rp->getType()?->allowsNull() ?? false;
 
                             if ($instance instanceof Property) {
                                 $instance->property = $rp->getName();
@@ -128,5 +129,35 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
         });
 
         return $annotations;
+    }
+
+    /**
+     * @return string|array<string>
+     */
+    protected function typeForParameter(\ReflectionParameter $parameter)
+    {
+        if (!$type = $parameter->getType()) {
+            return Generator::UNDEFINED;
+        }
+
+        if ($type instanceof \ReflectionNamedType) {
+            return $type->getName();
+        } elseif ($type instanceof \ReflectionUnionType) {
+            $unionTypes = [];
+            foreach ($type->getTypes() as $unionType) {
+                if ('null' != $unionType->getName()) {
+                    // null means default for most parameters
+                    $unionTypes[] = $unionType->getName();
+                }
+            }
+            if ($type->allowsNull()) {
+                $unionTypes[] = 'null';
+            }
+            sort($unionTypes);
+
+            return implode('|', $unionTypes);
+        }
+
+        return Generator::UNDEFINED;
     }
 }
