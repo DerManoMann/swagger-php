@@ -357,59 +357,43 @@ class Analysis
         if ($annotation instanceof AbstractAnnotation) {
             return $annotation->_context;
         }
+
         if ($this->annotations->contains($annotation) === false) {
             throw new \Exception('Annotation not found');
         }
+
         $context = $this->annotations[$annotation];
         if ($context instanceof Context) {
             return $context;
         }
-        // Weird, did you use the addAnnotation/addAnnotations methods?
+
         throw new \Exception('Annotation has no context');
     }
 
     /**
-     * Build an analysis with only the annotations that are merged into the OpenAPI annotation.
-     */
-    public function merged(): Analysis
-    {
-        if ($this->openapi === null) {
-            throw new \Exception('No openapi target set. Run the MergeIntoOpenApi processor');
-        }
-        $unmerged = $this->openapi->_unmerged;
-        $this->openapi->_unmerged = [];
-        $analysis = new Analysis([$this->openapi], $this->context);
-        $this->openapi->_unmerged = $unmerged;
-
-        return $analysis;
-    }
-
-    /**
-     * Analysis with only the annotations that not merged.
-     */
-    public function unmerged(): Analysis
-    {
-        return $this->split()->unmerged;
-    }
-
-    /**
-     * Split the annotation into two analysis.
-     * One with annotations that are merged and one with annotations that are not merged.
+     * Split this analysis two instances; one with merged and one with unmerged annotations.
      *
      * @return object {merged: Analysis, unmerged: Analysis}
      */
     public function split()
     {
-        $result = new \stdClass();
-        $result->merged = $this->merged();
-        $result->unmerged = new Analysis([], $this->context);
+        if ($this->openapi === null) {
+            throw new \Exception('No openapi target set. Run the MergeIntoOpenApi processor');
+        }
+
+        $_unmerged = $this->openapi->_unmerged;
+        $this->openapi->_unmerged = [];
+        $merged = new Analysis([$this->openapi], $this->context);
+        $this->openapi->_unmerged = $_unmerged;
+
+        $unmerged = new Analysis([], $this->context);
         foreach ($this->annotations as $annotation) {
-            if ($result->merged->annotations->contains($annotation) === false) {
-                $result->unmerged->annotations->attach($annotation, $this->annotations[$annotation]);
+            if ($merged->annotations->contains($annotation) === false) {
+                $unmerged->annotations->attach($annotation, $this->annotations[$annotation]);
             }
         }
 
-        return $result;
+        return (object) ['merged' => $merged, 'unmerged' => $unmerged];
     }
 
     /**

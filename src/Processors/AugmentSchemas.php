@@ -40,7 +40,7 @@ class AugmentSchemas
         }
 
         // Merge unmerged @OA\Property annotations into the @OA\Schema of the class
-        $unmergedProperties = $analysis->unmerged()->getAnnotationsOfType(Property::class);
+        $unmergedProperties = $analysis->split()->unmerged->getAnnotationsOfType(Property::class);
         foreach ($unmergedProperties as $property) {
             if ($property->_context->nested) {
                 continue;

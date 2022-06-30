@@ -32,6 +32,6 @@ class MergeIntoOpenApiTest extends OpenApiTestCase
 
         $this->assertSame($openapi, $analysis->openapi);
         $this->assertSame($info, $openapi->info);
-        $this->assertCount(0, $analysis->unmerged()->annotations);
+        $this->assertCount(0, $analysis->split()->unmerged->annotations);
     }
 }

@@ -31,6 +31,6 @@ class MergeIntoComponentsTest extends OpenApiTestCase
 
         $this->assertCount(1, $openapi->components->responses);
         $this->assertSame($response, $openapi->components->responses[0]);
-        $this->assertCount(0, $analysis->unmerged()->annotations);
+        $this->assertCount(0, $analysis->split()->unmerged->annotations);
     }
 }

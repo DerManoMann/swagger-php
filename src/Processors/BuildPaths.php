@@ -13,7 +13,7 @@ use OpenApi\Context;
 use OpenApi\Generator;
 
 /**
- * Build the openapi->paths using the detected `@OA\PathItem` and `@OA\Operation` (`@OA\Get`, `@OA\Post`, etc).
+ * Build the openapi->paths using the detected `OA\PathItem` and `OA\Operation`(s).
  */
 class BuildPaths
 {
@@ -35,7 +35,7 @@ class BuildPaths
         }
 
         /** @var Operation[] $operations */
-        $operations = $analysis->unmerged()->getAnnotationsOfType(Operation::class);
+        $operations = $analysis->split()->unmerged->getAnnotationsOfType(Operation::class);
 
         // Merge @OA\Operations into existing @OA\PathItems or create a new one.
         foreach ($operations as $operation) {
