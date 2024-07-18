@@ -66,8 +66,8 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
                             /** @var OA\Property|OA\Parameter|OA\RequestBody $instance */
                             $instance = $attribute->newInstance();
 
-                            $type = (($rnt = $rp->getType()) && $rnt instanceof \ReflectionNamedType) ? $rnt->getName() : Generator::UNDEFINED;
-                            $nullable = $rnt ? $rnt->allowsNull() : true;
+                            $type = (($rt = $rp->getType()) && $rt instanceof \ReflectionNamedType) ? $rt->getName() : Generator::UNDEFINED;
+                            $nullable = $rt ? $rt->allowsNull() : true;
 
                             if ($instance instanceof OA\RequestBody) {
                                 $instance->required = !$nullable;
@@ -98,6 +98,8 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
                                 $context->comment = null;
                                 $instance->merge([new OA\Schema(['type' => $type, '_context' => $context])]);
                             }
+
+                            $instance->_context->addType($rt);
                             $annotations[] = $instance;
                         }
                     }
