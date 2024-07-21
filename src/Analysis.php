@@ -18,7 +18,7 @@ use OpenApi\Processors\ProcessorInterface;
 class Analysis
 {
     /**
-     * @var \SplObjectStorage
+     * @var \SplObjectStorage<OA\AbstractAnnotation>
      */
     public $annotations;
 
