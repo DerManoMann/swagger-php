@@ -99,7 +99,7 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
                                 $instance->merge([new OA\Schema(['type' => $type, '_context' => $context])]);
                             }
 
-                            $instance->_context->addType($rt);
+                            $instance->_context->addType($rp);
                             $annotations[] = $instance;
                         }
                     }

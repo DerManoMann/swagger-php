@@ -152,7 +152,7 @@ class ReflectionAnalyser implements AnalyserInterface
                     $ctx->static = true;
                 }
                 if (\PHP_VERSION_ID >= 70400 && ($type = $property->getType())) {
-                    $ctx->addType($type);
+                    $ctx->addType($property);
                     $ctx->nullable = $type->allowsNull();
                     if ($type instanceof \ReflectionNamedType) {
                         $ctx->type = $type->getName();
@@ -177,7 +177,7 @@ class ReflectionAnalyser implements AnalyserInterface
                 ], $context);
                 foreach ($annotationFactory->build($constant, $ctx) as $annotation) {
                     if ($annotation instanceof OA\Property) {
-                        $annotation->_context->addType($constant);
+                        $annotation->_context->addType($rc);
                         if (Generator::isDefault($annotation->property)) {
                             $annotation->property = $constant->getName();
                         }
