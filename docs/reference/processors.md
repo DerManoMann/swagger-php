@@ -13,8 +13,8 @@ The `-c` option allows to specify a name/value pair with the name consisting
 of the processor name (starting lowercase) and  option name separated by a dot (`.`).
 
 ```shell
-> ./bin/openapi -c operatinId.hash=true // ...
-> ./bin/openapi -c pathFilter.tags[]=/pets/ -c pathFilter.tags[]=/store/ // ...
+> ./vendor/bin/openapi -c operatinId.hash=true // ...
+> ./vendor/bin/openapi -c pathFilter.tags[]=/pets/ -c pathFilter.tags[]=/store/ // ...
 ```
 
 ### Programmatically with PHP
@@ -157,5 +157,3 @@ Ensures that all tags used on operations also exist in the global <code>tags</co
   <dt><strong>default</strong> : <span style="font-family: monospace;">[]</span></dt>
   <dd><p>Whitelist tags to keep even if not used. <code>*</code> may be used to keep all unused.</p>  </dd>
 </dl>
-
-
