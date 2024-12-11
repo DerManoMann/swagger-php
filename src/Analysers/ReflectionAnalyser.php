@@ -24,6 +24,7 @@ use OpenApi\OpenApiException;
 class ReflectionAnalyser implements AnalyserInterface
 {
     use GeneratorAwareTrait;
+    use TypeResolverTrait;
 
     /** @var AnnotationFactoryInterface[] */
     protected array $annotationFactories = [];
@@ -134,6 +135,9 @@ class ReflectionAnalyser implements AnalyserInterface
                     'annotations' => [],
                     'reflector' => $method,
                 ], $context);
+
+                $this->resolveType($method, $ctx);
+
                 foreach ($this->annotationFactories as $annotationFactory) {
                     $analysis->addAnnotations($annotationFactory->build($method, $ctx), $ctx);
                 }
@@ -151,6 +155,9 @@ class ReflectionAnalyser implements AnalyserInterface
                 if ($property->isStatic()) {
                     $ctx->static = true;
                 }
+
+                $this->resolveType($property, $ctx);
+
                 if ($type = $property->getType()) {
                     $ctx->nullable = $type->allowsNull();
                     if ($type instanceof \ReflectionNamedType) {
@@ -175,6 +182,9 @@ class ReflectionAnalyser implements AnalyserInterface
                     'annotations' => [],
                     'reflector' => $constant,
                 ], $context);
+
+                $this->resolveType($constant, $ctx);
+
                 foreach ($annotationFactory->build($constant, $ctx) as $annotation) {
                     if ($annotation instanceof OA\Property) {
                         if (Generator::isDefault($annotation->property)) {

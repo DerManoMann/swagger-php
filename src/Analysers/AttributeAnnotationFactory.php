@@ -14,6 +14,7 @@ use OpenApi\GeneratorAwareTrait;
 class AttributeAnnotationFactory implements AnnotationFactoryInterface
 {
     use GeneratorAwareTrait;
+    use TypeResolverTrait;
 
     protected bool $ignoreOtherAttributes = false;
 
@@ -51,6 +52,7 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
             foreach ($reflector->getAttributes(...$attributeName) as $attribute) {
                 if (class_exists($attribute->getName())) {
                     $instance = $attribute->newInstance();
+
                     if ($instance instanceof OA\AbstractAnnotation) {
                         $annotations[] = $instance;
                     } else {
@@ -75,6 +77,8 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
 
                             $type = (($rnt = $rp->getType()) && $rnt instanceof \ReflectionNamedType) ? $rnt->getName() : Generator::UNDEFINED;
                             $nullable = $rnt ? $rnt->allowsNull() : true;
+
+                            $this->resolveType($rp, $context);
 
                             if ($instance instanceof OA\RequestBody) {
                                 $instance->required = !$nullable;
@@ -113,6 +117,7 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
                 }
 
                 if (($rrt = $reflector->getReturnType()) && $rrt instanceof \ReflectionNamedType) {
+                    $this->resolveType($reflector, $context);
                     foreach ($annotations as $annotation) {
                         if ($annotation instanceof OA\Property && Generator::isDefault($annotation->type)) {
                             // pick up simple return types
