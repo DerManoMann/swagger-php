@@ -8,17 +8,15 @@ namespace OpenApi\Tests\Fixtures\PHP;
 
 class DocblockAndTypehintTypes
 {
+    public $nothing;
+
     /**
-     * The first name.
-     *
      * @var string
      */
     public string $firstName;
 
     /**
-     * Optional second name.
-     *
-     * @var ?string
+     * @var string|null
      */
     public ?string $secondName;
 
@@ -43,37 +41,27 @@ class DocblockAndTypehintTypes
     public array|null $moreOptionalNames;
 
     /**
-     * A class type property.
-     *
      * @var DocblockAndTypehintTypes
      */
     public DocblockAndTypehintTypes $class;
 
     /**
-     * A nullable class type property.
-     *
-     * @var null|DocblockAndTypehintTypes
+     * @var DocblockAndTypehintTypes|null
      */
     public ?DocblockAndTypehintTypes $nullableClass;
 
     /**
-     * A namespaced global class type property.
-     *
      * @var \DateTime
      */
     public \DateTime $namespacedGlobalClass;
 
     /**
-     * A nullable namespaced global class type property.
-     *
      * @var \DateTime|null
      */
     public \DateTime|null $nullableNamespacedGlobalClass;
 
     /**
-     * Also a namespaced global class type property.
-     *
-     * @var null|\DateTime
+     * @var \DateTime|null
      */
     public null|\DateTime $alsoNullableNamespacedGlobalClass;
 
@@ -86,4 +74,25 @@ class DocblockAndTypehintTypes
      * @var positive-int The positive integer
      */
     public int $positiveInt;
+
+    /**
+     * @var array{foo: boolean}
+     */
+    public array $arrayShape;
+
+    /**
+     * @param string $promotedString
+     * @param bool $bool
+     */
+    public function __construct(protected string $promotedString, bool $bool = true)
+    {
+    }
+
+    /**
+     * @return string
+     */
+    public function getString(): string
+    {
+        return 'string';
+    }
 }
