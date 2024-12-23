@@ -6,25 +6,26 @@
 
 namespace OpenApi\Processors\Concerns;
 
-use OpenApi\Analysers\TokenScanner;
 use OpenApi\Annotations as OA;
-use OpenApi\Context;
 use OpenApi\Generator;
-use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocTagNode;
-use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocTagValueNode;
-use PHPStan\PhpDocParser\Ast\Type\ArrayShapeNode;
-use PHPStan\PhpDocParser\Ast\Type\ArrayTypeNode;
-use PHPStan\PhpDocParser\Ast\Type\GenericTypeNode;
-use PHPStan\PhpDocParser\Ast\Type\IdentifierTypeNode;
-use PHPStan\PhpDocParser\Ast\Type\NullableTypeNode;
-use PHPStan\PhpDocParser\Ast\Type\TypeNode;
-use PHPStan\PhpDocParser\Ast\Type\UnionTypeNode;
+use PHPStan\PhpDocParser\Ast\PhpDoc\ParamTagValueNode;
+use PHPStan\PhpDocParser\Ast\PhpDoc\ReturnTagValueNode;
+use PHPStan\PhpDocParser\Ast\PhpDoc\VarTagValueNode;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\ConstExprParser;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
 use PHPStan\PhpDocParser\Parser\TypeParser;
 use PHPStan\PhpDocParser\ParserConfig;
+use Symfony\Component\TypeInfo\Exception\UnsupportedException;
+use Symfony\Component\TypeInfo\Type;
+use Symfony\Component\TypeInfo\Type\BuiltinType;
+use Symfony\Component\TypeInfo\Type\CollectionType;
+use Symfony\Component\TypeInfo\Type\NullableType;
+use Symfony\Component\TypeInfo\Type\ObjectType;
+use Symfony\Component\TypeInfo\TypeContext\TypeContextFactory;
+use Symfony\Component\TypeInfo\TypeResolver\ReflectionTypeResolver;
+use Symfony\Component\TypeInfo\TypeResolver\StringTypeResolver;
 
 trait TypesTrait
 {
@@ -76,7 +77,7 @@ trait TypesTrait
         return is_array($mapped) ? $mapped[0] : $mapped;
     }
 
-    protected function getTypeDetailsFromDocblock(\Reflector $reflector, ?Context $context = null): \stdClass
+    protected function transformTypeResult(\Reflector $reflector, ?Type $resolved): \stdClass
     {
         $details = (object) [
             'types' => [],
@@ -85,158 +86,112 @@ trait TypesTrait
             'isArray' => null,
         ];
 
-        $docblockReflector = $reflector;
+        if (!$resolved) {
+            $details->nullable = true;
 
-        // promoted parameter - docblock is available via class/property
-        if ($reflector instanceof \ReflectionParameter && method_exists($reflector, 'isPromoted') && $reflector->isPromoted()) {
-            $docblockReflector = $reflector->getDeclaringClass()->getProperty($reflector->getName());
-        }
-
-        $docblock = $docblockReflector->getDocComment();
-
-        if (Generator::isDefault($docblock) || empty($docblock)) {
             return $details;
         }
 
-        $config = new ParserConfig([]);
-        $constExprParser = new ConstExprParser($config);
-        $phpDocParser = new PhpDocParser($config, new TypeParser($config, $constExprParser), $constExprParser);
+        $details->name = $reflector->getName();
 
-        $phpDocNode = $phpDocParser->parse(new TokenIterator((new Lexer($config))->tokenize($docblock)));
-
-        foreach (['var', 'param'] as $tag) {
-            foreach ($phpDocNode->getTagsByName("@$tag") as $tagLine) {
-                if ($tagLine instanceof PhpDocTagNode && $tagLine->value instanceof PhpDocTagValueNode) {
-                    if ($tagLine->value->type instanceof UnionTypeNode) {
-                        foreach ($tagLine->value->type->types as $type) {
-                            if ($type instanceof GenericTypeNode) {
-                                $genericTypes = array_map(fn (TypeNode $type) => trim($type->name), $type->genericTypes);
-                                $details->types = array_merge($details->types, $genericTypes);
-
-                                if ('array' === $type->type->name) {
-                                    $details->isArray = true;
-                                }
-                            } elseif ($type instanceof ArrayShapeNode) {
-                                $details->types[] = $type->kind;
-                            } else {
-                                $details->types[] = $type->name;
-                            }
-                        }
-                    } else {
-                        if ($tagLine->value->type instanceof ArrayTypeNode) {
-                            $valueType = $tagLine->value->type->type;
-                            $details->isArray = true;
-                            $details->types[] = $valueType->name;
-                        } else {
-                            if ($tagLine->value->type instanceof GenericTypeNode) {
-                                if ($tagLine->value->type->type instanceof IdentifierTypeNode) {
-                                    if ($tagLine->value->type->genericTypes) {
-                                          $genericTypes = array_map(fn (TypeNode $type) => trim($type->name), $tagLine->value->type->genericTypes);
-                                        $details->types = array_merge($details->types, $genericTypes);
-
-                                        if ('array' === $tagLine->value->type->type->name) {
-                                            $details->isArray = true;
-                                        }
-                                    } else {
-                                        $details->types[] = $tagLine->value->type->type->name;
-                                    }
-                                } else {
-                                    $genericTypes = array_map(fn (TypeNode $type) => trim($type->name), $tagLine->value->type->genericTypes);
-                                    $details->types = array_merge($details->types, $genericTypes);
-
-                                    if ('array' === $tagLine->value->type->type->name) {
-                                        $details->isArray = true;
-                                    }
-                                }
-                            } elseif ($tagLine->value->type instanceof ArrayShapeNode) {
-                                $details->types[] = $tagLine->value->type->kind;
-                            } elseif ($tagLine->value->type instanceof NullableTypeNode) {
-                                if ($tagLine->value->type->type instanceof GenericTypeNode) {
-                                    $genericTypes = array_map(fn (TypeNode $type) => trim($type->name), $tagLine->value->type->type->genericTypes);
-                                    $details->types = array_merge($details->types, $genericTypes);
-
-                                    if ('array' === $tagLine->value->type->type->type->name) {
-                                        $details->isArray = true;
-                                    }
-                                } else {
-                                    $details->types[] = $tagLine->value->type->type->name;
-                                }
-                                $details->nullable = true;
-                            } else {
-                                $details->types[] = $tagLine->value->type->name;
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
+        $details->nullable = $resolved instanceof NullableType;
+        if ($details->nullable) {
+            $resolved = $resolved->getWrappedType();
         }
 
-        if (in_array('null', $details->types)) {
-            $details->nullable = true;
-            $details->types = array_values(array_filter($details->types, fn ($item) => $item !== 'null'));
-        } else {
-            $details->nullable ??= false;
+        if ($resolved instanceof CollectionType) {
+            $details->isArray = true;
+            $resolved = $resolved->getCollectionValueType();
         }
 
-        // map FQCN if we can
-        if ($rc = $reflector->getDeclaringClass()) {
-            $fileDetails = $context
-                ? $context['scanned']
-                : (new TokenScanner())->scanFile($rc->getFileName())[$rc->getName()];
-
-            $resolve = function (string $type) use ($rc, $fileDetails) {
-                if (in_array($type, $fileDetails['uses'])) {
-                    return $fileDetails['uses'][$type];
-                }
-
-                if (!array_key_exists($type, self::$NATIVE_TYPE_MAP) && $rc->inNamespace()) {
-                    if ('\\' !== $type[0]) {
-                        return $rc->getNamespaceName() . '\\' . $type;
-                    } else {
-                        return ltrim($type, '\\');
-                    }
-                }
-
-                return $type;
-            };
-            $details->types = array_map($resolve, $details->types);
+        if ($resolved instanceof BuiltinType || $resolved instanceof ObjectType) {
+            $details->types[] = (string) $resolved;
         }
 
         return $details;
     }
 
-    protected function getTypeDetailsFromReflector(\Reflector $reflector): \stdClass
+    public function getTypeDetailsFromTypeInfoReflection(\Reflector $reflector): \stdClass
     {
-        $details = (object) [
-            'types' => [],
-            'name' => null,
-            'nullable' => null,
-            'isArray' => null,
-        ];
+        $subject = $reflector instanceof \ReflectionMethod
+            ? $reflector->getReturnType()
+            : $reflector->getType();
+        try {
+            $typeContext ??= (new TypeContextFactory())->createFromReflection($reflector);
+            $resolved = (new ReflectionTypeResolver())->resolve($subject, $typeContext);
+        } catch (UnsupportedException $exception) {
+            $resolved = null;
+        }
 
-        if ($reflector instanceof \ReflectionParameter || $reflector instanceof \ReflectionProperty) {
-            if ($rt = $reflector->getType()) {
-                $details->name = $reflector->getName();
-                $details->nullable = $rt->allowsNull();
+        return $this->transformTypeResult($reflector, $resolved);
+    }
 
-                if ($rt instanceof \ReflectionNamedType) {
-                    $details->types[] = $rt->getName();
-                } elseif ($rt instanceof \ReflectionUnionType) {
-                    foreach ($rt->getTypes() as $rut) {
-                        if ($rut instanceof \ReflectionNamedType) {
-                            $details->types[] = $rut->getName();
-                        }
-                    }
-                }
+    public function getTypeDetailsFromTypeInfoDocblock(\Reflector $reflector): \stdClass
+    {
+        switch (true) {
+            case $reflector instanceof \ReflectionProperty:
+                $docComment = (method_exists($reflector, 'isPromoted') && $reflector->isPromoted())
+                        && $reflector->getDeclaringClass() && $reflector->getDeclaringClass()->getConstructor()
+                    ? $reflector->getDeclaringClass()->getConstructor()->getDocComment()
+                    : $reflector->getDocComment();
+                break;
+            case $reflector instanceof \ReflectionParameter:
+                $docComment = $reflector->getDeclaringFunction()->getDocComment();
+                break;
+            case $reflector instanceof \ReflectionFunctionAbstract:
+                $docComment = $reflector->getDocComment();
+                break;
+            default:
+                $docComment = null;
+        }
+
+        if (!$docComment) {
+            return $this->transformTypeResult($reflector, null);
+        }
+
+        $typeContext ??= (new TypeContextFactory())->createFromReflection($reflector);
+
+        switch (true) {
+            case $reflector instanceof \ReflectionProperty:
+                $tagName = (method_exists($reflector, 'isPromoted') && $reflector->isPromoted())
+                    ? '@param'
+                    : '@var';
+                break;
+            case $reflector instanceof \ReflectionParameter:
+                $tagName = '@param';
+                break;
+            case $reflector instanceof \ReflectionFunctionAbstract:
+                $tagName = '@return';
+                break;
+            default:
+                $tagName = null;
+
+        }
+
+        $lexer = new Lexer(new ParserConfig([]));
+        $phpDocParser = new PhpDocParser(
+            $config = new ParserConfig([]),
+            new TypeParser($config, $constExprParser = new ConstExprParser($config)),
+            $constExprParser,
+        );
+
+        $tokens = new TokenIterator($lexer->tokenize($docComment));
+        $docNode = $phpDocParser->parse($tokens);
+
+        foreach ($docNode->getTagsByName($tagName) as $tag) {
+            $tagValue = $tag->value;
+
+            if (
+                $tagValue instanceof VarTagValueNode
+                || $tagValue instanceof ParamTagValueNode && $tagName && '$' . $reflector->getName() === $tagValue->parameterName
+                || $tagValue instanceof ReturnTagValueNode
+            ) {
+                $resolved = (new StringTypeResolver())->resolve((string) $tagValue, $typeContext);
+
+                return $this->transformTypeResult($reflector, $resolved);
             }
         }
 
-        if (1 == count($details->types) && in_array('array', $details->types, true)) {
-            $details->types = [];
-            $details->isArray = true;
-        }
-
-        return $details;
+        return $this->transformTypeResult($reflector, null);
     }
 }
