@@ -61,10 +61,10 @@
         "composer/package-versions-deprecated": "^1.11",
         "doctrine/annotations": "^2.0",
         "friendsofphp/php-cs-fixer": "^3.62.0",
-        "phpstan/phpstan": "^1.6",
+        "phpstan/phpstan": "^2",
         "phpunit/phpunit": "^9.0",
-        "rector/rector": "^1.0",
-        "vimeo/psalm": "^4.30"
+        "rector/rector": "^2",
+        "vimeo/psalm": "^5"
     },
     "conflict": {
         "symfony/process": ">=6, <6.4.14"
