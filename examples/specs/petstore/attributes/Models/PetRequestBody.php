@@ -4,9 +4,7 @@
  * @license Apache 2.0
  */
 
-namespace OpenApi\Examples\Specs\Petstore\Annotations\Models;
-
-use OpenApi\Annotations as OA;
+namespace OpenApi\Examples\Specs\Petstore\Attributes\Models;
 
 /**
  * @OA\RequestBody(

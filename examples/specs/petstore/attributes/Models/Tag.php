@@ -4,29 +4,27 @@
  * @license Apache 2.0
  */
 
-namespace OpenApi\Examples\Specs\Petstore\Annotations\Models;
-
-use OpenApi\Annotations as OA;
+namespace OpenApi\Examples\Specs\Petstore\Attributes\Models;
 
 /**
- * Pets Category.
+ * Tag.
  *
  * @author  Donii Sergii <doniysa@gmail.com>
  *
  * @OA\Schema(
- *     title="Pets Category.",
+ *     title="Tag",
  *     @OA\Xml(
- *         name="Category"
+ *         name="Tag"
  *     )
  * )
  */
-class Category
+class Tag
 {
     /**
      * @OA\Property(
-     *     title="ID",
-     *     description="ID",
      *     format="int64",
+     *     description="ID",
+     *     title="ID"
      * )
      *
      * @var int
@@ -35,8 +33,8 @@ class Category
 
     /**
      * @OA\Property(
-     *     title="Category name",
-     *     description="Category name"
+     *     description="Name",
+     *     title="Name"
      * )
      *
      * @var string
