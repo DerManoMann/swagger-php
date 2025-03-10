@@ -170,7 +170,7 @@ trait DocblockTrait
     }
 
     /**
-     * Extract property type and description from a <code>@var</code> dockblock line.
+     * Extract property type and description from a `@var` docblock line.
      *
      * @return array<string, ?string> extracted <code>type</code> and <code>description</code>; values default to <code>null</code>
      */

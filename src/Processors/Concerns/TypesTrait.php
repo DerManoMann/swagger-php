@@ -7,57 +7,21 @@
 namespace OpenApi\Processors\Concerns;
 
 use OpenApi\Annotations as OA;
+use OpenApi\Context;
 use OpenApi\Generator;
-use PHPStan\PhpDocParser\Ast\PhpDoc\ParamTagValueNode;
-use PHPStan\PhpDocParser\Ast\PhpDoc\ReturnTagValueNode;
-use PHPStan\PhpDocParser\Ast\PhpDoc\VarTagValueNode;
-use PHPStan\PhpDocParser\Lexer\Lexer;
-use PHPStan\PhpDocParser\Parser\ConstExprParser;
-use PHPStan\PhpDocParser\Parser\PhpDocParser;
-use PHPStan\PhpDocParser\Parser\TokenIterator;
-use PHPStan\PhpDocParser\Parser\TypeParser;
-use PHPStan\PhpDocParser\ParserConfig;
-use Symfony\Component\TypeInfo\Exception\UnsupportedException;
-use Symfony\Component\TypeInfo\Type;
-use Symfony\Component\TypeInfo\Type\BuiltinType;
-use Symfony\Component\TypeInfo\Type\CollectionType;
-use Symfony\Component\TypeInfo\Type\NullableType;
-use Symfony\Component\TypeInfo\Type\ObjectType;
-use Symfony\Component\TypeInfo\TypeContext\TypeContextFactory;
-use Symfony\Component\TypeInfo\TypeResolver\ReflectionTypeResolver;
-use Symfony\Component\TypeInfo\TypeResolver\StringTypeResolver;
+use OpenApi\Type\LegacyTypeResolver;
+use OpenApi\Type\TypeInfoTypeResolver;
+use OpenApi\TypeResolverInterface;
 
 trait TypesTrait
 {
-    protected static $NATIVE_TYPE_MAP = [
-        'array' => 'array',
-        'byte' => ['string', 'byte'],
-        'boolean' => 'boolean',
-        'bool' => 'boolean',
-        'int' => 'integer',
-        'integer' => 'integer',
-        'long' => ['integer', 'long'],
-        'float' => ['number', 'float'],
-        'double' => ['number', 'double'],
-        'string' => 'string',
-        'date' => ['string', 'date'],
-        'datetime' => ['string', 'date-time'],
-        '\\datetime' => ['string', 'date-time'],
-        'datetimeimmutable' => ['string', 'date-time'],
-        '\\datetimeimmutable' => ['string', 'date-time'],
-        'datetimeinterface' => ['string', 'date-time'],
-        '\\datetimeinterface' => ['string', 'date-time'],
-        'number' => 'number',
-        'object' => 'object',
-    ];
-
     public function mapNativeType(OA\Schema $schema, string $type): bool
     {
-        if (!array_key_exists($type, self::$NATIVE_TYPE_MAP)) {
+        if (!array_key_exists($type, TypeResolverInterface::NATIVE_TYPE_MAP)) {
             return false;
         }
 
-        $type = self::$NATIVE_TYPE_MAP[$type];
+        $type = TypeResolverInterface::NATIVE_TYPE_MAP[$type];
         if (is_array($type)) {
             if (Generator::isDefault($schema->format)) {
                 $schema->format = $type[1];
@@ -72,126 +36,25 @@ trait TypesTrait
 
     public function native2spec(string $type): string
     {
-        $mapped = array_key_exists($type, self::$NATIVE_TYPE_MAP) ? self::$NATIVE_TYPE_MAP[$type] : $type;
+        $mapped = array_key_exists($type, TypeResolverInterface::NATIVE_TYPE_MAP) ? TypeResolverInterface::NATIVE_TYPE_MAP[$type] : $type;
 
         return is_array($mapped) ? $mapped[0] : $mapped;
     }
 
-    protected function transformTypeResult(\Reflector $reflector, ?Type $resolved): \stdClass
+    public function getTypeResolver(?Context $context = null): TypeResolverInterface
     {
-        $details = (object) [
-            'types' => [],
-            'name' => null,
-            'nullable' => null,
-            'isArray' => null,
-        ];
-
-        if (!$resolved) {
-            $details->nullable = true;
-
-            return $details;
-        }
-
-        $details->name = $reflector->getName();
-
-        $details->nullable = $resolved instanceof NullableType;
-        if ($details->nullable) {
-            $resolved = $resolved->getWrappedType();
-        }
-
-        if ($resolved instanceof CollectionType) {
-            $details->isArray = true;
-            $resolved = $resolved->getCollectionValueType();
-        }
-
-        if ($resolved instanceof BuiltinType || $resolved instanceof ObjectType) {
-            $details->types[] = (string) $resolved;
-        }
-
-        return $details;
+        return class_exists('Radebatz\TypeInfoExtras\TypeResolver\StringTypeResolver')
+            ? new TypeInfoTypeResolver($context)
+            : new LegacyTypeResolver($context);
     }
 
-    public function getTypeDetailsFromTypeInfoReflection(\Reflector $reflector): \stdClass
+    public function getReflectionTypeDetails(\Reflector $reflector, ?Context $context = null): \stdClass
     {
-        $subject = $reflector instanceof \ReflectionMethod
-            ? $reflector->getReturnType()
-            : $reflector->getType();
-        try {
-            $typeContext ??= (new TypeContextFactory())->createFromReflection($reflector);
-            $resolved = (new ReflectionTypeResolver())->resolve($subject, $typeContext);
-        } catch (UnsupportedException $exception) {
-            $resolved = null;
-        }
-
-        return $this->transformTypeResult($reflector, $resolved);
+        return $this->getTypeResolver()->getReflectionTypeDetails($reflector, $context);
     }
 
-    public function getTypeDetailsFromTypeInfoDocblock(\Reflector $reflector): \stdClass
+    public function getDocblockTypeDetails(\Reflector $reflector, ?Context $context = null): \stdClass
     {
-        switch (true) {
-            case $reflector instanceof \ReflectionProperty:
-                $docComment = (method_exists($reflector, 'isPromoted') && $reflector->isPromoted())
-                        && $reflector->getDeclaringClass() && $reflector->getDeclaringClass()->getConstructor()
-                    ? $reflector->getDeclaringClass()->getConstructor()->getDocComment()
-                    : $reflector->getDocComment();
-                break;
-            case $reflector instanceof \ReflectionParameter:
-                $docComment = $reflector->getDeclaringFunction()->getDocComment();
-                break;
-            case $reflector instanceof \ReflectionFunctionAbstract:
-                $docComment = $reflector->getDocComment();
-                break;
-            default:
-                $docComment = null;
-        }
-
-        if (!$docComment) {
-            return $this->transformTypeResult($reflector, null);
-        }
-
-        $typeContext ??= (new TypeContextFactory())->createFromReflection($reflector);
-
-        switch (true) {
-            case $reflector instanceof \ReflectionProperty:
-                $tagName = (method_exists($reflector, 'isPromoted') && $reflector->isPromoted())
-                    ? '@param'
-                    : '@var';
-                break;
-            case $reflector instanceof \ReflectionParameter:
-                $tagName = '@param';
-                break;
-            case $reflector instanceof \ReflectionFunctionAbstract:
-                $tagName = '@return';
-                break;
-            default:
-                $tagName = null;
-
-        }
-
-        $lexer = new Lexer(new ParserConfig([]));
-        $phpDocParser = new PhpDocParser(
-            $config = new ParserConfig([]),
-            new TypeParser($config, $constExprParser = new ConstExprParser($config)),
-            $constExprParser,
-        );
-
-        $tokens = new TokenIterator($lexer->tokenize($docComment));
-        $docNode = $phpDocParser->parse($tokens);
-
-        foreach ($docNode->getTagsByName($tagName) as $tag) {
-            $tagValue = $tag->value;
-
-            if (
-                $tagValue instanceof VarTagValueNode
-                || $tagValue instanceof ParamTagValueNode && $tagName && '$' . $reflector->getName() === $tagValue->parameterName
-                || $tagValue instanceof ReturnTagValueNode
-            ) {
-                $resolved = (new StringTypeResolver())->resolve((string) $tagValue, $typeContext);
-
-                return $this->transformTypeResult($reflector, $resolved);
-            }
-        }
-
-        return $this->transformTypeResult($reflector, null);
+        return $this->getTypeResolver()->getDocblockTypeDetails($reflector, $context);
     }
 }
