@@ -17,6 +17,9 @@ use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPStan\PhpDocParser\Parser\TokenIterator;
 use PHPStan\PhpDocParser\Parser\TypeParser;
 use PHPStan\PhpDocParser\ParserConfig;
+use Radebatz\TypeInfoExtras\Type\ExplicitType;
+use Radebatz\TypeInfoExtras\Type\IntRangeType;
+use Radebatz\TypeInfoExtras\TypeResolver\StringTypeResolver;
 use Symfony\Component\TypeInfo\Exception\UnsupportedException;
 use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\Type\BuiltinType;
@@ -25,7 +28,6 @@ use Symfony\Component\TypeInfo\Type\NullableType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
 use Symfony\Component\TypeInfo\TypeContext\TypeContextFactory;
 use Symfony\Component\TypeInfo\TypeResolver\ReflectionTypeResolver;
-use Symfony\Component\TypeInfo\TypeResolver\StringTypeResolver;
 
 trait TypesTrait
 {
@@ -77,9 +79,10 @@ trait TypesTrait
         return is_array($mapped) ? $mapped[0] : $mapped;
     }
 
-    protected function transformTypeResult(\Reflector $reflector, ?Type $resolved): \stdClass
+    protected function normaliseTypeResult(\Reflector $reflector, ?Type $resolved): \stdClass
     {
         $details = (object) [
+            'explicitType' => null,
             'types' => [],
             'name' => null,
             'nullable' => null,
@@ -105,7 +108,17 @@ trait TypesTrait
         }
 
         if ($resolved instanceof BuiltinType || $resolved instanceof ObjectType) {
+            $details->explicitType = (string) $resolved;
             $details->types[] = (string) $resolved;
+        } elseif ($resolved instanceof IntRangeType) {
+            // use just `int` for custom `int<..>`
+            $details->explicitType = str_contains($resolved->getExplicitType(), '<')
+                ? $resolved->getTypeIdentifier()->value
+                : $resolved->getExplicitType();
+            $details->types[] = $resolved->getTypeIdentifier()->value;
+        } elseif ($resolved instanceof ExplicitType) {
+            $details->explicitType = $resolved->getExplicitType();
+            $details->types[] = $resolved->getTypeIdentifier()->value;
         }
 
         return $details;
@@ -123,7 +136,7 @@ trait TypesTrait
             $resolved = null;
         }
 
-        return $this->transformTypeResult($reflector, $resolved);
+        return $this->normaliseTypeResult($reflector, $resolved);
     }
 
     public function getTypeDetailsFromTypeInfoDocblock(\Reflector $reflector): \stdClass
@@ -131,7 +144,7 @@ trait TypesTrait
         switch (true) {
             case $reflector instanceof \ReflectionProperty:
                 $docComment = (method_exists($reflector, 'isPromoted') && $reflector->isPromoted())
-                        && $reflector->getDeclaringClass() && $reflector->getDeclaringClass()->getConstructor()
+                && $reflector->getDeclaringClass() && $reflector->getDeclaringClass()->getConstructor()
                     ? $reflector->getDeclaringClass()->getConstructor()->getDocComment()
                     : $reflector->getDocComment();
                 break;
@@ -146,7 +159,7 @@ trait TypesTrait
         }
 
         if (!$docComment) {
-            return $this->transformTypeResult($reflector, null);
+            return $this->normaliseTypeResult($reflector, null);
         }
 
         $typeContext ??= (new TypeContextFactory())->createFromReflection($reflector);
@@ -188,10 +201,10 @@ trait TypesTrait
             ) {
                 $resolved = (new StringTypeResolver())->resolve((string) $tagValue, $typeContext);
 
-                return $this->transformTypeResult($reflector, $resolved);
+                return $this->normaliseTypeResult($reflector, $resolved);
             }
         }
 
-        return $this->transformTypeResult($reflector, null);
+        return $this->normaliseTypeResult($reflector, null);
     }
 }

@@ -22,135 +22,135 @@ class TypesTraitTest extends OpenApiTestCase
         yield 'nothing' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nothing'),
             [
-                'reflection' => ['types' => [], 'name' => null, 'nullable' => true, 'isArray' => null],
-                'docblock' => ['types' => [], 'name' => null, 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => null, 'types' => [], 'name' => null, 'nullable' => true, 'isArray' => null],
+                'docblock' => ['explicitType' => null, 'types' => [], 'name' => null, 'nullable' => true, 'isArray' => null],
             ],
         ];
         yield 'string' => [
-            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'firstName'),
+            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'string'),
             [
-                'reflection' => ['types' => ['string'], 'name' => 'firstName', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['types' => ['string'], 'name' => 'firstName', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'string', 'nullable' => false, 'isArray' => null],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'string', 'nullable' => false, 'isArray' => null],
             ],
         ];
 
         yield '?string' => [
-            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'secondName'),
+            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nullableString'),
             [
-                'reflection' => ['types' => ['string'], 'name' => 'secondName', 'nullable' => true, 'isArray' => null],
-                'docblock' => ['types' => ['string'], 'name' => 'secondName', 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'nullableString', 'nullable' => true, 'isArray' => null],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'nullableString', 'nullable' => true, 'isArray' => null],
             ],
         ];
 
         yield 'string[]' => [
-            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'names'),
+            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'stringArray'),
             [
-                'reflection' => ['types' => ['mixed'], 'name' => 'names', 'nullable' => false, 'isArray' => true],
-                'docblock' => ['types' => ['string'], 'name' => 'names', 'nullable' => false, 'isArray' => true],
+                'reflection' => ['explicitType' => 'mixed', 'types' => ['mixed'], 'name' => 'stringArray', 'nullable' => false, 'isArray' => true],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'stringArray', 'nullable' => false, 'isArray' => true],
             ],
         ];
 
         yield 'array<string>' => [
-            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'moreNames'),
+            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'stringList'),
             [
-                'reflection' => ['types' => ['mixed'], 'name' => 'moreNames', 'nullable' => false, 'isArray' => true],
-                'docblock' => ['types' => ['string'], 'name' => 'moreNames', 'nullable' => false, 'isArray' => true],
+                'reflection' => ['explicitType' => 'mixed', 'types' => ['mixed'], 'name' => 'stringList', 'nullable' => false, 'isArray' => true],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'stringList', 'nullable' => false, 'isArray' => true],
             ],
         ];
 
         yield '?array<string>' => [
-            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'optionalNames'),
+            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nullableStringList'),
             [
-                'reflection' => ['types' => ['mixed'], 'name' => 'optionalNames', 'nullable' => true, 'isArray' => true],
-                'docblock' => ['types' => ['string'], 'name' => 'optionalNames', 'nullable' => true, 'isArray' => true],
+                'reflection' => ['explicitType' => 'mixed', 'types' => ['mixed'], 'name' => 'nullableStringList', 'nullable' => true, 'isArray' => true],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'nullableStringList', 'nullable' => true, 'isArray' => true],
             ],
         ];
 
         yield 'array<string>|null' => [
-            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'moreOptionalNames'),
+            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nullableStringListUnion'),
             [
-                'reflection' => ['types' => ['mixed'], 'name' => 'moreOptionalNames', 'nullable' => true, 'isArray' => true],
-                'docblock' => ['types' => ['string'], 'name' => 'moreOptionalNames', 'nullable' => true, 'isArray' => true],
+                'reflection' => ['explicitType' => 'mixed', 'types' => ['mixed'], 'name' => 'nullableStringListUnion', 'nullable' => true, 'isArray' => true],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'nullableStringListUnion', 'nullable' => true, 'isArray' => true],
             ],
         ];
 
         yield 'DocblockAndTypehintTypes' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'class'),
             [
-                'reflection' => ['types' => [DocblockAndTypehintTypes::class], 'name' => 'class', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['types' => [DocblockAndTypehintTypes::class], 'name' => 'class', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'class', 'nullable' => false, 'isArray' => null],
+                'docblock' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'class', 'nullable' => false, 'isArray' => null],
             ],
         ];
 
         yield '?DocblockAndTypehintTypes' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nullableClass'),
             [
-                'reflection' => ['types' => [DocblockAndTypehintTypes::class], 'name' => 'nullableClass', 'nullable' => true, 'isArray' => null],
-                'docblock' => ['types' => [DocblockAndTypehintTypes::class], 'name' => 'nullableClass', 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'nullableClass', 'nullable' => true, 'isArray' => null],
+                'docblock' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'nullableClass', 'nullable' => true, 'isArray' => null],
             ],
         ];
 
         yield '\\DateTime' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'namespacedGlobalClass'),
             [
-                'reflection' => ['types' => [\DateTime::class], 'name' => 'namespacedGlobalClass', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['types' => [\DateTime::class], 'name' => 'namespacedGlobalClass', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'namespacedGlobalClass', 'nullable' => false, 'isArray' => null],
+                'docblock' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'namespacedGlobalClass', 'nullable' => false, 'isArray' => null],
             ],
         ];
 
         yield '\\DateTime|null' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nullableNamespacedGlobalClass'),
             [
-                'reflection' => ['types' => [\DateTime::class], 'name' => 'nullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
-                'docblock' => ['types' => [\DateTime::class], 'name' => 'nullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'nullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
+                'docblock' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'nullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
             ],
         ];
 
         yield 'null|\\DateTime' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'alsoNullableNamespacedGlobalClass'),
             [
-                'reflection' => ['types' => [\DateTime::class], 'name' => 'alsoNullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
-                'docblock' => ['types' => [\DateTime::class], 'name' => 'alsoNullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'alsoNullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
+                'docblock' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'alsoNullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
             ],
         ];
 
         yield 'int<min,10>' => [
-            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'maxRangeInt'),
+            new \ReflectionProperty(DocblockAndTypehintTypes::class, 'intRange'),
             [
-                'reflection' => ['types' => ['int'], 'name' => 'maxRangeInt', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['types' => ['int'], 'name' => 'maxRangeInt', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'int', 'types' => ['int'], 'name' => 'intRange', 'nullable' => false, 'isArray' => null],
+                'docblock' => ['explicitType' => 'int', 'types' => ['int'], 'name' => 'intRange', 'nullable' => false, 'isArray' => null],
             ],
         ];
 
         yield 'positive-int' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'positiveInt'),
             [
-                'reflection' => ['types' => ['int'], 'name' => 'positiveInt', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['types' => ['int'], 'name' => 'positiveInt', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'int', 'types' => ['int'], 'name' => 'positiveInt', 'nullable' => false, 'isArray' => null],
+                'docblock' => ['explicitType' => 'positive-int', 'types' => ['int'], 'name' => 'positiveInt', 'nullable' => false, 'isArray' => null],
             ],
         ];
 
         yield 'array-shape' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'arrayShape'),
             [
-                'reflection' => ['types' => ['mixed'], 'name' => 'arrayShape', 'nullable' => false, 'isArray' => true],
-                'docblock' => ['types' => ['mixed'], 'name' => 'arrayShape', 'nullable' => false, 'isArray' => true],
+                'reflection' => ['explicitType' => 'mixed', 'types' => ['mixed'], 'name' => 'arrayShape', 'nullable' => false, 'isArray' => true],
+                'docblock' => ['explicitType' => 'mixed', 'types' => ['mixed'], 'name' => 'arrayShape', 'nullable' => false, 'isArray' => true],
             ],
         ];
 
         yield 'promoted-string' => [
             (new \ReflectionClass(DocblockAndTypehintTypes::class))->getConstructor()->getParameters()[0],
             [
-                'reflection' => ['types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => null],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => null],
             ],
         ];
 
         yield 'return-string' => [
             (new \ReflectionClass(DocblockAndTypehintTypes::class))->getMethod('getString'),
             [
-                'reflection' => ['types' => ['string'], 'name' => 'getString', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['types' => ['string'], 'name' => 'getString', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'getString', 'nullable' => false, 'isArray' => null],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'getString', 'nullable' => false, 'isArray' => null],
             ],
         ];
     }
