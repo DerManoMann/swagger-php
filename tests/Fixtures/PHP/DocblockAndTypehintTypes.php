@@ -6,39 +6,42 @@
 
 namespace OpenApi\Tests\Fixtures\PHP;
 
+use OpenApi\Attributes as OAT;
+
+#[OAT\Schema()]
 class DocblockAndTypehintTypes
 {
     public $nothing;
 
     /**
-     * @var string
+     * @var string $string
      */
-    public string $firstName;
+    public string $string;
 
     /**
      * @var string|null
      */
-    public ?string $secondName;
+    public ?string $nullableString;
 
     /**
      * @var string[]
      */
-    public array $names;
+    public array $stringArray;
 
     /**
      * @var array<string>
      */
-    public array $moreNames;
+    public array $stringList;
 
     /**
      * @var ?array<string>
      */
-    public ?array $optionalNames;
+    public ?array $nullableStringList;
 
     /**
      * @var array<string>|null
      */
-    public array|null $moreOptionalNames;
+    public array|null $nullableStringListUnion;
 
     /**
      * @var DocblockAndTypehintTypes
@@ -66,9 +69,9 @@ class DocblockAndTypehintTypes
     public null|\DateTime $alsoNullableNamespacedGlobalClass;
 
     /**
-     * @var int<min,10> The maximum range integer
+     * @var int<min,10> An int range
      */
-    public int $maxRangeInt;
+    public int $intRange;
 
     /**
      * @var positive-int The positive integer

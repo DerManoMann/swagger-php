@@ -170,7 +170,7 @@ trait DocblockTrait
     }
 
     /**
-     * Extract property type and description from a `@var` dockblock line.
+     * Extract property type and description from a `@var` docblock line.
      *
      * @return array<string, ?string> extracted `type` and `description`; values default to `null`
      */
@@ -187,7 +187,7 @@ trait DocblockTrait
     }
 
     /**
-     * Extract example text from a `@example` dockblock line.
+     * Extract example text from a `@example` docblock line.
      */
     public function extractExampleDescription(?string $docblock): ?string
     {
