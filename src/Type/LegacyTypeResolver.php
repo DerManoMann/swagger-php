@@ -11,17 +11,10 @@ use ReflectionProperty;
 
 class LegacyTypeResolver
 {
-//        $details = (object) [
-//            'explicitType' => null,
-//            'types' => [],
-//            'name' => null,
-//            'nullable' => null,
-//            'isArray' => null,
-//        ];
 
-    protected function normaliseTypeResult(array $types = [], ?string $name = null, ?bool $nullable = null, ?bool $isArray = null): stdClass
+    protected function normaliseTypeResult(?string $explicitType = null, array $types = [], ?string $name = null, ?bool $nullable = null, ?bool $isArray = null): stdClass
     {
-        $explicitType = $types ? $types[0] : null;
+        $explicitType = $explicitType ?: ($types ? $types[0] : null);
 
         return (object)[
             'explicitType' => $explicitType,
@@ -88,12 +81,13 @@ class LegacyTypeResolver
         $docComment = preg_replace('/\*\/[ \t]*$/', '', $docComment); // strip '*/'
         preg_match("/$tagName\s+(?<type>[^\s]+)([ \t])?(?<description>.+)?$/im", $docComment, $matches);
 
+        $explicitType = null;
         $type = $matches['type'];
         $nullable = in_array('null', explode('|', strtolower($type))) || str_contains($type, '?');
         $isArray = str_contains($type, '[]') || str_contains($type, 'array');
         $type = str_replace(['|null', 'null|', '?', 'null', '[]'], '', $type);
 
-
+        // typed array
         $result = preg_match("/([^<]+)<([^>]+)>/", $type, $matches);
         if ($result) {
             if (!$isArray) {
@@ -103,8 +97,27 @@ class LegacyTypeResolver
             }
         }
 
+        // partial array shape
+        $result = preg_match("/([^{]+){([^}]+)/", $type, $matches);
+        if ($result) {
+            $type = 'mixed';
+        }
+
+        // special types
+        switch ($type) {
+            case 'positive-int':
+            case 'negative-int':
+            case 'non-positive-int':
+            case 'non-negative-int':
+            case 'non-zero-int':
+                $explicitType = $type;
+                $type = 'int';
+                break;
+        }
+
+        // cheat
         $name = $reflector->getName();
 
-        return $this->normaliseTypeResult([$type], $name, $nullable, $isArray);
+        return $this->normaliseTypeResult($explicitType, [$type], $name, $nullable, $isArray);
     }
 }
