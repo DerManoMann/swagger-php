@@ -158,16 +158,16 @@ class TypesTraitTest extends OpenApiTestCase
     /**
      * @dataProvider propertyCases
      */
-    public function testGetTypeDetailsFromTypeInfoReflection(\Reflector $reflector, array $expected): void
+    public function testGetReflectionTypeDetails(\Reflector $reflector, array $expected): void
     {
-        $this->assertEquals((object) $expected['reflection'], $this->getTypeDetailsFromTypeInfoReflection($reflector));
+        $this->assertEquals((object) $expected['reflection'], $this->getReflectionTypeDetails($reflector));
     }
 
     /**
      * @dataProvider propertyCases
      */
-    public function testGetTypeDetailsFromTypeInfoDocblock(\Reflector $reflector, array $expected): void
+    public function testGetDockblockTypeDetails(\Reflector $reflector, array $expected): void
     {
-        $this->assertEquals((object) $expected['docblock'], $this->getTypeDetailsFromTypeInfoDocblock($reflector));
+        $this->assertEquals((object) $expected['docblock'], $this->getDockblockTypeDetails($reflector));
     }
 }
