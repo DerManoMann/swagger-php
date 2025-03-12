@@ -115,6 +115,9 @@ class LegacyTypeResolver
                 break;
         }
 
+        $type = ltrim($type, '\\');
+
+
         // cheat
         $name = $reflector->getName();
 
