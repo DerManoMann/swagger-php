@@ -11,7 +11,7 @@ class DocblockAndTypehintTypes
     public $nothing;
 
     /**
-     * @var string
+     * @var string $string
      */
     public string $string;
 

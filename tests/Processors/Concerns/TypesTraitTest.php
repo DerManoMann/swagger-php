@@ -22,23 +22,23 @@ class TypesTraitTest extends OpenApiTestCase
         yield 'nothing' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nothing'),
             [
-                'reflection' => ['explicitType' => null, 'types' => [], 'name' => null, 'nullable' => true, 'isArray' => null],
-                'docblock' => ['explicitType' => null, 'types' => [], 'name' => null, 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => null, 'types' => [], 'name' => null, 'nullable' => true, 'isArray' => false],
+                'docblock' => ['explicitType' => null, 'types' => [], 'name' => null, 'nullable' => true, 'isArray' => false],
             ],
         ];
         yield 'string' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'string'),
             [
-                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'string', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'string', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'string', 'nullable' => false, 'isArray' => false],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'string', 'nullable' => false, 'isArray' => false],
             ],
         ];
 
         yield '?string' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nullableString'),
             [
-                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'nullableString', 'nullable' => true, 'isArray' => null],
-                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'nullableString', 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'nullableString', 'nullable' => true, 'isArray' => false],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'nullableString', 'nullable' => true, 'isArray' => false],
             ],
         ];
 
@@ -77,56 +77,56 @@ class TypesTraitTest extends OpenApiTestCase
         yield 'DocblockAndTypehintTypes' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'class'),
             [
-                'reflection' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'class', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'class', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'class', 'nullable' => false, 'isArray' => false],
+                'docblock' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'class', 'nullable' => false, 'isArray' => false],
             ],
         ];
 
         yield '?DocblockAndTypehintTypes' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nullableClass'),
             [
-                'reflection' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'nullableClass', 'nullable' => true, 'isArray' => null],
-                'docblock' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'nullableClass', 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'nullableClass', 'nullable' => true, 'isArray' => false],
+                'docblock' => ['explicitType' => DocblockAndTypehintTypes::class, 'types' => [DocblockAndTypehintTypes::class], 'name' => 'nullableClass', 'nullable' => true, 'isArray' => false],
             ],
         ];
 
         yield '\\DateTime' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'namespacedGlobalClass'),
             [
-                'reflection' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'namespacedGlobalClass', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'namespacedGlobalClass', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'namespacedGlobalClass', 'nullable' => false, 'isArray' => false],
+                'docblock' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'namespacedGlobalClass', 'nullable' => false, 'isArray' => false],
             ],
         ];
 
         yield '\\DateTime|null' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'nullableNamespacedGlobalClass'),
             [
-                'reflection' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'nullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
-                'docblock' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'nullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'nullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => false],
+                'docblock' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'nullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => false],
             ],
         ];
 
         yield 'null|\\DateTime' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'alsoNullableNamespacedGlobalClass'),
             [
-                'reflection' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'alsoNullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
-                'docblock' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'alsoNullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => null],
+                'reflection' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'alsoNullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => false],
+                'docblock' => ['explicitType' => \DateTime::class, 'types' => [\DateTime::class], 'name' => 'alsoNullableNamespacedGlobalClass', 'nullable' => true, 'isArray' => false],
             ],
         ];
 
         yield 'int<min,10>' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'intRange'),
             [
-                'reflection' => ['explicitType' => 'int', 'types' => ['int'], 'name' => 'intRange', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['explicitType' => 'int', 'types' => ['int'], 'name' => 'intRange', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'int', 'types' => ['int'], 'name' => 'intRange', 'nullable' => false, 'isArray' => false],
+                'docblock' => ['explicitType' => 'int', 'types' => ['int'], 'name' => 'intRange', 'nullable' => false, 'isArray' => false],
             ],
         ];
 
         yield 'positive-int' => [
             new \ReflectionProperty(DocblockAndTypehintTypes::class, 'positiveInt'),
             [
-                'reflection' => ['explicitType' => 'int', 'types' => ['int'], 'name' => 'positiveInt', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['explicitType' => 'positive-int', 'types' => ['int'], 'name' => 'positiveInt', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'int', 'types' => ['int'], 'name' => 'positiveInt', 'nullable' => false, 'isArray' => false],
+                'docblock' => ['explicitType' => 'positive-int', 'types' => ['int'], 'name' => 'positiveInt', 'nullable' => false, 'isArray' => false],
             ],
         ];
 
@@ -141,16 +141,16 @@ class TypesTraitTest extends OpenApiTestCase
         yield 'promoted-string' => [
             (new \ReflectionClass(DocblockAndTypehintTypes::class))->getConstructor()->getParameters()[0],
             [
-                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => false],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => false],
             ],
         ];
 
         yield 'return-string' => [
             (new \ReflectionClass(DocblockAndTypehintTypes::class))->getMethod('getString'),
             [
-                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'getString', 'nullable' => false, 'isArray' => null],
-                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'getString', 'nullable' => false, 'isArray' => null],
+                'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'getString', 'nullable' => false, 'isArray' => false],
+                'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'getString', 'nullable' => false, 'isArray' => false],
             ],
         ];
     }
