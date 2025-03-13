@@ -6,7 +6,6 @@
 
 namespace OpenApi\Type;
 
-use OpenApi\Context;
 use OpenApi\TypeResolverInterface;
 use PHPStan\PhpDocParser\Ast\PhpDoc\ParamTagValueNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\ReturnTagValueNode;
@@ -26,18 +25,12 @@ use Symfony\Component\TypeInfo\Type\BuiltinType;
 use Symfony\Component\TypeInfo\Type\CollectionType;
 use Symfony\Component\TypeInfo\Type\NullableType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
+use Symfony\Component\TypeInfo\Type\UnionType;
 use Symfony\Component\TypeInfo\TypeContext\TypeContextFactory;
 use Symfony\Component\TypeInfo\TypeResolver\ReflectionTypeResolver;
 
 class TypeInfoTypeResolver implements TypeResolverInterface
 {
-    protected ?Context $context;
-
-    public function __construct(?Context $context = null)
-    {
-        $this->context = $context;
-    }
-
     protected function normaliseTypeResult(\Reflector $reflector, ?Type $resolved): \stdClass
     {
         $details = (object) [
@@ -54,29 +47,36 @@ class TypeInfoTypeResolver implements TypeResolverInterface
             return $details;
         }
 
-        $details->nullable = $resolved instanceof NullableType;
-        if ($details->nullable) {
-            $resolved = $resolved->getWrappedType();
+        $fromType = function (Type $type, $details) {
+            if ($type instanceof BuiltinType || $type instanceof ObjectType) {
+                $details->types[] = (string) $type;
+            } elseif ($type instanceof CollectionType) {
+                $details->isArray = true;
+                $details->types[] = $type->getCollectionValueType();
+            } elseif ($type instanceof IntRangeType) {
+                // use just `int` for custom `int<..>`
+                $details->explicitType = str_contains($type->getExplicitType(), '<')
+                    ? $type->getTypeIdentifier()->value
+                    : $type->getExplicitType();
+                $details->types[] = $type->getTypeIdentifier()->value;
+            } elseif ($type instanceof ExplicitType) {
+                $details->explicitType = $type->getExplicitType();
+                $details->types[] = $type->getTypeIdentifier()->value;
+            }
+        };
+
+        if ($resolved instanceof NullableType) {
+            $details->nullable = true;
+            $fromType($resolved->getWrappedType(), $details);
+        } elseif ($resolved instanceof UnionType) {
+            foreach ($resolved->getTypes() as $utype) {
+                $fromType($utype, $details);
+            }
+        } else {
+            $fromType($resolved, $details);
         }
 
-        if ($resolved instanceof CollectionType) {
-            $details->isArray = true;
-            $resolved = $resolved->getCollectionValueType();
-        }
-
-        if ($resolved instanceof BuiltinType || $resolved instanceof ObjectType) {
-            $details->explicitType = (string) $resolved;
-            $details->types[] = (string) $resolved;
-        } elseif ($resolved instanceof IntRangeType) {
-            // use just `int` for custom `int<..>`
-            $details->explicitType = str_contains($resolved->getExplicitType(), '<')
-                ? $resolved->getTypeIdentifier()->value
-                : $resolved->getExplicitType();
-            $details->types[] = $resolved->getTypeIdentifier()->value;
-        } elseif ($resolved instanceof ExplicitType) {
-            $details->explicitType = $resolved->getExplicitType();
-            $details->types[] = $resolved->getTypeIdentifier()->value;
-        }
+        $details->explicitType = $details->explicitType ?: ($details->types ? $details->types[0] : null);
 
         return $details;
     }
@@ -87,7 +87,7 @@ class TypeInfoTypeResolver implements TypeResolverInterface
             ? $reflector->getReturnType()
             : $reflector->getType();
         try {
-            $typeContext ??= (new TypeContextFactory())->createFromReflection($reflector);
+            $typeContext = (new TypeContextFactory())->createFromReflection($reflector);
             $resolved = (new ReflectionTypeResolver())->resolve($subject, $typeContext);
         } catch (UnsupportedException $exception) {
             $resolved = null;
@@ -119,7 +119,7 @@ class TypeInfoTypeResolver implements TypeResolverInterface
             return $this->normaliseTypeResult($reflector, null);
         }
 
-        $typeContext ??= (new TypeContextFactory())->createFromReflection($reflector);
+        $typeContext = (new TypeContextFactory())->createFromReflection($reflector);
 
         switch (true) {
             case $reflector instanceof \ReflectionProperty:
@@ -155,9 +155,13 @@ class TypeInfoTypeResolver implements TypeResolverInterface
                 || $tagValue instanceof ParamTagValueNode && $tagName && '$' . $reflector->getName() === $tagValue->parameterName
                 || $tagValue instanceof ReturnTagValueNode
             ) {
-                $resolved = (new StringTypeResolver())->resolve((string) $tagValue, $typeContext);
+                try {
+                    $resolved = (new StringTypeResolver())->resolve((string) $tagValue, $typeContext);
 
-                return $this->normaliseTypeResult($reflector, $resolved);
+                    return $this->normaliseTypeResult($reflector, $resolved);
+                } catch (UnsupportedException $e) {
+                    // ignore
+                }
             }
         }
 

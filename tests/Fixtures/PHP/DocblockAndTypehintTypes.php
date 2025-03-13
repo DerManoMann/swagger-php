@@ -84,10 +84,20 @@ class DocblockAndTypehintTypes
     public array $arrayShape;
 
     /**
+     * @var int|string
+     */
+    public int|string $unionType;
+
+    /**
+     * @param OAT\Tag $tag
      * @param string $promotedString
      * @param bool $bool
      */
-    public function __construct(protected string $promotedString, bool $bool = true)
+    public function __construct(
+        private OAT\Tag $tag,
+        protected string $promotedString,
+        bool $bool = true
+    )
     {
     }
 
