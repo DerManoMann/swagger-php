@@ -43,11 +43,20 @@ class LegacyTypeResolver implements TypeResolverInterface
 
     public function getReflectionTypeDetails(\Reflector $reflector): \stdClass
     {
-        $subject = $reflector instanceof \ReflectionMethod
+        $rtype = $reflector instanceof \ReflectionMethod
             ? $reflector->getReturnType()
             : $reflector->getType();
 
-        return $this->normaliseTypeResult();
+        $isArray = false;
+        $type = $rtype ? $rtype->getName() : null;
+        if ('array' === $type) {
+            $type = 'mixed';
+            $isArray = true;
+        }
+        $name = $reflector->getName();
+        $nullable = $rtype ? $rtype->allowsNull() : true;
+
+        return $this->normaliseTypeResult($type, $type ? [$type] : [], $name, $nullable, $isArray);
     }
 
     public function getDocblockTypeDetails(\Reflector $reflector): \stdClass

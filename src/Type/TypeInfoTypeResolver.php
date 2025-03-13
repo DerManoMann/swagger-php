@@ -43,7 +43,7 @@ class TypeInfoTypeResolver implements TypeResolverInterface
         $details = (object) [
             'explicitType' => null,
             'types' => [],
-            'name' => null,
+            'name' => $reflector->getName(),
             'nullable' => false,
             'isArray' => false,
         ];
@@ -53,8 +53,6 @@ class TypeInfoTypeResolver implements TypeResolverInterface
 
             return $details;
         }
-
-        $details->name = $reflector->getName();
 
         $details->nullable = $resolved instanceof NullableType;
         if ($details->nullable) {

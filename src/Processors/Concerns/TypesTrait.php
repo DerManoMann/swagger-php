@@ -43,7 +43,7 @@ trait TypesTrait
 
     public function getTypeResolver(?Context $context = null): TypeResolverInterface
     {
-        return class_exists('Radebatz\TypeInfoExtras\TypeResolver\StringTypeResolver') && false
+        return class_exists('Radebatz\TypeInfoExtras\TypeResolver\StringTypeResolver')
             ? new TypeInfoTypeResolver($context)
             : new LegacyTypeResolver($context);
     }
