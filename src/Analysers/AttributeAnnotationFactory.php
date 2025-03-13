@@ -14,6 +14,7 @@ use OpenApi\GeneratorAwareTrait;
 class AttributeAnnotationFactory implements AnnotationFactoryInterface
 {
     use GeneratorAwareTrait;
+    use TypeResolverTrait;
 
     protected bool $ignoreOtherAttributes = false;
 

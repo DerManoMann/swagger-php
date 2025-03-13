@@ -22,6 +22,8 @@ class TypeResolverTest extends OpenApiTestCase
 {
     public static function resolverPropertyCases(): iterable
     {
+        $context = null;
+
         $rc = new \ReflectionClass(DocblockAndTypehintTypes::class);
         $analysis = (new Generator())
             ->withContext(function (Generator $generator, Analysis $analysis, Context $context) use ($rc) {
@@ -35,7 +37,7 @@ class TypeResolverTest extends OpenApiTestCase
 
         $resolvers = ['legacy' => new LegacyTypeResolver($context)];
         if (class_exists('Radebatz\TypeInfoExtras\TypeResolver\StringTypeResolver')) {
-            $resolvers['type-info'] = new TypeInfoTypeResolver($context);
+            $resolvers['type-info'] = new TypeInfoTypeResolver();
         }
 
         foreach ($resolvers as $key => $typeResolver) {
@@ -174,9 +176,18 @@ class TypeResolverTest extends OpenApiTestCase
                 ],
             ];
 
+            yield "$key-union-type" => [
+                $typeResolver,
+                new \ReflectionProperty(DocblockAndTypehintTypes::class, 'unionType'),
+                [
+                    'reflection' => ['explicitType' => 'int', 'types' => ['int', 'string'], 'name' => 'unionType', 'nullable' => false, 'isArray' => false],
+                    'docblock' => ['explicitType' => 'int', 'types' => ['int', 'string'], 'name' => 'unionType', 'nullable' => false, 'isArray' => false],
+                ],
+            ];
+
             yield "$key-promoted-string" => [
                 $typeResolver,
-                (new \ReflectionClass(DocblockAndTypehintTypes::class))->getConstructor()->getParameters()[0],
+                (new \ReflectionClass(DocblockAndTypehintTypes::class))->getConstructor()->getParameters()[1],
                 [
                     'reflection' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => false],
                     'docblock' => ['explicitType' => 'string', 'types' => ['string'], 'name' => 'promotedString', 'nullable' => false, 'isArray' => false],
