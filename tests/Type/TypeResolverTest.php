@@ -4,19 +4,22 @@
  * @license Apache 2.0
  */
 
-namespace OpenApi\Tests\Processors\Concerns;
+namespace OpenApi\Tests\Type;
 
-use OpenApi\Processors\Concerns\TypesTrait;
+use OpenApi\Analysis;
+use OpenApi\Context;
+use OpenApi\Generator;
 use OpenApi\Tests\Fixtures\PHP\DocblockAndTypehintTypes;
 use OpenApi\Tests\OpenApiTestCase;
+use OpenApi\Type\LegacyTypeResolver;
+use OpenApi\Type\TypeInfoTypeResolver;
+use OpenApi\TypeResolverInterface;
 
 /**
  * @requires PHP 8.1
  */
-class TypesTraitTest extends OpenApiTestCase
+class TypeResolverTest extends OpenApiTestCase
 {
-    use TypesTrait;
-
     public static function propertyCases(): iterable
     {
         yield 'nothing' => [
@@ -155,19 +158,39 @@ class TypesTraitTest extends OpenApiTestCase
         ];
     }
 
-    /**
-     * @dataProvider propertyCases
-     */
-    public function testGetReflectionTypeDetails(\Reflector $reflector, array $expected): void
+    public static function resolverPropertyCases(): iterable
     {
-        $this->assertEquals((object) $expected['reflection'], $this->getReflectionTypeDetails($reflector));
+        $rc = new \ReflectionClass(DocblockAndTypehintTypes::class);
+        $analysis = (new Generator())
+            ->withContext(function (Generator $generator, Analysis $analysis, Context $context) use ($rc) {
+                $generator->generate([$rc->getFileName()], $analysis, false);
+
+                return $analysis;
+            });
+
+        $schema = $analysis->getSchemaForSource(DocblockAndTypehintTypes::class);
+        $context = $schema->_context;
+
+        foreach (['legacy' => new LegacyTypeResolver($context), 'type-info' => new TypeInfoTypeResolver($context)] as $key => $typeResolver) {
+            foreach (static::propertyCases() as $name => $details) {
+                yield "$key-$name" => [$typeResolver, ...$details];
+            }
+        }
     }
 
     /**
-     * @dataProvider propertyCases
+     * @dataProvider resolverPropertyCases
      */
-    public function testGetDockblockTypeDetails(\Reflector $reflector, array $expected): void
+    public function testGetReflectionTypeDetails(TypeResolverInterface $typeResolver, \Reflector $reflector, array $expected): void
     {
-        $this->assertEquals((object) $expected['docblock'], $this->getDockblockTypeDetails($reflector));
+        $this->assertEquals((object) $expected['reflection'], $typeResolver->getReflectionTypeDetails($reflector));
+    }
+
+    /**
+     * @dataProvider resolverPropertyCases
+     */
+    public function testGetDockblockTypeDetails(TypeResolverInterface $typeResolver, \Reflector $reflector, array $expected): void
+    {
+        $this->assertEquals((object) $expected['docblock'], $typeResolver->getDocblockTypeDetails($reflector));
     }
 }

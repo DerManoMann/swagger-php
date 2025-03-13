@@ -6,6 +6,8 @@
 
 namespace OpenApi\Type;
 
+use OpenApi\Context;
+use OpenApi\TypeResolverInterface;
 use PHPStan\PhpDocParser\Ast\PhpDoc\ParamTagValueNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\ReturnTagValueNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\VarTagValueNode;
@@ -18,12 +20,6 @@ use PHPStan\PhpDocParser\ParserConfig;
 use Radebatz\TypeInfoExtras\Type\ExplicitType;
 use Radebatz\TypeInfoExtras\Type\IntRangeType;
 use Radebatz\TypeInfoExtras\TypeResolver\StringTypeResolver;
-use ReflectionFunctionAbstract;
-use ReflectionMethod;
-use ReflectionParameter;
-use ReflectionProperty;
-use Reflector;
-use stdClass;
 use Symfony\Component\TypeInfo\Exception\UnsupportedException;
 use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\Type\BuiltinType;
@@ -33,11 +29,18 @@ use Symfony\Component\TypeInfo\Type\ObjectType;
 use Symfony\Component\TypeInfo\TypeContext\TypeContextFactory;
 use Symfony\Component\TypeInfo\TypeResolver\ReflectionTypeResolver;
 
-class TypeInfoTypeResolver
+class TypeInfoTypeResolver implements TypeResolverInterface
 {
-    protected function normaliseTypeResult(Reflector $reflector, ?Type $resolved): stdClass
+    protected ?Context $context;
+
+    public function __construct(?Context $context = null)
     {
-        $details = (object)[
+        $this->context = $context;
+    }
+
+    protected function normaliseTypeResult(\Reflector $reflector, ?Type $resolved): \stdClass
+    {
+        $details = (object) [
             'explicitType' => null,
             'types' => [],
             'name' => null,
@@ -64,8 +67,8 @@ class TypeInfoTypeResolver
         }
 
         if ($resolved instanceof BuiltinType || $resolved instanceof ObjectType) {
-            $details->explicitType = (string)$resolved;
-            $details->types[] = (string)$resolved;
+            $details->explicitType = (string) $resolved;
+            $details->types[] = (string) $resolved;
         } elseif ($resolved instanceof IntRangeType) {
             // use just `int` for custom `int<..>`
             $details->explicitType = str_contains($resolved->getExplicitType(), '<')
@@ -80,9 +83,9 @@ class TypeInfoTypeResolver
         return $details;
     }
 
-    public function getReflectionTypeDetails(Reflector $reflector): stdClass
+    public function getReflectionTypeDetails(\Reflector $reflector): \stdClass
     {
-        $subject = $reflector instanceof ReflectionMethod
+        $subject = $reflector instanceof \ReflectionMethod
             ? $reflector->getReturnType()
             : $reflector->getType();
         try {
@@ -95,19 +98,19 @@ class TypeInfoTypeResolver
         return $this->normaliseTypeResult($reflector, $resolved);
     }
 
-    public function getDockblockTypeDetails(Reflector $reflector): stdClass
+    public function getDocblockTypeDetails(\Reflector $reflector): \stdClass
     {
         switch (true) {
-            case $reflector instanceof ReflectionProperty:
+            case $reflector instanceof \ReflectionProperty:
                 $docComment = (method_exists($reflector, 'isPromoted') && $reflector->isPromoted())
                 && $reflector->getDeclaringClass() && $reflector->getDeclaringClass()->getConstructor()
                     ? $reflector->getDeclaringClass()->getConstructor()->getDocComment()
                     : $reflector->getDocComment();
                 break;
-            case $reflector instanceof ReflectionParameter:
+            case $reflector instanceof \ReflectionParameter:
                 $docComment = $reflector->getDeclaringFunction()->getDocComment();
                 break;
-            case $reflector instanceof ReflectionFunctionAbstract:
+            case $reflector instanceof \ReflectionFunctionAbstract:
                 $docComment = $reflector->getDocComment();
                 break;
             default:
@@ -121,15 +124,15 @@ class TypeInfoTypeResolver
         $typeContext ??= (new TypeContextFactory())->createFromReflection($reflector);
 
         switch (true) {
-            case $reflector instanceof ReflectionProperty:
+            case $reflector instanceof \ReflectionProperty:
                 $tagName = (method_exists($reflector, 'isPromoted') && $reflector->isPromoted())
                     ? '@param'
                     : '@var';
                 break;
-            case $reflector instanceof ReflectionParameter:
+            case $reflector instanceof \ReflectionParameter:
                 $tagName = '@param';
                 break;
-            case $reflector instanceof ReflectionFunctionAbstract:
+            case $reflector instanceof \ReflectionFunctionAbstract:
                 $tagName = '@return';
                 break;
             default:
@@ -154,7 +157,7 @@ class TypeInfoTypeResolver
                 || $tagValue instanceof ParamTagValueNode && $tagName && '$' . $reflector->getName() === $tagValue->parameterName
                 || $tagValue instanceof ReturnTagValueNode
             ) {
-                $resolved = (new StringTypeResolver())->resolve((string)$tagValue, $typeContext);
+                $resolved = (new StringTypeResolver())->resolve((string) $tagValue, $typeContext);
 
                 return $this->normaliseTypeResult($reflector, $resolved);
             }

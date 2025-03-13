@@ -1,22 +1,38 @@
-<?php
+<?php declare(strict_types=1);
+
+/**
+ * @license Apache 2.0
+ */
 
 namespace OpenApi\Type;
 
-use Reflector;
-use stdClass;
-use ReflectionFunctionAbstract;
-use ReflectionMethod;
-use ReflectionParameter;
-use ReflectionProperty;
+use OpenApi\Context;
+use OpenApi\TypeResolverInterface;
 
-class LegacyTypeResolver
+class LegacyTypeResolver implements TypeResolverInterface
 {
+    protected ?Context $context;
 
-    protected function normaliseTypeResult(?string $explicitType = null, array $types = [], ?string $name = null, ?bool $nullable = null, ?bool $isArray = null): stdClass
+    public function __construct(?Context $context = null)
     {
+        $this->context = $context;
+    }
+
+    protected function normaliseTypeResult(?string $explicitType = null, array $types = [], ?string $name = null, ?bool $nullable = null, ?bool $isArray = null): \stdClass
+    {
+        if ($this->context) {
+            foreach ($types as $ii => $type) {
+                if (!array_key_exists(strtolower($type), TypeResolverInterface::NATIVE_TYPE_MAP)) {
+                    if ($resolved = $this->context->fullyQualifiedName($type)) {
+                        $types[$ii] = ltrim($resolved, '\\');
+                    }
+                }
+            }
+        }
+
         $explicitType = $explicitType ?: ($types ? $types[0] : null);
 
-        return (object)[
+        return (object) [
             'explicitType' => $explicitType,
             'types' => $types,
             'name' => $name,
@@ -25,28 +41,28 @@ class LegacyTypeResolver
         ];
     }
 
-    public function getReflectionTypeDetails(Reflector $reflector): stdClass
+    public function getReflectionTypeDetails(\Reflector $reflector): \stdClass
     {
-        $subject = $reflector instanceof ReflectionMethod
+        $subject = $reflector instanceof \ReflectionMethod
             ? $reflector->getReturnType()
             : $reflector->getType();
 
         return $this->normaliseTypeResult();
     }
 
-    public function getDockblockTypeDetails(Reflector $reflector): stdClass
+    public function getDocblockTypeDetails(\Reflector $reflector): \stdClass
     {
         switch (true) {
-            case $reflector instanceof ReflectionProperty:
+            case $reflector instanceof \ReflectionProperty:
                 $docComment = (method_exists($reflector, 'isPromoted') && $reflector->isPromoted())
                 && $reflector->getDeclaringClass() && $reflector->getDeclaringClass()->getConstructor()
                     ? $reflector->getDeclaringClass()->getConstructor()->getDocComment()
                     : $reflector->getDocComment();
                 break;
-            case $reflector instanceof ReflectionParameter:
+            case $reflector instanceof \ReflectionParameter:
                 $docComment = $reflector->getDeclaringFunction()->getDocComment();
                 break;
-            case $reflector instanceof ReflectionFunctionAbstract:
+            case $reflector instanceof \ReflectionFunctionAbstract:
                 $docComment = $reflector->getDocComment();
                 break;
             default:
@@ -58,15 +74,15 @@ class LegacyTypeResolver
         }
 
         switch (true) {
-            case $reflector instanceof ReflectionProperty:
+            case $reflector instanceof \ReflectionProperty:
                 $tagName = (method_exists($reflector, 'isPromoted') && $reflector->isPromoted())
                     ? '@param'
                     : '@var';
                 break;
-            case $reflector instanceof ReflectionParameter:
+            case $reflector instanceof \ReflectionParameter:
                 $tagName = '@param';
                 break;
-            case $reflector instanceof ReflectionFunctionAbstract:
+            case $reflector instanceof \ReflectionFunctionAbstract:
                 $tagName = '@return';
                 break;
             default:
@@ -79,7 +95,7 @@ class LegacyTypeResolver
 
         $docComment = str_replace("\r\n", "\n", $docComment);
         $docComment = preg_replace('/\*\/[ \t]*$/', '', $docComment); // strip '*/'
-        preg_match("/$tagName\s+(?<type>[^\s]+)([ \t])?(?<description>.+)?$/im", $docComment, $matches);
+        preg_match("/$tagName\s+(?<type>\S+)([ 	])?(?<description>.+)?$/im", $docComment, $matches);
 
         $explicitType = null;
         $type = $matches['type'];
@@ -88,7 +104,7 @@ class LegacyTypeResolver
         $type = str_replace(['|null', 'null|', '?', 'null', '[]'], '', $type);
 
         // typed array
-        $result = preg_match("/([^<]+)<([^>]+)>/", $type, $matches);
+        $result = preg_match('/([^<]+)<([^>]+)>/', $type, $matches);
         if ($result) {
             if (!$isArray) {
                 $type = $matches[1];
@@ -98,7 +114,7 @@ class LegacyTypeResolver
         }
 
         // partial array shape
-        $result = preg_match("/([^{]+){([^}]+)/", $type, $matches);
+        $result = preg_match('/([^{]+){([^}]+)/', $type, $matches);
         if ($result) {
             $type = 'mixed';
         }
@@ -116,7 +132,6 @@ class LegacyTypeResolver
         }
 
         $type = ltrim($type, '\\');
-
 
         // cheat
         $name = $reflector->getName();

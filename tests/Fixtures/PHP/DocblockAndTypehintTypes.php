@@ -6,6 +6,9 @@
 
 namespace OpenApi\Tests\Fixtures\PHP;
 
+use OpenApi\Attributes as OAT;
+
+#[OAT\Schema()]
 class DocblockAndTypehintTypes
 {
     public $nothing;
