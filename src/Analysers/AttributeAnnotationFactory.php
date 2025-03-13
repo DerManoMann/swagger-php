@@ -13,6 +13,7 @@ use OpenApi\Generator;
 class AttributeAnnotationFactory implements AnnotationFactoryInterface
 {
     use GeneratorAwareTrait;
+    use TypeResolverTrait;
 
     public function isSupported(): bool
     {

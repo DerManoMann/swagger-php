@@ -22,8 +22,8 @@ class LegacyTypeResolver implements TypeResolverInterface
     {
         if ($this->context) {
             foreach ($types as $ii => $type) {
-                if (!array_key_exists(strtolower($type), TypeResolverInterface::NATIVE_TYPE_MAP)) {
-                    if ($resolved = $this->context->fullyQualifiedName($type)) {
+                if (!array_key_exists(strtolower($type), TypeResolverInterface::NATIVE_TYPE_MAP) && !class_exists($type)) {
+                    if (($resolved = $this->context->fullyQualifiedName($type)) && class_exists($resolved)) {
                         $types[$ii] = ltrim($resolved, '\\');
                     }
                 }
@@ -48,15 +48,28 @@ class LegacyTypeResolver implements TypeResolverInterface
             : $reflector->getType();
 
         $isArray = false;
-        $type = $rtype ? $rtype->getName() : null;
-        if ('array' === $type) {
-            $type = 'mixed';
+
+        $types = [];
+        if ($rtype instanceof \ReflectionUnionType) {
+            foreach ($rtype->getTypes() as $utype) {
+                // more nesting is not supported
+                if ($utype instanceof \ReflectionNamedType) {
+                    $types[] = $utype->getName();
+                }
+            }
+        } elseif ($rtype instanceof \ReflectionNamedType) {
+            $types[] = $rtype->getName();
+        }
+
+        if (1 === count($types) && 'array' === $types[0]) {
+            $types = ['mixed'];
             $isArray = true;
         }
+
         $name = $reflector->getName();
         $nullable = $rtype ? $rtype->allowsNull() : true;
 
-        return $this->normaliseTypeResult($type, $type ? [$type] : [], $name, $nullable, $isArray);
+        return $this->normaliseTypeResult(null, array_reverse($types), $name, $nullable, $isArray);
     }
 
     public function getDocblockTypeDetails(\Reflector $reflector): \stdClass
@@ -78,8 +91,11 @@ class LegacyTypeResolver implements TypeResolverInterface
                 $docComment = null;
         }
 
+        // cheat
+        $name = $reflector->getName();
+
         if (!$docComment) {
-            return $this->normaliseTypeResult();
+            return $this->normaliseTypeResult(null, [], $name);
         }
 
         switch (true) {
@@ -99,15 +115,21 @@ class LegacyTypeResolver implements TypeResolverInterface
         }
 
         if (!$tagName) {
-            return $this->normaliseTypeResult();
+            return $this->normaliseTypeResult(null, [], $name);
+        }
+
+        $pattern = "/$tagName\s+(?<type>[^\s]+)([ \t])?/im";
+        if ('@param' === $tagName) {
+            // need to match on $name too
+            $pattern = "/$tagName\s+(?<type>[^\s]+)([ \t])?\\$$name/im";
         }
 
         $docComment = str_replace("\r\n", "\n", $docComment);
         $docComment = preg_replace('/\*\/[ \t]*$/', '', $docComment); // strip '*/'
-        preg_match("/$tagName\s+(?<type>\S+)([ 	])?(?<description>.+)?$/im", $docComment, $matches);
+        preg_match($pattern, $docComment, $matches);
 
         $explicitType = null;
-        $type = $matches['type'];
+        $type = $matches['type'] ?? '';
         $nullable = in_array('null', explode('|', strtolower($type))) || str_contains($type, '?');
         $isArray = str_contains($type, '[]') || str_contains($type, 'array');
         $type = str_replace(['|null', 'null|', '?', 'null', '[]'], '', $type);
@@ -115,11 +137,7 @@ class LegacyTypeResolver implements TypeResolverInterface
         // typed array
         $result = preg_match('/([^<]+)<([^>]+)>/', $type, $matches);
         if ($result) {
-            if (!$isArray) {
-                $type = $matches[1];
-            } else {
-                $type = $matches[2];
-            }
+            $type = $isArray ? $matches[2] : $matches[1];
         }
 
         // partial array shape
@@ -141,10 +159,8 @@ class LegacyTypeResolver implements TypeResolverInterface
         }
 
         $type = ltrim($type, '\\');
+        $types = explode('|', $type);
 
-        // cheat
-        $name = $reflector->getName();
-
-        return $this->normaliseTypeResult($explicitType, [$type], $name, $nullable, $isArray);
+        return $this->normaliseTypeResult($explicitType, $types, $name, $nullable, $isArray);
     }
 }

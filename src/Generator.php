@@ -314,6 +314,25 @@ class Generator
     }
 
     /**
+     * Run code in the context of this generator.
+     *
+     * @param callable $callable Callable in the form of
+     *                           `function(Generator $generator, Analysis $analysis, Context $context): mixed`
+     *
+     * @return mixed the result of the `callable`
+     */
+    public function withContext(callable $callable)
+    {
+        $rootContext = new Context([
+            'version' => $this->getVersion(),
+            'logger' => $this->getLogger(),
+        ]);
+        $analysis = new Analysis([], $rootContext);
+
+        return $callable($this, $analysis, $rootContext);
+    }
+
+    /**
      * Generate OpenAPI spec by scanning the given source files.
      *
      * @param iterable      $sources  PHP source files to scan.
@@ -352,25 +371,6 @@ class Generator
         }
 
         return $analysis->openapi;
-    }
-
-    /**
-     * Run code in the context of this generator.
-     *
-     * @param callable $callable Callable in the form of
-     *                           `function(Generator $generator, Analysis $analysis, Context $context): mixed`
-     *
-     * @return mixed the result of the `callable`
-     */
-    public function withContext(callable $callable)
-    {
-        $rootContext = new Context([
-            'version' => $this->getVersion(),
-            'logger' => $this->getLogger(),
-        ]);
-        $analysis = new Analysis([], $rootContext);
-
-        return $callable($this, $analysis, $rootContext);
     }
 
     protected function scanSources(iterable $sources, Analysis $analysis, Context $rootContext): void

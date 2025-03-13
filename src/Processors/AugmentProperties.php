@@ -39,7 +39,7 @@ class AugmentProperties
             $typeAndDescription = $this->extractVarTypeAndDescription((string) $context->comment);
 
             if (Generator::isDefault($property->type)) {
-                $this->augmentType($analysis, $property, $context, $typeAndDescription['type']);
+                $this->augmentSchemaType($analysis, $property, $context, $typeAndDescription['type']);
             } else {
                 if (!is_array($property->type)) {
                     $this->mapNativeType($property, $property->type);
@@ -63,14 +63,14 @@ class AugmentProperties
         }
     }
 
-    protected function augmentType(Analysis $analysis, OA\Property $property, Context $context, ?string $varType): void
+    protected function augmentSchemaType(Analysis $analysis, OA\Schema $schema, Context $context, ?string $varType): void
     {
         // docblock typehints
         if ($varType) {
             $allTypes = trim($varType);
 
-            if ($this->isNullable($allTypes) && Generator::isDefault($property->nullable)) {
-                $property->nullable = true;
+            if ($this->isNullable($allTypes) && Generator::isDefault($schema->nullable)) {
+                $schema->nullable = true;
             }
 
             $allTypes = $this->stripNull($allTypes);
@@ -78,61 +78,61 @@ class AugmentProperties
             $type = $typeMatches[1];
 
             // finalise property type/ref
-            if (!$this->mapNativeType($property, $type)) {
-                $schema = $analysis->getSchemaForSource($context->fullyQualifiedName($type));
-                if (Generator::isDefault($property->ref) && $schema) {
-                    $property->ref = OA\Components::ref($schema);
+            if (!$this->mapNativeType($schema, $type)) {
+                $typeSchema = $analysis->getSchemaForSource($context->fullyQualifiedName($type));
+                if (Generator::isDefault($schema->ref) && $typeSchema) {
+                    $schema->ref = OA\Components::ref($typeSchema);
                 }
             }
 
             // ok, so we possibly have a type or ref
-            if (!Generator::isDefault($property->ref) && $typeMatches[2] === '' && !Generator::isDefault($property->nullable) && $property->nullable) {
-                $schema = $analysis->getSchemaForSource($context->fullyQualifiedName($type));
-                if ($schema) {
-                    $property->ref = OA\Components::ref($schema);
+            if (!Generator::isDefault($schema->ref) && $typeMatches[2] === '' && !Generator::isDefault($schema->nullable) && $schema->nullable) {
+                $typeSchema = $analysis->getSchemaForSource($context->fullyQualifiedName($type));
+                if ($typeSchema) {
+                    $schema->ref = OA\Components::ref($typeSchema);
                 }
             } elseif ($typeMatches[2] === '[]') {
-                if (Generator::isDefault($property->items)) {
-                    $property->items = $items = new OA\Items(
+                if (Generator::isDefault($schema->items)) {
+                    $schema->items = $items = new OA\Items(
                         [
-                            'type' => $property->type,
+                            'type' => $schema->type,
                             '_context' => new Context(['generated' => true], $context),
                         ]
                     );
                     $analysis->addAnnotation($items, $items->_context);
-                    if (!Generator::isDefault($property->ref)) {
-                        $property->items->ref = $property->ref;
-                        $property->ref = Generator::UNDEFINED;
+                    if (!Generator::isDefault($schema->ref)) {
+                        $schema->items->ref = $schema->ref;
+                        $schema->ref = Generator::UNDEFINED;
                     }
-                    $property->type = 'array';
+                    $schema->type = 'array';
                 }
-            } elseif ($property->type === 'integer' && str_starts_with($typeMatches[2], '<') && str_ends_with($typeMatches[2], '>')) {
+            } elseif ($schema->type === 'integer' && str_starts_with($typeMatches[2], '<') && str_ends_with($typeMatches[2], '>')) {
                 [$min, $max] = explode(',', substr($typeMatches[2], 1, -1));
 
                 if (is_numeric($min)) {
-                    $property->minimum = (int) $min;
+                    $schema->minimum = (int) $min;
                 }
                 if (is_numeric($max)) {
-                    $property->maximum = (int) $max;
+                    $schema->maximum = (int) $max;
                 }
             } elseif ($type === 'positive-int') {
-                $property->type = 'integer';
-                $property->minimum = 1;
+                $schema->type = 'integer';
+                $schema->minimum = 1;
             } elseif ($type === 'negative-int') {
-                $property->type = 'integer';
-                $property->maximum = -1;
+                $schema->type = 'integer';
+                $schema->maximum = -1;
             } elseif ($type === 'non-positive-int') {
-                $property->type = 'integer';
-                $property->maximum = 0;
+                $schema->type = 'integer';
+                $schema->maximum = 0;
             } elseif ($type === 'non-negative-int') {
-                $property->type = 'integer';
-                $property->minimum = 0;
+                $schema->type = 'integer';
+                $schema->minimum = 0;
             } elseif ($type === 'non-zero-int') {
-                $property->type = 'integer';
-                if ($property->_context->isVersion(OA\OpenApi::VERSION_3_1_0)) {
-                    $property->not = ['const' => 0];
+                $schema->type = 'integer';
+                if ($schema->_context->isVersion(OA\OpenApi::VERSION_3_1_0)) {
+                    $schema->not = ['const' => 0];
                 } else {
-                    $property->not = ['enum' => [0]];
+                    $schema->not = ['enum' => [0]];
                 }
             }
         }
@@ -140,27 +140,27 @@ class AugmentProperties
         // native typehints
         if ($context->type && !Generator::isDefault($context->type)) {
             if ($context->nullable === true) {
-                $property->nullable = true;
+                $schema->nullable = true;
             }
             $type = strtolower($context->type);
-            if (!$this->mapNativeType($property, $type)) {
-                $schema = $analysis->getSchemaForSource($context->fullyQualifiedName($type));
-                if (Generator::isDefault($property->ref) && $schema) {
-                    $this->applyRef($analysis, $property, OA\Components::ref($schema));
+            if (!$this->mapNativeType($schema, $type)) {
+                $typeSchema = $analysis->getSchemaForSource($context->fullyQualifiedName($type));
+                if (Generator::isDefault($schema->ref) && $typeSchema) {
+                    $this->applyRef($analysis, $schema, OA\Components::ref($typeSchema));
                 } else {
                     if (is_string($context->type) && $typeSchema = $analysis->getSchemaForSource($context->type)) {
-                        if (Generator::isDefault($property->format)) {
-                            $property->ref = OA\Components::ref($typeSchema);
-                            $property->type = Generator::UNDEFINED;
+                        if (Generator::isDefault($schema->format)) {
+                            $schema->ref = OA\Components::ref($typeSchema);
+                            $schema->type = Generator::UNDEFINED;
                         }
                     }
                 }
             }
         }
 
-        if (!Generator::isDefault($property->const) && Generator::isDefault($property->type)) {
-            if (!$this->mapNativeType($property, gettype($property->const))) {
-                $property->type = Generator::UNDEFINED;
+        if (!Generator::isDefault($schema->const) && Generator::isDefault($schema->type)) {
+            if (!$this->mapNativeType($schema, gettype($schema->const))) {
+                $schema->type = Generator::UNDEFINED;
             }
         }
     }
@@ -186,18 +186,18 @@ class AugmentProperties
         return implode('|', $types);
     }
 
-    protected function applyRef(Analysis $analysis, OA\Property $property, string $ref): void
+    protected function applyRef(Analysis $analysis, OA\Schema $schema, string $ref): void
     {
-        if ($property->nullable === true) {
-            $property->oneOf = [
-                $schema = new OA\Schema([
+        if ($schema->nullable === true) {
+            $schema->oneOf = [
+                $nullableSchema = new OA\Schema([
                     'ref' => $ref,
-                    '_context' => new Context(['generated' => true], $property->_context),
+                    '_context' => new Context(['generated' => true], $schema->_context),
                 ]),
             ];
-            $analysis->addAnnotation($schema, $schema->_context);
+            $analysis->addAnnotation($nullableSchema, $nullableSchema->_context);
         } else {
-            $property->ref = $ref;
+            $schema->ref = $ref;
         }
     }
 }
