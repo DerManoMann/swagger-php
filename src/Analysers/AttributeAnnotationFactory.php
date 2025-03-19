@@ -77,6 +77,8 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
                             $type = (($rnt = $rp->getType()) && $rnt instanceof \ReflectionNamedType) ? $rnt->getName() : Generator::UNDEFINED;
                             $nullable = $rnt ? $rnt->allowsNull() : true;
 
+                            $this->resolveType($rp, $context);
+
                             if ($instance instanceof OA\RequestBody) {
                                 $instance->required = !$nullable;
                             } elseif ($instance instanceof OA\Property) {
@@ -114,6 +116,7 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
                 }
 
                 if (($rrt = $reflector->getReturnType()) && $rrt instanceof \ReflectionNamedType) {
+                    $this->resolveType($reflector, $context);
                     foreach ($annotations as $annotation) {
                         if ($annotation instanceof OA\Property && Generator::isDefault($annotation->type)) {
                             // pick up simple return types
