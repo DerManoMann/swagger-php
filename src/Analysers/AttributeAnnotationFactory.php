@@ -52,6 +52,7 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
             foreach ($reflector->getAttributes(...$attributeName) as $attribute) {
                 if (class_exists($attribute->getName())) {
                     $instance = $attribute->newInstance();
+
                     if ($instance instanceof OA\AbstractAnnotation) {
                         $annotations[] = $instance;
                     } else {

@@ -22,8 +22,6 @@ class TypeResolverTest extends OpenApiTestCase
 {
     public static function resolverPropertyCases(): iterable
     {
-        $context = null;
-
         $rc = new \ReflectionClass(DocblockAndTypehintTypes::class);
         $analysis = (new Generator())
             ->withContext(function (Generator $generator, Analysis $analysis, Context $context) use ($rc) {
