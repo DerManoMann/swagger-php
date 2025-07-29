@@ -79,7 +79,7 @@ class DocblockAndTypehintTypes
     public int $positiveInt;
 
     /**
-     * @var array{foo: boolean}
+     * @var array{foo:bool}
      */
     public array $arrayShape;
 

@@ -170,7 +170,7 @@ class TypeResolverTest extends OpenApiTestCase
                 new \ReflectionProperty(DocblockAndTypehintTypes::class, 'arrayShape'),
                 [
                     'reflection' => ['explicitType' => 'mixed', 'types' => ['mixed'], 'name' => 'arrayShape', 'nullable' => false, 'isArray' => true],
-                    'docblock' => ['explicitType' => 'mixed', 'types' => ['mixed'], 'name' => 'arrayShape', 'nullable' => false, 'isArray' => true],
+                    'docblock' => ['explicitType' => 'bool', 'types' => ['bool'], 'name' => 'arrayShape', 'nullable' => false, 'isArray' => true],
                 ],
             ];
 

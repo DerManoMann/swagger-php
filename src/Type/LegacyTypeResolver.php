@@ -141,9 +141,16 @@ class LegacyTypeResolver implements TypeResolverInterface
         }
 
         // partial array shape
-        $result = preg_match('/([^{]+){([^}]+)/', $type, $matches);
+        $result = preg_match('/([^{]+){([^}]+)}/', $type, $matches);
         if ($result) {
-            $type = 'mixed';
+            $shapeTypes = [];
+            foreach (explode(',', $matches[2]) as $shape) {
+                $token = explode(':', $shape);
+                if (2 === count($token)) {
+                    $shapeTypes[trim($token[0])] = trim($token[1]);
+                }
+            }
+            $type = implode('|', $shapeTypes);
         }
 
         // special types

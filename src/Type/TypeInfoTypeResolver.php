@@ -47,7 +47,7 @@ class TypeInfoTypeResolver implements TypeResolverInterface
             return $details;
         }
 
-        $fromType = function (Type $type, $details) {
+        $fromType = function (Type $type, $details): void {
             if ($type instanceof BuiltinType || $type instanceof ObjectType) {
                 $details->types[] = (string) $type;
             } elseif ($type instanceof CollectionType) {
@@ -89,7 +89,7 @@ class TypeInfoTypeResolver implements TypeResolverInterface
         try {
             $typeContext = (new TypeContextFactory())->createFromReflection($reflector);
             $resolved = (new ReflectionTypeResolver())->resolve($subject, $typeContext);
-        } catch (UnsupportedException $exception) {
+        } catch (UnsupportedException $unsupportedException) {
             $resolved = null;
         }
 
