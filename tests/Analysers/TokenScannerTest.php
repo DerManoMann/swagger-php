@@ -51,7 +51,7 @@ final class TokenScannerTest extends OpenApiTestCase
         yield 'php7' => [
             'PHP/php7.php',
             [
-                'deng' => null,
+                'OpenApi\\Tests\\Fixtures\\PHP\\deng' => null,
             ],
         ];
 
@@ -82,7 +82,7 @@ final class TokenScannerTest extends OpenApiTestCase
                     'methods' => ['foo', 'bar'],
                     'properties' => [],
                 ],
-                'dong' => null,
+                'OpenApi\\Tests\\Fixtures\\PHP\\dong' => null,
             ],
         ];
 
