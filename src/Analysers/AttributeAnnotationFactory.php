@@ -78,12 +78,8 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
                             ], $context);
 
                             $type = (($rnt = $rp->getType()) && $rnt instanceof \ReflectionNamedType) ? $rnt->getName() : Generator::UNDEFINED;
-                            $nullable = $rnt ? $rnt->allowsNull() : true;
 
-                            if ($instance instanceof OA\RequestBody) {
-                                // todo: resolve
-                                $instance->required = !$nullable;
-                            } elseif ($instance instanceof OA\Property) {
+                            if ($instance instanceof OA\Property) {
                                 // todo: resolve
                                 if (Generator::isDefault($instance->property)) {
                                     $instance->property = $rp->getName();

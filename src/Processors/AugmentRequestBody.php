@@ -17,31 +17,39 @@ class AugmentRequestBody
 {
     public function __invoke(Analysis $analysis): void
     {
-        /** @var array<OA\RequestBody> $requests */
-        $requests = $analysis->getAnnotationsOfType(OA\RequestBody::class);
+        $requestBodies = $analysis->getAnnotationsOfType(OA\RequestBody::class);
 
-        $this->augmentRequestBody($requests);
+        $this->augmentRequestBody($requestBodies);
     }
 
     /**
-     * @param array<OA\RequestBody> $requests
+     * @param array<OA\RequestBody> $requestBodies
      */
-    protected function augmentRequestBody(array $requests): void
+    protected function augmentRequestBody(array $requestBodies): void
     {
-        foreach ($requests as $request) {
-            if (!$request->isRoot(OA\RequestBody::class)) {
+        foreach ($requestBodies as $requestBody) {
+            if (!$requestBody->isRoot(OA\RequestBody::class)) {
                 continue;
             }
-            if (Generator::isDefault($request->request)) {
-                if ($request->_context->is('class')) {
-                    $request->request = $request->_context->class;
-                } elseif ($request->_context->is('interface')) {
-                    $request->request = $request->_context->interface;
-                } elseif ($request->_context->is('trait')) {
-                    $request->request = $request->_context->trait;
-                } elseif ($request->_context->is('enum')) {
-                    $request->request = $request->_context->enum;
+
+            $context = $requestBody->_context;
+            if (Generator::isDefault($requestBody->request)) {
+                if ($context->is('class')) {
+                    $requestBody->request = $requestBody->_context->class;
+                } elseif ($context->is('interface')) {
+                    $requestBody->request = $requestBody->_context->interface;
+                } elseif ($context->is('trait')) {
+                    $requestBody->request = $requestBody->_context->trait;
+                } elseif ($context->is('enum')) {
+                    $requestBody->request = $requestBody->_context->enum;
                 }
+            }
+
+            if ($context->reflector instanceof \ReflectionParameter) {
+                // todo: use type resolver
+                $rnt = $context->reflector->getType();
+                $nullable = $rnt ? $rnt->allowsNull() : true;
+                $requestBody->required = !$nullable;
             }
         }
     }
