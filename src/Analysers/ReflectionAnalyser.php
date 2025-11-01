@@ -140,6 +140,7 @@ class ReflectionAnalyser implements AnalyserInterface
                         // default to method name if no property name set
                         if ($annotation instanceof OA\Property) {
                             if (Generator::isDefault($annotation->property)) {
+                                // todo: set on context instead
                                 $annotation->property = $method->getName();
                                 // can do this once only
                                 break;
