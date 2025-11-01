@@ -71,12 +71,17 @@ class AttributeAnnotationFactory implements AnnotationFactoryInterface
                         foreach ($rp->getAttributes($attributeName, \ReflectionAttribute::IS_INSTANCEOF) as $attribute) {
                             /** @var OA\Property|OA\Parameter|OA\RequestBody $instance */
                             $instance = $attribute->newInstance();
-                            $instance->_context = new Context(['nested' => false, 'reflector' => $rp], $context);
+                            $instance->_context = new Context([
+                                'nested' => false,
+                                'property' => $rp->getName(),
+                                'reflector' => $rp,
+                            ], $context);
 
                             $type = (($rnt = $rp->getType()) && $rnt instanceof \ReflectionNamedType) ? $rnt->getName() : Generator::UNDEFINED;
                             $nullable = $rnt ? $rnt->allowsNull() : true;
 
                             if ($instance instanceof OA\RequestBody) {
+                                // todo: resolve
                                 $instance->required = !$nullable;
                             } elseif ($instance instanceof OA\Property) {
                                 // todo: resolve

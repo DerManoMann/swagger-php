@@ -64,6 +64,7 @@ class AugmentParameters implements GeneratorAwareInterface
             }
 
             if ($context->reflector instanceof \ReflectionParameter) {
+                // todo: use type resolver
                 $rnt = $context->reflector->getType();
                 $nullable = $rnt ? $rnt->allowsNull() : true;
                 $parameter->required = !$nullable;
