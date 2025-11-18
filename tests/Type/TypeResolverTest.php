@@ -15,10 +15,7 @@ use OpenApi\Processors\AugmentSchemas;
 use OpenApi\Processors\MergeIntoOpenApi;
 use OpenApi\Tests\Fixtures\PHP\DocblockAndTypehintTypes;
 use OpenApi\Tests\OpenApiTestCase;
-use OpenApi\Type\LegacyTypeResolver;
-use OpenApi\Type\TypeInfoTypeResolver;
 use OpenApi\TypeResolverInterface;
-use Radebatz\TypeInfoExtras\TypeResolver\StringTypeResolver;
 
 class TypeResolverTest extends OpenApiTestCase
 {
@@ -49,7 +46,8 @@ class TypeResolverTest extends OpenApiTestCase
             'positiveint' => '{ "type": "integer", "maximum": 9223372036854775807, "minimum": 1, "property": "positiveInt" }',
             'nonzeroint' => '{ "type": "integer", "not": { "enum": [ 0 ] }, "property": "nonZeroInt" }',
             'arrayshape' => '{ "type": "array", "items": { "type": "boolean" }, "property": "arrayShape" }',
-            'uniontype' => '{ "property": "unionType" }',
+            'legacy:uniontype' => '{ "property": "unionType" }',
+            'type-info:uniontype' => '{ "type": [ "integer", "string" ], "property": "unionType" }',
             'promotedstring' => '{ "type": "string", "property": "promotedString" }',
             'mixedunion' => '{ "example": "My value", "property": "mixedUnion" }',
             'getstring' => '{ "type": "string", "property": "getString" }',
@@ -63,13 +61,9 @@ class TypeResolverTest extends OpenApiTestCase
 
         $rc = new \ReflectionClass(DocblockAndTypehintTypes::class);
 
-        $typeResolvers = ['legacy' => new LegacyTypeResolver()];
-        if (class_exists(StringTypeResolver::class)) {
-            $typeResolvers['type-info'] = new TypeInfoTypeResolver();
-        }
-
-        foreach ($typeResolvers as $key => $typeResolver) {
+        foreach (static::getTypeResolvers() as $key => $typeResolver) {
             $analysis = (new Generator())
+                ->setVersion(OA\OpenApi::VERSION_3_1_0)
                 ->setProcessorPipeline(new Pipeline([new MergeIntoOpenApi(), new AugmentSchemas()]))
                 ->withContext(function (Generator $generator, Analysis $analysis, Context $context) use ($rc) {
                     $generator->generate([$rc->getFileName()], $analysis, false);
@@ -85,13 +79,14 @@ class TypeResolverTest extends OpenApiTestCase
                     ?? $property->_context->method;
 
                 $caseName = strtolower($property->property);
-                $case = "$key-[$ii]-$caseName";
+                $resolverCaseName = "$key:$caseName";
+                $fullCase = "$key-[$ii]-$caseName";
 
-                yield $case => [
+                yield $fullCase => [
                     $typeResolver,
                     $analysis,
                     $property,
-                    json_decode($expectations[$caseName] ?? $expectations[$case] ?? '{}', true),
+                    json_decode($expectations[$caseName] ?? $expectations[$resolverCaseName] ?? '{}', true),
                 ];
             }
         }

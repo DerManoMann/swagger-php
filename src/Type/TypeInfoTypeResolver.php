@@ -28,6 +28,7 @@ use Symfony\Component\TypeInfo\Type\CollectionType;
 use Symfony\Component\TypeInfo\Type\CompositeTypeInterface;
 use Symfony\Component\TypeInfo\Type\NullableType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
+use Symfony\Component\TypeInfo\Type\UnionType;
 use Symfony\Component\TypeInfo\TypeContext\TypeContextFactory;
 use Symfony\Component\TypeInfo\TypeResolver\ReflectionTypeResolver;
 
@@ -51,38 +52,7 @@ class TypeInfoTypeResolver extends AbstractTypeResolver
         $reflectionType = $reflectionType instanceof NullableType ? $reflectionType->getWrappedType() : $reflectionType;
 
         if (Generator::isDefault($schema->type, $schema->oneOf, $schema->allOf, $schema->anyOf) && ($docblockType || $reflectionType)) {
-            $type = $docblockType ?? $reflectionType;
-
-            $isNonZeroInt = false;
-            if ($type instanceof CompositeTypeInterface && 2 === count($type->getTypes())) {
-                $types = $type->getTypes();
-                $isNonZeroInt = $types[0] instanceof IntRangeType && $types[1] instanceof IntRangeType;
-            }
-
-            if (!$type instanceof CompositeTypeInterface || $isNonZeroInt) {
-                if ($isNonZeroInt) {
-                    $schema->type = 'int';
-                    $schema->not = $schema->_context->isVersion('3.1.x')
-                        ? ['const' => 0]
-                        : ['enum' => [0]];
-                } elseif ($type instanceof BuiltinType || $type instanceof ObjectType) {
-                    $schema->type = (string) $type;
-                } elseif ($type instanceof IntRangeType) {
-                    $schema->type = $type->getTypeIdentifier()->value;
-
-                    $schema->minimum = $type->getFrom();
-                    $schema->maximum = $type->getTo();
-
-                } elseif ($type instanceof ExplicitType) {
-                    $schema->type = $type->getTypeIdentifier()->value;
-                } elseif ($type instanceof CollectionType) {
-                    $schema->type = (string) $type->getCollectionValueType();
-                }
-            }
-        }
-
-        if ($docblockType instanceof CollectionType || $reflectionType instanceof CollectionType) {
-            $this->augmentItems($schema, $analysis);
+            $this->setSchemaType($schema, $docblockType ?? $reflectionType, $analysis);
         }
 
         $this->type2ref($schema, $analysis, $sourceClass);
@@ -96,6 +66,48 @@ class TypeInfoTypeResolver extends AbstractTypeResolver
         // final sanity check
         if (!Generator::isDefault($schema->type) && !$this->mapNativeType($schema, $schema->type)) {
             $schema->type = Generator::UNDEFINED;
+        }
+    }
+
+    protected function setSchemaType(OA\Schema $schema, Type $type, Analysis $analysis): void
+    {
+        if ($type instanceof CompositeTypeInterface) {
+            $types = $type->getTypes();
+
+            $isNonZeroInt = 2 === count($types) && $types[0] instanceof IntRangeType && $types[1] instanceof IntRangeType;
+
+            if ($isNonZeroInt) {
+                $schema->type = 'int';
+                $schema->not = $schema->_context->isVersion('3.1.x')
+                    ? ['const' => 0]
+                    : ['enum' => [0]];
+            } else {
+                // regular composite type
+                $allBuiltin = array_reduce($types, fn ($carry, $t): bool => $carry && $t instanceof BuiltinType, true);
+                // echo (string) $type . ': ' . ($allBuiltin ? 'builtin' : 'mixed') . '; ' . get_class($type) ."\n";
+
+                if ($type instanceof UnionType) {
+                    if ($allBuiltin) {
+                        $schema->type = array_map(fn (Type $t): string => (string) $t, $types);
+                    } else {
+                        // oneOf...
+                    }
+                }
+            }
+        } else {
+            if ($type instanceof BuiltinType || $type instanceof ObjectType) {
+                $schema->type = (string) $type;
+            } elseif ($type instanceof IntRangeType) {
+                $schema->type = $type->getTypeIdentifier()->value;
+
+                $schema->minimum = $type->getFrom();
+                $schema->maximum = $type->getTo();
+            } elseif ($type instanceof ExplicitType) {
+                $schema->type = $type->getTypeIdentifier()->value;
+            } elseif ($type instanceof CollectionType) {
+                $schema->type = (string) $type->getCollectionValueType();
+                $this->augmentItems($schema, $analysis);
+            }
         }
     }
 

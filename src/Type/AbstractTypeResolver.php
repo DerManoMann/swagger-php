@@ -16,7 +16,7 @@ abstract class AbstractTypeResolver implements TypeResolverInterface
 {
     protected function type2ref(OA\Schema $schema, Analysis $analysis, string $sourceClass = OA\Schema::class): void
     {
-        if (!Generator::isDefault($schema->type)) {
+        if (!Generator::isDefault($schema->type) && !is_array($schema->type)) {
             if ($typeSchema = $analysis->getAnnotationForSource($schema->type, $sourceClass)) {
                 $schema->type = Generator::UNDEFINED;
                 $schema->ref = OA\Components::ref($typeSchema);
