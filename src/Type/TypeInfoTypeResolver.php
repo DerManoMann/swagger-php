@@ -8,6 +8,7 @@ namespace OpenApi\Type;
 
 use OpenApi\Analysis;
 use OpenApi\Annotations as OA;
+use OpenApi\Context;
 use OpenApi\Generator;
 use PHPStan\PhpDocParser\Ast\PhpDoc\ParamTagValueNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\ReturnTagValueNode;
@@ -82,15 +83,32 @@ class TypeInfoTypeResolver extends AbstractTypeResolver
                     ? ['const' => 0]
                     : ['enum' => [0]];
             } else {
-                // regular composite type
                 $allBuiltin = array_reduce($types, fn ($carry, $t): bool => $carry && $t instanceof BuiltinType, true);
-                // echo (string) $type . ': ' . ($allBuiltin ? 'builtin' : 'mixed') . '; ' . get_class($type) ."\n";
 
                 if ($type instanceof UnionType) {
                     if ($allBuiltin) {
                         $schema->type = array_map(fn (Type $t): string => (string) $t, $types);
                     } else {
-                        // oneOf...
+                        $builtinTypes = array_filter($types, fn (Type $t): bool => $t instanceof BuiltinType);
+                        $otherTypes = array_filter($types, fn (Type $t): bool => !$t instanceof BuiltinType);
+
+                        $schema->type = Generator::UNDEFINED;
+                        $schema->oneOf = [];
+                        if ($builtinTypes) {
+                            $schema->oneOf[] = $builtinSchema = new OA\Schema([
+                                'type' => array_values(array_map(fn (Type $t): string => (string) $t, $builtinTypes)),
+                                '_context' => new Context(['generated' => true], $schema->_context),
+                            ]);
+                            $analysis->addAnnotation($builtinSchema, $builtinSchema->_context);
+                        }
+                        foreach ($otherTypes as $otherType) {
+                            $otherSchema = new OA\Schema([
+                                '_context' => new Context(['generated' => true], $schema->_context),
+                            ]);
+                            $this->setSchemaType($otherSchema, $otherType, $analysis);
+                            $schema->oneOf[] = $otherSchema;
+                            $analysis->addAnnotation($otherSchema, $otherSchema->_context);
+                        }
                     }
                 }
             }

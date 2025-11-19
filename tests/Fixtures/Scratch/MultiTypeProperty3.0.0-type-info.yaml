@@ -16,9 +16,23 @@ components:
       properties:
         otherValue:
           example: 'My value'
+          oneOf:
+            -
+              type: string
+            -
+              type: array
+              items:
+                type: string
         value:
           example: true
           nullable: true
         mixedUnion:
           example: 'My value'
+          oneOf:
+            -
+              type: string
+            -
+              type: array
+              items:
+                type: string
       type: object
