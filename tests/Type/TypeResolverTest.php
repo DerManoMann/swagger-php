@@ -60,7 +60,7 @@ class TypeResolverTest extends OpenApiTestCase
                 'blah_values' => '{ "type": "array", "items": { "type": "string", "example": "hello" }, "nullable": true, "property": "blah_values" }',
                 'oneofvar' => '{ "oneOf": [ { "type": "string" }, { "type": "bool" } ], "property": "oneOfVar" }',
                 'oneoflist' => '{ "type": "array", "items": { "oneOf": [ { "type": "string" }, { "type": "bool" } ] }, "property": "oneOfList" }',
-                'legacy:nullabletypedlistunion' => '{}',
+                'legacy:nullabletypedlistunion' => '{ "nullable": true, "property": "nullableTypedListUnion" }',
                 'type-info:nullabletypedlistunion' => '{ "nullable": true, "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } } ], "property": "nullableTypedListUnion" }',
             ],
             OA\OpenApi::VERSION_3_1_0 => [
@@ -96,7 +96,7 @@ class TypeResolverTest extends OpenApiTestCase
                 'blah_values' => '{ "type": [ "array", "null" ], "items": { "type": "string", "example": "hello" }, "property": "blah_values" }',
                 'oneofvar' => '{ "oneOf": [ { "type": "string" }, { "type": "bool" } ], "property": "oneOfVar" }',
                 'oneoflist' => '{ "type": "array", "items": { "oneOf": [ { "type": "string" }, { "type": "bool" } ] }, "property": "oneOfList" }',
-                'legacy:nullabletypedlistunion' => '{}',
+                'legacy:nullabletypedlistunion' => '{ "property": "nullableTypedListUnion" }',
                 'type-info:nullabletypedlistunion' => '{ "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } }, { "type": "null" } ], "property": "nullableTypedListUnion" }',
             ],
         ];
