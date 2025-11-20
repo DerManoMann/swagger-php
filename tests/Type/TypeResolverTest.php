@@ -62,6 +62,9 @@ class TypeResolverTest extends OpenApiTestCase
                 'oneoflist' => '{ "type": "array", "items": { "oneOf": [ { "type": "string" }, { "type": "bool" } ] }, "property": "oneOfList" }',
                 'legacy:nullabletypedlistunion' => '{ "nullable": true, "property": "nullableTypedListUnion" }',
                 'type-info:nullabletypedlistunion' => '{ "nullable": true, "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } } ], "property": "nullableTypedListUnion" }',
+                'legacy:nullablenestedtypedlistunion' => '{ "nullable": true, "property": "nullableNestedTypedListUnion" }',
+                'type-info:nullablenestedtypedlistunion' => '{ "nullable": true, "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } }, { "type": "array", "items": { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } } } ], "property": "nullableNestedTypedListUnion" }',
+                'reflectionvalue' => '{ "example": true, "nullable": true, "property": "reflectionValue" }',
             ],
             OA\OpenApi::VERSION_3_1_0 => [
                 'nothing' => '{ "property": "nothing" }',
@@ -98,6 +101,10 @@ class TypeResolverTest extends OpenApiTestCase
                 'oneoflist' => '{ "type": "array", "items": { "oneOf": [ { "type": "string" }, { "type": "bool" } ] }, "property": "oneOfList" }',
                 'legacy:nullabletypedlistunion' => '{ "property": "nullableTypedListUnion" }',
                 'type-info:nullabletypedlistunion' => '{ "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } }, { "type": "null" } ], "property": "nullableTypedListUnion" }',
+                'legacy:nullablenestedtypedlistunion' => '{ "property": "nullableNestedTypedListUnion" }',
+                'type-info:nullablenestedtypedlistunion' => '{ "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } }, { "type": "array", "items": { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } } }, { "type": "null" } ], "property": "nullableNestedTypedListUnion" }',
+                'legacy:reflectionvalue' => '{ "example": true, "property": "reflectionValue" }',
+                'type-info:reflectionvalue' => '{ "type": [ "boolean", "integer", "null" ], "example": true, "property": "reflectionValue" }',
             ],
         ];
 

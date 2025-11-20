@@ -94,6 +94,7 @@ class TypeInfoTypeResolver extends AbstractTypeResolver
 
                         $schema->type = Generator::UNDEFINED;
                         $schema->oneOf = [];
+
                         if ($builtinTypes) {
                             $schema->oneOf[] = $builtinSchema = new OA\Schema([
                                 'type' => array_values(array_map(fn (Type $t): string => (string) $t, $builtinTypes)),
@@ -102,6 +103,7 @@ class TypeInfoTypeResolver extends AbstractTypeResolver
                             $this->type2ref($builtinSchema, $analysis);
                             $analysis->addAnnotation($builtinSchema, $builtinSchema->_context);
                         }
+
                         foreach ($otherTypes as $otherType) {
                             $otherSchema = new OA\Schema([
                                 '_context' => new Context(['generated' => true], $schema->_context),
@@ -124,15 +126,26 @@ class TypeInfoTypeResolver extends AbstractTypeResolver
             } elseif ($type instanceof ExplicitType) {
                 $schema->type = $type->getTypeIdentifier()->value;
             } elseif ($type instanceof CollectionType) {
-                $schema->type = (string) $type->getCollectionValueType();
-                $this->augmentItems($schema, $analysis);
+                $schema->type = 'array';
+
+                if (Generator::isDefault($schema->items)) {
+                    $schema->items = new OA\Items(['_context' => new Context(['generated' => true], $schema->_context)]);
+                    $this->setSchemaType($schema->items, $type->getCollectionValueType(), $analysis);
+                    $this->type2ref($schema->items, $analysis);
+                    $analysis->addAnnotation($schema->items, $schema->items->_context);
+                } elseif (Generator::isDefault($schema->items->type, $schema->items->oneOf, $schema->items->allOf, $schema->items->anyOf)) {
+                    $this->setSchemaType($schema->items, $type->getCollectionValueType(), $analysis);
+                    $this->type2ref($schema->items, $analysis);
+                }
+
+                $this->mapNativeType($schema->items, $schema->items->type);
             }
         }
 
         return $schema;
     }
 
-    /**
+    /**645 1050272  02 1268 0026220 00
      * @param \ReflectionParameter|\ReflectionProperty|\ReflectionMethod $reflector
      */
     protected function getReflectionType(\Reflector $reflector): ?Type
