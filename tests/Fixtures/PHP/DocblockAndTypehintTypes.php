@@ -179,6 +179,12 @@ class DocblockAndTypehintTypes
     public array $oneOfList;
 
     /**
+     * @var null|DocblockAndTypehintTypes|array<DocblockAndTypehintTypes>
+     */
+    #[OAT\Property()]
+    public ?array $nullableTypedListUnion;
+
+    /**
      * @param \DateTimeImmutable[] $paramDateTimeList
      * @param string[] $paramStringList
      */

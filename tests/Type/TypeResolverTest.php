@@ -60,6 +60,8 @@ class TypeResolverTest extends OpenApiTestCase
                 'blah_values' => '{ "type": "array", "items": { "type": "string", "example": "hello" }, "nullable": true, "property": "blah_values" }',
                 'oneofvar' => '{ "oneOf": [ { "type": "string" }, { "type": "bool" } ], "property": "oneOfVar" }',
                 'oneoflist' => '{ "type": "array", "items": { "oneOf": [ { "type": "string" }, { "type": "bool" } ] }, "property": "oneOfList" }',
+                'legacy:nullabletypedlistunion' => '{}',
+                'type-info:nullabletypedlistunion' => '{ "nullable": true, "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } } ], "property": "nullableTypedListUnion" }',
             ],
             OA\OpenApi::VERSION_3_1_0 => [
                 'nothing' => '{ "property": "nothing" }',
@@ -94,6 +96,8 @@ class TypeResolverTest extends OpenApiTestCase
                 'blah_values' => '{ "type": [ "array", "null" ], "items": { "type": "string", "example": "hello" }, "property": "blah_values" }',
                 'oneofvar' => '{ "oneOf": [ { "type": "string" }, { "type": "bool" } ], "property": "oneOfVar" }',
                 'oneoflist' => '{ "type": "array", "items": { "oneOf": [ { "type": "string" }, { "type": "bool" } ] }, "property": "oneOfList" }',
+                'legacy:nullabletypedlistunion' => '{}',
+                'type-info:nullabletypedlistunion' => '{ "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } }, { "type": "null" } ], "property": "nullableTypedListUnion" }',
             ],
         ];
 
@@ -121,12 +125,16 @@ class TypeResolverTest extends OpenApiTestCase
                     $resolverCaseName = "$key:$caseName";
                     $fullCase = "$key:{$version}[$ii]-$caseName";
 
-                    yield $fullCase => [
-                        $typeResolver,
-                        $analysis,
-                        $property,
-                        json_decode($expectations[$version][$caseName] ?? $expectations[$version][$resolverCaseName] ?? '{}', true),
-                    ];
+                    $json = $expectations[$version][$caseName] ?? $expectations[$version][$resolverCaseName] ?? null;
+
+                    if ($json) {
+                        yield $fullCase => [
+                            $typeResolver,
+                            $analysis,
+                            $property,
+                            json_decode($json, true),
+                        ];
+                    }
                 }
             }
         }
