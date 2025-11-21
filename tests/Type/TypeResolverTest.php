@@ -65,6 +65,8 @@ class TypeResolverTest extends OpenApiTestCase
                 'legacy:nullablenestedtypedlistunion' => '{ "nullable": true, "property": "nullableNestedTypedListUnion" }',
                 'type-info:nullablenestedtypedlistunion' => '{ "nullable": true, "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } }, { "type": "array", "items": { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } } } ], "property": "nullableNestedTypedListUnion" }',
                 'reflectionvalue' => '{ "example": true, "nullable": true, "property": "reflectionValue" }',
+                'legacy:intersectionvar' => '{ "property": "intersectionVar" }',
+                'type-info:intersectionvar' => '{ "allOf": [ { "$ref": "#/components/schemas/FirstInterface" }, { "$ref": "#/components/schemas/SecondInterface" } ], "property": "intersectionVar" }',
             ],
             OA\OpenApi::VERSION_3_1_0 => [
                 'nothing' => '{ "property": "nothing" }',
@@ -105,18 +107,26 @@ class TypeResolverTest extends OpenApiTestCase
                 'type-info:nullablenestedtypedlistunion' => '{ "oneOf": [ { "$ref": "#/components/schemas/DocblockAndTypehintTypes" }, { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } }, { "type": "array", "items": { "type": "array", "items": { "$ref": "#/components/schemas/DocblockAndTypehintTypes" } } }, { "type": "null" } ], "property": "nullableNestedTypedListUnion" }',
                 'legacy:reflectionvalue' => '{ "example": true, "property": "reflectionValue" }',
                 'type-info:reflectionvalue' => '{ "type": [ "boolean", "integer", "null" ], "example": true, "property": "reflectionValue" }',
+                'legacy:intersectionvar' => '{ "property": "intersectionVar" }',
+                'type-info:intersectionvar' => '{ "allOf": [ { "$ref": "#/components/schemas/FirstInterface" }, { "$ref": "#/components/schemas/SecondInterface" } ], "property": "intersectionVar" }',
             ],
         ];
 
         $rc = new \ReflectionClass(DocblockAndTypehintTypes::class);
+        $fixtureFolder = dirname($rc->getFileName());
+        $sources = [
+            $rc->getFileName(),
+            "$fixtureFolder/FirstInterface.php",
+            "$fixtureFolder/SecondInterface.php",
+        ];
 
         foreach (static::getTypeResolvers() as $key => $typeResolver) {
             foreach ([OA\OpenApi::VERSION_3_0_0, OA\OpenApi::VERSION_3_1_0] as $version) {
                 $analysis = (new Generator())
                     ->setVersion($version)
                     ->setProcessorPipeline(new Pipeline([new MergeIntoOpenApi(), new AugmentSchemas()]))
-                    ->withContext(function (Generator $generator, Analysis $analysis, Context $context) use ($rc) {
-                        $generator->generate([$rc->getFileName()], $analysis, false);
+                    ->withContext(function (Generator $generator, Analysis $analysis, Context $context) use ($sources) {
+                        $generator->generate($sources, $analysis, false);
 
                         return $analysis;
                     });

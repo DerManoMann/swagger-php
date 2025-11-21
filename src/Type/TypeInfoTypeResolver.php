@@ -27,6 +27,7 @@ use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\Type\BuiltinType;
 use Symfony\Component\TypeInfo\Type\CollectionType;
 use Symfony\Component\TypeInfo\Type\CompositeTypeInterface;
+use Symfony\Component\TypeInfo\Type\IntersectionType;
 use Symfony\Component\TypeInfo\Type\NullableType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
 use Symfony\Component\TypeInfo\Type\UnionType;
@@ -112,6 +113,18 @@ class TypeInfoTypeResolver extends AbstractTypeResolver
                             $this->type2ref($otherSchema, $analysis);
                             $analysis->addAnnotation($otherSchema, $otherSchema->_context);
                         }
+                    }
+                } elseif ($type instanceof IntersectionType) {
+                    $schema->type = Generator::UNDEFINED;
+                    $schema->allOf = [];
+
+                    foreach ($types as $intersectionType) {
+                        $intersectionSchema = new OA\Schema([
+                            '_context' => new Context(['generated' => true], $schema->_context),
+                        ]);
+                        $schema->allOf[] = $this->setSchemaType($intersectionSchema, $intersectionType, $analysis);
+                        $this->type2ref($intersectionSchema, $analysis);
+                        $analysis->addAnnotation($intersectionSchema, $intersectionSchema->_context);
                     }
                 }
             }

@@ -216,4 +216,7 @@ class DocblockAndTypehintTypes
         ?array  $blah_values,
     ) {
     }
+
+    #[OAT\Property]
+    public FirstInterface&SecondInterface $intersectionVar;
 }
