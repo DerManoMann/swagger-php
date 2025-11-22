@@ -21,7 +21,6 @@ class ExpandTraits
 
     public function __invoke(Analysis $analysis): void
     {
-        /** @var OA\Schema[] $schemas */
         $schemas = $analysis->getAnnotationsOfType(OA\Schema::class, true);
 
         // do regular trait inheritance / merge

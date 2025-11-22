@@ -17,7 +17,6 @@ class AugmentDiscriminators
 {
     public function __invoke(Analysis $analysis): void
     {
-        /** @var OA\Discriminator[] $discriminators */
         $discriminators = $analysis->getAnnotationsOfType(OA\Discriminator::class);
 
         foreach ($discriminators as $discriminator) {

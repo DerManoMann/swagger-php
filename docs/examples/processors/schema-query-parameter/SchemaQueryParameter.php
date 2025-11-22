@@ -25,7 +25,6 @@ class SchemaQueryParameter
 
     public function __invoke(Analysis $analysis): void
     {
-        /** @var Operation[] $operations */
         $operations = $analysis->getAnnotationsOfType(Operation::class);
 
         foreach ($operations as $operation) {
