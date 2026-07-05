@@ -7,6 +7,7 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_PROPERTY)]
+#[AllowedParents(Schema::class)]
 class Xml extends AbstractAttribute
 {
     /**

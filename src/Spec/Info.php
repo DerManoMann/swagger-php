@@ -7,6 +7,7 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS)]
+#[AllowedParents]
 class Info extends AbstractAttribute
 {
     /**

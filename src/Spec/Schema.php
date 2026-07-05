@@ -7,6 +7,7 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD | \Attribute::TARGET_PROPERTY | \Attribute::IS_REPEATABLE)]
+#[AllowedParents(Property::class, Parameter::class, Header::class, MediaType::class)]
 class Schema extends AbstractAttribute
 {
     /**

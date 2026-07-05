@@ -7,6 +7,7 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD)]
+#[AllowedParents(Operation::class, Tag::class, Schema::class)]
 class ExternalDocumentation extends AbstractAttribute
 {
     /**

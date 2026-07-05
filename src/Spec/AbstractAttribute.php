@@ -9,10 +9,10 @@ namespace OpenApi\Spec;
 abstract class AbstractAttribute implements OpenApiAttributeInterface
 {
     /** @internal */
-    public readonly ?SourceLocation $sourceLocation;
+    public ?SourceLocation $sourceLocation = null;
 
     /** @internal */
-    public readonly ?\Reflector $reflector;
+    public ?\Reflector $reflector = null;
 
     /**
      * @param list<Attachable> $attachables

@@ -7,6 +7,7 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
+#[AllowedParents(Response::class, RequestBody::class)]
 class MediaType extends AbstractAttribute
 {
     /**

@@ -7,6 +7,7 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_PROPERTY | \Attribute::IS_REPEATABLE)]
+#[AllowedParents(MediaType::class)]
 class Encoding extends AbstractAttribute
 {
     /**

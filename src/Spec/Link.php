@@ -7,6 +7,7 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
+#[AllowedParents(Response::class)]
 class Link extends AbstractAttribute
 {
     /**

@@ -7,6 +7,7 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
+#[AllowedParents(Server::class)]
 class ServerVariable extends AbstractAttribute
 {
     /**
