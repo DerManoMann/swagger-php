@@ -6,6 +6,19 @@
 
 namespace OpenApi\Spec;
 
+/**
+ * With PHP 8.4+ property hooks this interface would become:
+ *
+ *     interface OpenApiAttributeInterface
+ *     {
+ *         public ?array $x { get; }
+ *         public array $attachables { get; }
+ *         public ?\Reflector $reflector { get; set; }
+ *         public ?SourceLocation $sourceLocation { get; set; }
+ *
+ *         public function allowedParents(): ?array;
+ *     }
+ */
 interface OpenApiAttributeInterface
 {
     public function allowedParents(): ?array;

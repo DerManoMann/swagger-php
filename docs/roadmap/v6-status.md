@@ -6,26 +6,47 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 
 | Component | Location | Notes |
 |-----------|----------|-------|
-| DTOs (`OpenApi\Spec\*`) | `src/Spec/` | All essential classes (Schema, Property, Operation, Parameter, Response, etc.) |
-| `AbstractAttribute` | `src/Spec/AbstractAttribute.php` | Base class with `sourceLocation`, `reflector`, `attachables`, `x`, `allowedParents()` |
-| `OpenApiAttributeInterface` | `src/Spec/OpenApiAttributeInterface.php` | Marker interface for all spec DTOs |
+| DTOs (`OpenApi\Spec\*`) | `src/Spec/` | All essential classes (Schema, Property, Operation, Parameter, Response, RequestBody, MediaType, Header, Encoding, ExternalDocumentation, Discriminator, Xml, Link, SecurityScheme, Flow, Info, Contact, License, Tag, Server, ServerVariable, Example, Attachable, OpenApi) |
+| `OpenApiAttributeInterface` | `src/Spec/OpenApiAttributeInterface.php` | Full contract: `allowedParents()`, `getReflector()`/`setReflector()`, `getSourceLocation()`/`setSourceLocation()`, `getExtensions()`, `getAttachables()` |
+| `AbstractAttribute` | `src/Spec/AbstractAttribute.php` | Base class implementing the interface; `reflector`/`sourceLocation` are protected with fluent setters |
 | `SourceLocation` | `src/Spec/SourceLocation.php` | Value object with `fromReflector()` |
-| `Specification` | `src/Spec/Specification.php` | Flat collection with typed buckets + `add()` routing |
-| `Assembler` | `src/Spec/Assembler.php` | Reads attributes, resolves nesting via `allowedParents()`, populates Specification |
-| `SpecAnnotationFactory` | `src/Spec/SpecAnnotationFactory.php` | Phase 1 bridge: converts Spec DTOs → classic OA annotations |
+| `Specification` | `src/Spec/Specification.php` | Flat typed collections + `add()` routing; `$openapi` is non-nullable DTO (initialized in constructor) |
+| `Assembler` | `src/Spec/Assembler.php` | Reads attributes via reflection, resolves nesting via `allowedParents()`, populates Specification; typed to concrete reflection classes |
+| `SpecAnnotationFactory` | `src/Spec/SpecAnnotationFactory.php` | Phase 1 bridge with full context propagation (resolveContext, buildNestedContext, recursive convertArray, flattenSchema, UNDEFINED-aware extractProperties) |
 | `SpecCompilerInterface` | `src/Spec/SpecCompilerInterface.php` | Interface with `getVersion()`, `compile()`, `validate()` |
-| `OpenApi31Compiler` | `src/Spec/OpenApi31Compiler.php` | Full implementation producing structured output arrays |
+| `OpenApi31Compiler` | `src/Spec/OpenApi31Compiler.php` | Full declarative implementation with `filter()` stripping null/UNDEFINED/[] |
 | `CompilerDiagnostics` / `Diagnostic` | `src/Spec/` | Error/warning collection for validation |
 | `CompilerExtension` / `CompilerContext` | `src/Spec/` | Interfaces declared (not wired into compiler yet) |
+| `Generator::UNDEFINED` reuse | `src/Spec/Schema.php` | `example`, `default`, `const` use UNDEFINED to distinguish "not set" from explicit null |
+
+## Tested End-to-End Paths
+
+| Path | Test | Notes |
+|------|------|-------|
+| Assembler → Compiler | `AssemblerTest` | PetStore fixture, 61 assertions |
+| Assembler → Compiler validation | `OpenApi31CompilerTest` | Compile + validate tests |
+| Bridge → Classic pipeline | `ApiBridgeTest` | Full API example comparing against `docs/examples/specs/api/api-3.1.0.yaml` via `assertSpecEquals` (handles property ordering) |
+| Bridge → Classic pipeline (simple) | `SpecAnnotationFactoryTest` | Basic conversion tests |
+
+## Deviations from Plan
+
+| Plan says | Implementation does | Reason |
+|-----------|--------------------|----|
+| `AttributeStack` intermediate | Not needed; Assembler works directly with flat attribute lists | Nesting resolved via `allowedParents()` + reflection; no intermediate container required |
+| Slot map on Assembler | `allowedParents()` method on each DTO + reflection-based `nestChild()` | More extensible; custom DTOs declare their own parents |
+| `Specification` has finders (`schema()`, `find()`, `filter()`) | Only `add()` routing exists | Finders not yet needed; compiler accesses collections directly |
+| `$security` as flat array on Specification | `$specification->openapi->security` via OpenApi DTO | More consistent — OpenApi is a DTO like all others |
+| DTOs use `null` for "not set" exclusively | Schema uses `Generator::UNDEFINED` for `example`/`default`/`const` | Needed for properties where `null` is a valid JSON value |
+| Converters as separate class(es) | Conversion logic lives in `SpecAnnotationFactory` directly | Single bridge class; converter extraction can happen later if needed |
+| Factory + AttributeEnricher as separate component | Not yet started | Phase 1 bridge works without it |
 
 ## Not Yet Touched
 
 | Component | Roadmap reference | Purpose |
 |-----------|-------------------|---------|
-| `AttributeStack` | `details/factory.md` | Per-element container with `find()`, `findStructural()`, `getOrCreate()` |
 | `AttributeFactory` | `details/factory.md` | New-path factory: namespace routing, enricher invocation, metadata assignment |
 | `AttributeEnricher` | `details/factory.md` | Translates non-OA attributes (validation, routing) into OA DTOs — key for Nelmio |
-| Extract merge from classic constructor | `details/extract-merge.md` | Split `__construct()` into `captureContext()` / `assignProperties()` / `performMerge()` — needed for Phase 2 flip where classic annotations become thin DTOs |
+| Extract merge from classic constructor | `details/extract-merge.md` | Split `__construct()` into `captureContext()` / `assignProperties()` / `performMerge()` — needed for Phase 2 flip |
 | Specification finders | `details/specification.md` | `schema()`, `operations()`, `find()`, `filter()`, `resolveRef()`, `schemaNameFor()` |
 | Schema registry / `$ref` resolution | `v6-details.md` | Late-bound ref resolution after all schemas registered |
 | `ProcessorInterface` (v7) | `details/processor-interface.md` | `process(Specification)` — replaces `__invoke(Analysis)` |
@@ -33,7 +54,6 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 | `OpenApi30Compiler` | `v6-compilers.md` | Downgrade compiler: nullable, exclusiveMin semantics, feature gating |
 | `OpenApi32Compiler` | `v6-compilers.md` | 3.2 additions: Tag `summary`/`parent`/`kind`, PathItem `query` |
 | CompilerExtension wiring | `details/compiler-extension.md` | Registration on compiler, Attachable → output dispatch |
-| SourceLocation on classic `AbstractAnnotation` | `details/sourcelocation.md` | Adding `$_sourceLocation` + `$_reflector` to existing annotations |
 | Generator integration | `details/spec-compiler.md` | `setCompiler()` on Generator, compiler as output path |
 | Namespace routing | `details/factory.md` | Per-class routing: `OpenApi\Spec\*` → new pipeline, `OpenApi\Attributes\*` → classic |
 
@@ -57,4 +77,4 @@ Two tested paths through the prototype:
 2. **Assembler → Factory → Classic pipeline** (Phase 1 bridge):
    `ReflectionClass → SpecAnnotationFactory::build() → classic OA annotations → Generator → YAML`
 
-Both produce correct output for the PetStore fixture. The full existing test suite (1064 tests) passes unchanged.
+Both produce correct output for complex fixtures (PetStore + full API example with operations, parameters, responses, callbacks, traits, enums, security). The full existing test suite (1065 tests) passes unchanged.
