@@ -67,6 +67,18 @@ Mode is auto-detected from attribute namespace in sources, or set explicitly. Us
 
 See [v6-builder.md](v6-builder.md) for full API design.
 
+## Prep Work (before introducing new pipeline)
+
+See [v6-prep-work.md](v6-prep-work.md) for full details.
+
+1. Extract `Generator::UNDEFINED` to shared utility (30+ files depend on Generator just for this)
+2. Decouple TypeResolver from `OA\Schema` (extract generic type mapping helper)
+3. Remove version branching from type resolvers (always canonical form; compilers handle downgrade)
+4. Extract generic docblock parser from `DocBlockTrait`
+5. Namespace moves (TokenScanner, RefTrait to neutral locations)
+
+Items 1–3 are critical path. 4–5 reduce friction but don't block.
+
 ## Reusable Code Analysis
 
 See [v6-reusable-code.md](v6-reusable-code.md) for full breakdown.
