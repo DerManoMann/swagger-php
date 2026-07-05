@@ -19,6 +19,8 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 | `CompilerExtension` / `CompilerContext` | `src/Spec/` | Interfaces declared (not wired into compiler yet) |
 | `Generator::UNDEFINED` reuse | `src/Spec/Schema.php` | `example`, `default`, `const` use UNDEFINED to distinguish "not set" from explicit null |
 | `SpecificationConverter` | `src/Spec/SpecificationConverter.php` | Phase 2 bridge: classic `OA\OpenApi` → `Specification`; handles nullable→type array, callbacks with nested annotations, $ref+description |
+| `OpenApi30Compiler` | `src/Spec/OpenApi30Compiler.php` | Downgrade compiler: type array→single+nullable, exclusiveMin boolean form, const→enum, strips 3.1+ keywords |
+| `OpenApi32Compiler` | `src/Spec/OpenApi32Compiler.php` | Extends 3.1 with forward-looking Tag summary/parent/kind and PathItem query |
 
 ## Tested End-to-End Paths
 
@@ -53,8 +55,8 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 | Schema registry / `$ref` resolution | `v6-details.md` | Late-bound ref resolution after all schemas registered |
 | `ProcessorInterface` (v7) | `details/processor-interface.md` | `process(Specification)` — replaces `__invoke(Analysis)` |
 | Phase 2 converter (classic → new DTO) | `v6-architecture.md` | ✅ Prototyped as `SpecificationConverter` |
-| `OpenApi30Compiler` | `v6-compilers.md` | Downgrade compiler: nullable, exclusiveMin semantics, feature gating |
-| `OpenApi32Compiler` | `v6-compilers.md` | 3.2 additions: Tag `summary`/`parent`/`kind`, PathItem `query` |
+| `OpenApi30Compiler` | `v6-compilers.md` | ✅ Prototyped: downgrade compiler with nullable, exclusiveMin, const→enum, strips 3.1+ keywords |
+| `OpenApi32Compiler` | `v6-compilers.md` | ✅ Prototyped: extends 3.1 with forward-looking Tag/PathItem support |
 | CompilerExtension wiring | `details/compiler-extension.md` | Registration on compiler, Attachable → output dispatch |
 | Generator integration | `details/spec-compiler.md` | `setCompiler()` on Generator, compiler as output path |
 | Namespace routing | `details/factory.md` | Per-class routing: `OpenApi\Spec\*` → new pipeline, `OpenApi\Attributes\*` → classic |
