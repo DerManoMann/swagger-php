@@ -375,18 +375,26 @@ class OpenApi31Compiler implements SpecCompilerInterface
         }
 
         if ($schema->ref !== null) {
-            return ['$ref' => $schema->ref];
+            $ref = ['$ref' => $schema->ref];
+            if ($schema->description !== null) {
+                $ref['description'] = $schema->description;
+            }
+
+            return $ref;
         }
 
-        return $this->filter([
-            'type' => $schema->type,
+        $type = $schema->type;
+        if ($schema->nullable === true && $type !== null) {
+            $type = (array) $type;
+            $type[] = 'null';
+        }
+
+        $result = $this->filter([
+            'type' => $type,
             'format' => $schema->format,
             'title' => $schema->title,
             'description' => $schema->description,
-            'nullable' => $schema->nullable,
             'enum' => $schema->enum,
-            'const' => $schema->const,
-            'default' => $schema->default,
 
             // String
             'minLength' => $schema->minLength,
@@ -437,7 +445,6 @@ class OpenApi31Compiler implements SpecCompilerInterface
             'else' => $schema->else !== null ? $this->compileSchema($schema->else) : null,
 
             // Examples
-            'example' => $schema->example,
             'examples' => $schema->examples,
 
             // Meta
@@ -450,6 +457,19 @@ class OpenApi31Compiler implements SpecCompilerInterface
             'externalDocs' => $schema->externalDocs !== null ? $this->compileExternalDocs($schema->externalDocs) : null,
             'xml' => $schema->xml !== null ? $this->compileXml($schema->xml) : null,
         ], $schema);
+
+        // These use UNDEFINED as "not set" — null is a valid JSON value
+        if ($schema->default !== Generator::UNDEFINED) {
+            $result['default'] = $schema->default;
+        }
+        if ($schema->const !== Generator::UNDEFINED) {
+            $result['const'] = $schema->const;
+        }
+        if ($schema->example !== Generator::UNDEFINED) {
+            $result['example'] = $schema->example;
+        }
+
+        return $result;
     }
 
     /**

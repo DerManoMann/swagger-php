@@ -18,6 +18,7 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 | `CompilerDiagnostics` / `Diagnostic` | `src/Spec/` | Error/warning collection for validation |
 | `CompilerExtension` / `CompilerContext` | `src/Spec/` | Interfaces declared (not wired into compiler yet) |
 | `Generator::UNDEFINED` reuse | `src/Spec/Schema.php` | `example`, `default`, `const` use UNDEFINED to distinguish "not set" from explicit null |
+| `SpecificationConverter` | `src/Spec/SpecificationConverter.php` | Phase 2 bridge: classic `OA\OpenApi` → `Specification`; handles nullable→type array, callbacks with nested annotations, $ref+description |
 
 ## Tested End-to-End Paths
 
@@ -27,6 +28,7 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 | Assembler → Compiler validation | `OpenApi31CompilerTest` | Compile + validate tests |
 | Bridge → Classic pipeline | `ApiBridgeTest` | Full API example comparing against `docs/examples/specs/api/api-3.1.0.yaml` via `assertSpecEquals` (handles property ordering) |
 | Bridge → Classic pipeline (simple) | `SpecAnnotationFactoryTest` | Basic conversion tests |
+| Classic → DTO → Compiler | `SpecificationConverterTest` | Phase 2 bridge: full API example through `SpecificationConverter` → `OpenApi31Compiler` → assertSpecEquals |
 
 ## Deviations from Plan
 
@@ -50,7 +52,7 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 | Specification finders | `details/specification.md` | `schema()`, `operations()`, `find()`, `filter()`, `resolveRef()`, `schemaNameFor()` |
 | Schema registry / `$ref` resolution | `v6-details.md` | Late-bound ref resolution after all schemas registered |
 | `ProcessorInterface` (v7) | `details/processor-interface.md` | `process(Specification)` — replaces `__invoke(Analysis)` |
-| Phase 2 converter (classic → new DTO) | `v6-architecture.md` | Reverse bridge for when Specification becomes primary |
+| Phase 2 converter (classic → new DTO) | `v6-architecture.md` | ✅ Prototyped as `SpecificationConverter` |
 | `OpenApi30Compiler` | `v6-compilers.md` | Downgrade compiler: nullable, exclusiveMin semantics, feature gating |
 | `OpenApi32Compiler` | `v6-compilers.md` | 3.2 additions: Tag `summary`/`parent`/`kind`, PathItem `query` |
 | CompilerExtension wiring | `details/compiler-extension.md` | Registration on compiler, Attachable → output dispatch |
@@ -69,7 +71,7 @@ OpenApi30Compiler ──► Full version coverage (most complex: downgrade logic
 
 ## What Works End-to-End Today
 
-Two tested paths through the prototype:
+Three tested paths through the prototype:
 
 1. **Assembler → Compiler** (new pipeline, no classic involvement):
    `ReflectionClass → Assembler::collect() → Specification → OpenApi31Compiler::compile() → array`
@@ -77,4 +79,7 @@ Two tested paths through the prototype:
 2. **Assembler → Factory → Classic pipeline** (Phase 1 bridge):
    `ReflectionClass → SpecAnnotationFactory::build() → classic OA annotations → Generator → YAML`
 
-Both produce correct output for complex fixtures (PetStore + full API example with operations, parameters, responses, callbacks, traits, enums, security). The full existing test suite (1065 tests) passes unchanged.
+3. **Classic → Converter → Compiler** (Phase 2 bridge):
+   `Generator → OA\OpenApi → SpecificationConverter::convert() → Specification → OpenApi31Compiler::compile() → array`
+
+All three produce correct output for complex fixtures (PetStore + full API example with operations, parameters, responses, callbacks, traits, enums, security). The full existing test suite (1066 tests) passes unchanged.
