@@ -184,7 +184,7 @@ class Assembler
             if ($docComment) {
                 foreach ($constructor->getParameters() as $param) {
                     $paramName = $param->getName();
-                    $pattern = '/@param\s+(?:list|array)<([^>]+)>\s*\$' . preg_quote($paramName, '/') . '/';
+                    $pattern = '/@param\s+(?:list|array)<([^>]+)>(?:\|null)?\s+\$' . preg_quote($paramName, '/') . '/';
                     if (preg_match($pattern, $docComment, $matches)) {
                         $itemTypes = array_map('trim', explode('|', $matches[1]));
                         foreach ($itemTypes as $itemType) {

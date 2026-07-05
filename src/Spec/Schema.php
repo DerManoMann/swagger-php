@@ -115,6 +115,6 @@ class Schema extends AbstractAttribute
 
     public function allowedParents(): ?array
     {
-        return [Property::class, Parameter::class, Header::class, MediaType::class];
+        return [Parameter::class, Header::class, MediaType::class];
     }
 }
