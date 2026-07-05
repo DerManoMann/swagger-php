@@ -46,28 +46,46 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 | Converters as separate class(es) | Conversion logic lives in `SpecAnnotationFactory` directly | Single bridge class; converter extraction can happen later if needed |
 | Factory + AttributeEnricher as separate component | Not yet started | Phase 1 bridge works without it |
 
-## Generator Integration Strategy
+## Pipeline Architecture
 
-Two fully separate pipelines behind `Generator::generate()`, toggled via mode:
+`OpenApiBuilder` is the single public entry point, supporting both modes behind a unified `BuildResult` contract:
 
 ```
-Classic (default in v6, deprecated in v7, removed in v8):
-  AnalyserInterface → Analysis → ProcessorPipeline → OA\OpenApi → jsonSerialize()
-
-Spec (opt-in in v6, default in v7):
-  SourceScanner → Assembler → Specification → AugmenterPipeline → Compiler → array
+OpenApiBuilder::build()
+  ├─ classic mode (wraps Generator internally):
+  │    AnalyserInterface → Analysis → ProcessorPipeline → OA\OpenApi → BuildResult
+  │
+  └─ spec mode (new pipeline):
+       SourceScanner → Assembler → Specification → AugmenterPipeline → Compiler → BuildResult
 ```
 
-No shared interfaces between pipelines. No modifications to classic code. Generator is the router.
+Mode is auto-detected from attribute namespace in sources, or set explicitly. Users adopt the builder first (one-line change), then migrate annotations at their own pace.
+
+- **v6**: Builder ships. Classic auto-detected from `OA\*` attributes. Spec mode opt-in.
+- **v7**: Spec mode default. Classic still available via `setMode('classic')`.
+- **v8**: Classic mode removed.
+
+See [v6-builder.md](v6-builder.md) for full API design.
+
+## Reusable Code Analysis
+
+See [v6-reusable-code.md](v6-reusable-code.md) for full breakdown.
+
+**Summary:** ~60% of classic processor logic ports to augmenters. Main effort is replacing `_context` with `getReflector()` and targeting `Spec\*` instead of `OA\*`. Merge machinery (~40% of processors) is eliminated entirely.
+
+- **Copy as-is:** SourceFinder, TokenScanner, DocblockTrait, RefTrait
+- **Extract & adapt:** TypeResolver, ExpandEnums, CleanUnusedComponents, OperationId, AugmentSchemas/Properties/Parameters, ExpandInterfaces/Traits
+- **Not needed:** All Merge* processors, CleanUnmerged, BuildPaths, ExpandClasses, AttributeAnnotationFactory
 
 ## Not Yet Touched
 
 | Component | Roadmap reference | Purpose |
 |-----------|-------------------|---------|
+| `OpenApiBuilder` | `v6-builder.md` | New public entry point replacing Generator for spec pipeline; fluent config, returns `BuildResult` container |
+| `BuildResult` | `v6-builder.md` | Result container: `files()`, `specification()`, `compiler()`, `diagnostics()`, `toArray()`/`toJson()`/`toYaml()` |
 | `SourceScanner` | — | Discovers ReflectionClass[] from source paths (replaces analyser role in new pipeline) |
 | `SpecAugmenter` interface | — | `augment(Specification): void` — type resolution, validation rules, docblocks, route attrs |
 | `AugmenterPipeline` | — | Ordered list of augmenters, replaces ProcessorPipeline for new path |
-| Generator mode switch | — | `setMode('spec')` fork in `generate()`, compiler selection, output serialization |
 | Specification finders | `details/specification.md` | `schema()`, `operations()`, `find()`, `filter()`, `resolveRef()`, `schemaNameFor()` |
 | Schema registry / `$ref` resolution | `v6-details.md` | Late-bound ref resolution after all schemas registered |
 | CompilerExtension wiring | `details/compiler-extension.md` | Registration on compiler, Attachable → output dispatch |
