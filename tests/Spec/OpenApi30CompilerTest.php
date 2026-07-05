@@ -28,6 +28,17 @@ class OpenApi30CompilerTest extends TestCase
         $this->assertSame('3.0.3', $compiler->getVersion());
     }
 
+    public function testSupportsMatchesPatchVersions(): void
+    {
+        $compiler = new OpenApi30Compiler();
+        $this->assertTrue($compiler->supports('3.0.0'));
+        $this->assertTrue($compiler->supports('3.0.1'));
+        $this->assertTrue($compiler->supports('3.0.3'));
+        $this->assertTrue($compiler->supports('3.0.4'));
+        $this->assertFalse($compiler->supports('3.1.0'));
+        $this->assertFalse($compiler->supports('3.2.0'));
+    }
+
     public function testNullableTypeArray(): void
     {
         $spec = $this->buildSpec([

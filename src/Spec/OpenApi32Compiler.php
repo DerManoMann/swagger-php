@@ -23,6 +23,11 @@ class OpenApi32Compiler extends OpenApi31Compiler
         return '3.2.0';
     }
 
+    public function supports(string $version): bool
+    {
+        return str_starts_with($version, '3.2.');
+    }
+
     public function compile(Specification $specification): array
     {
         $output = parent::compile($specification);

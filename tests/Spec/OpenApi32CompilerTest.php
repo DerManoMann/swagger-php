@@ -25,6 +25,16 @@ class OpenApi32CompilerTest extends TestCase
         $this->assertSame('3.2.0', $compiler->getVersion());
     }
 
+    public function testSupportsMatchesPatchVersions(): void
+    {
+        $compiler = new OpenApi32Compiler();
+        $this->assertTrue($compiler->supports('3.2.0'));
+        $this->assertTrue($compiler->supports('3.2.1'));
+        $this->assertTrue($compiler->supports('3.2.99'));
+        $this->assertFalse($compiler->supports('3.1.0'));
+        $this->assertFalse($compiler->supports('3.0.3'));
+    }
+
     public function testOutputVersion(): void
     {
         $spec = new Specification();

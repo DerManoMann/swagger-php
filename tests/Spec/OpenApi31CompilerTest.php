@@ -15,6 +15,17 @@ use Symfony\Component\Yaml\Yaml;
 
 class OpenApi31CompilerTest extends TestCase
 {
+    public function testSupportsMatchesPatchVersions(): void
+    {
+        $compiler = new OpenApi31Compiler();
+        $this->assertTrue($compiler->supports('3.1.0'));
+        $this->assertTrue($compiler->supports('3.1.1'));
+        $this->assertTrue($compiler->supports('3.1.2'));
+        $this->assertFalse($compiler->supports('3.0.0'));
+        $this->assertFalse($compiler->supports('3.0.3'));
+        $this->assertFalse($compiler->supports('3.2.0'));
+    }
+
     public function testPetStoreCompile(): void
     {
         $assembler = new Assembler();

@@ -15,6 +15,11 @@ class OpenApi31Compiler implements SpecCompilerInterface
         return '3.1.0';
     }
 
+    public function supports(string $version): bool
+    {
+        return str_starts_with($version, '3.1.');
+    }
+
     public function validate(Specification $specification): CompilerDiagnostics
     {
         $diagnostics = new CompilerDiagnostics();

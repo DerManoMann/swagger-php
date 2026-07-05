@@ -26,6 +26,11 @@ class OpenApi30Compiler extends OpenApi31Compiler
         return '3.0.3';
     }
 
+    public function supports(string $version): bool
+    {
+        return str_starts_with($version, '3.0.');
+    }
+
     public function compile(Specification $specification): array
     {
         $this->diagnostics = new CompilerDiagnostics();
