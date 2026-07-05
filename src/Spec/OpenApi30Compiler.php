@@ -81,11 +81,39 @@ class OpenApi30Compiler extends OpenApi31Compiler
 
     public function validate(Specification $specification): CompilerDiagnostics
     {
-        $diagnostics = parent::validate($specification);
+        $diagnostics = new CompilerDiagnostics();
+
+        if ($specification->info === null) {
+            $diagnostics->errors[] = new Diagnostic('info is required');
+        } elseif ($specification->info->title === null) {
+            $diagnostics->errors[] = new Diagnostic('info.title is required');
+        }
+
+        $hasPaths = (bool) array_filter($specification->operations, fn (Operation $op) => $op->path !== null);
+
+        if (!$hasPaths) {
+            $diagnostics->errors[] = new Diagnostic('At least one path is required in OpenAPI 3.0');
+        }
 
         foreach ($specification->operations as $op) {
             if ($op->webhook !== null) {
                 $diagnostics->warnings[] = new Diagnostic('Webhooks are not supported in OpenAPI 3.0');
+            }
+        }
+
+        $allSchemas = $this->collectSchemas($specification);
+        foreach ($allSchemas as $schema) {
+            if ($schema->type !== null && (is_array($schema->type) ? in_array('array', $schema->type, true) : $schema->type === 'array')) {
+                if ($schema->items === null) {
+                    $diagnostics->warnings[] = new Diagnostic(
+                        'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ' has type "array" but no items'
+                    );
+                }
+            }
+            if ($schema->examples !== null) {
+                $diagnostics->warnings[] = new Diagnostic(
+                    'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ' uses examples array which is not supported in OpenAPI 3.0'
+                );
             }
         }
 

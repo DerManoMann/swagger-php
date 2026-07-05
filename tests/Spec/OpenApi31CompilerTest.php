@@ -7,7 +7,12 @@
 namespace OpenApi\Tests\Spec;
 
 use OpenApi\Spec\Assembler;
+use OpenApi\Spec\Info;
+use OpenApi\Spec\License;
 use OpenApi\Spec\OpenApi31Compiler;
+use OpenApi\Spec\Operation;
+use OpenApi\Spec\Response;
+use OpenApi\Spec\Schema;
 use OpenApi\Spec\Specification;
 use OpenApi\Tests\Spec\Fixtures\PetStore;
 use PHPUnit\Framework\TestCase;
@@ -61,5 +66,72 @@ class OpenApi31CompilerTest extends TestCase
 
         $this->assertTrue($diagnostics->hasErrors());
         $this->assertSame('info is required', $diagnostics->errors[0]->message);
+    }
+
+    public function testValidateNoPaths(): void
+    {
+        $compiler = new OpenApi31Compiler();
+        $spec = new Specification();
+        $spec->info = new Info(title: 'Test', version: '1.0.0');
+
+        $diagnostics = $compiler->validate($spec);
+
+        $this->assertNotEmpty($diagnostics->warnings);
+        $this->assertStringContainsString('at least one of', strtolower($diagnostics->warnings[0]->message));
+    }
+
+    public function testValidateWebhooksOnly(): void
+    {
+        $compiler = new OpenApi31Compiler();
+        $spec = new Specification();
+        $spec->info = new Info(title: 'Test', version: '1.0.0');
+        $spec->operations[] = new Operation(webhook: 'onEvent', method: 'post', responses: [new Response(response: 200, description: 'OK')]);
+
+        $diagnostics = $compiler->validate($spec);
+
+        $this->assertEmpty($diagnostics->warnings);
+    }
+
+    public function testValidateLicenseMutualExclusion(): void
+    {
+        $compiler = new OpenApi31Compiler();
+        $spec = new Specification();
+        $spec->info = new Info(
+            title: 'Test',
+            version: '1.0.0',
+            license: new License(name: 'MIT', identifier: 'MIT', url: 'https://example.com'),
+        );
+        $spec->operations[] = new Operation(path: '/test', method: 'get', responses: [new Response(response: 200, description: 'OK')]);
+
+        $diagnostics = $compiler->validate($spec);
+
+        $this->assertNotEmpty($diagnostics->warnings);
+        $this->assertStringContainsString('mutually exclusive', $diagnostics->warnings[0]->message);
+    }
+
+    public function testValidateArrayWithoutItems(): void
+    {
+        $compiler = new OpenApi31Compiler();
+        $spec = new Specification();
+        $spec->info = new Info(title: 'Test', version: '1.0.0');
+        $spec->schemas[] = new Schema(schema: 'List', type: 'array');
+
+        $diagnostics = $compiler->validate($spec);
+
+        $this->assertNotEmpty($diagnostics->warnings);
+        $this->assertStringContainsString('items', $diagnostics->warnings[0]->message);
+    }
+
+    public function testValidateArrayTypeInArrayForm(): void
+    {
+        $compiler = new OpenApi31Compiler();
+        $spec = new Specification();
+        $spec->info = new Info(title: 'Test', version: '1.0.0');
+        $spec->schemas[] = new Schema(schema: 'NullableList', type: ['array', 'null']);
+
+        $diagnostics = $compiler->validate($spec);
+
+        $warnings = array_filter($diagnostics->warnings, fn ($d) => str_contains($d->message, 'items'));
+        $this->assertNotEmpty($warnings);
     }
 }

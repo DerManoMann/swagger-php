@@ -30,9 +30,25 @@ class OpenApi31Compiler implements SpecCompilerInterface
             $diagnostics->errors[] = new Diagnostic('info.title is required');
         }
 
-        if (!$specification->operations && !$specification->schemas) {
-            $diagnostics->warnings[] = new Diagnostic('No paths or components defined');
+        $hasPaths = (bool) array_filter($specification->operations, fn (Operation $op) => $op->path !== null);
+        $hasWebhooks = (bool) array_filter($specification->operations, fn (Operation $op) => $op->webhook !== null);
+        $hasComponents = $specification->schemas || $specification->responses
+            || $specification->parameters || $specification->requestBodies
+            || $specification->headers || $specification->securitySchemes
+            || $specification->links || $specification->examples;
+
+        if (!$hasPaths && !$hasWebhooks && !$hasComponents) {
+            $diagnostics->warnings[] = new Diagnostic('At least one of paths, webhooks, or components is required');
         }
+
+        if ($specification->info?->license !== null) {
+            $license = $specification->info->license;
+            if ($license->url !== null && $license->identifier !== null) {
+                $diagnostics->warnings[] = new Diagnostic('License url and identifier are mutually exclusive');
+            }
+        }
+
+        $this->validateSchemas($specification, $diagnostics);
 
         return $diagnostics;
     }
@@ -657,6 +673,99 @@ class OpenApi31Compiler implements SpecCompilerInterface
         }
 
         return $result;
+    }
+
+    protected function validateSchemas(Specification $specification, CompilerDiagnostics $diagnostics): void
+    {
+        $allSchemas = $this->collectSchemas($specification);
+
+        foreach ($allSchemas as $schema) {
+            if ($schema->type !== null && (is_array($schema->type) ? in_array('array', $schema->type, true) : $schema->type === 'array')) {
+                if ($schema->items === null) {
+                    $diagnostics->warnings[] = new Diagnostic(
+                        'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ' has type "array" but no items'
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * @return list<Schema>
+     */
+    protected function collectSchemas(Specification $specification): array
+    {
+        $schemas = [];
+
+        foreach ($specification->schemas as $schema) {
+            $this->walkSchema($schema, $schemas);
+        }
+
+        foreach ($specification->operations as $operation) {
+            if ($operation->parameters) {
+                foreach ($operation->parameters as $param) {
+                    if ($param->schema !== null) {
+                        $this->walkSchema($param->schema, $schemas);
+                    }
+                }
+            }
+            if ($operation->requestBody?->content) {
+                foreach ($operation->requestBody->content as $mediaType) {
+                    if ($mediaType->schema !== null) {
+                        $this->walkSchema($mediaType->schema, $schemas);
+                    }
+                }
+            }
+            if ($operation->responses) {
+                foreach ($operation->responses as $response) {
+                    if ($response->content) {
+                        foreach ($response->content as $mediaType) {
+                            if ($mediaType->schema !== null) {
+                                $this->walkSchema($mediaType->schema, $schemas);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return $schemas;
+    }
+
+    /**
+     * @param list<Schema> $collected
+     */
+    protected function walkSchema(Schema $schema, array &$collected): void
+    {
+        $collected[] = $schema;
+
+        if ($schema->properties) {
+            foreach ($schema->properties as $prop) {
+                if ($prop instanceof Property && $prop->schema !== null) {
+                    $this->walkSchema($prop->schema, $collected);
+                } elseif ($prop instanceof Schema) {
+                    $this->walkSchema($prop, $collected);
+                }
+            }
+        }
+        if ($schema->items instanceof Schema) {
+            $this->walkSchema($schema->items, $collected);
+        }
+        if ($schema->allOf) {
+            foreach ($schema->allOf as $sub) {
+                $this->walkSchema($sub, $collected);
+            }
+        }
+        if ($schema->anyOf) {
+            foreach ($schema->anyOf as $sub) {
+                $this->walkSchema($sub, $collected);
+            }
+        }
+        if ($schema->oneOf) {
+            foreach ($schema->oneOf as $sub) {
+                $this->walkSchema($sub, $collected);
+            }
+        }
     }
 
     /**

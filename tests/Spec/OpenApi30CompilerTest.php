@@ -256,6 +256,63 @@ class OpenApi30CompilerTest extends TestCase
         $this->assertTrue($nameSchema['nullable']);
     }
 
+    public function testValidatePathsRequired(): void
+    {
+        $compiler = new OpenApi30Compiler();
+        $spec = new Specification();
+        $spec->openapi = new OpenApi(version: '3.0.3');
+        $spec->info = new Info(title: 'Test', version: '1.0.0');
+        $spec->schemas[] = new Schema(schema: 'Foo', type: 'string');
+
+        $diagnostics = $compiler->validate($spec);
+
+        $this->assertTrue($diagnostics->hasErrors());
+        $this->assertStringContainsString('path is required', $diagnostics->errors[0]->message);
+    }
+
+    public function testValidatePathsPresentIsValid(): void
+    {
+        $compiler = new OpenApi30Compiler();
+        $spec = new Specification();
+        $spec->openapi = new OpenApi(version: '3.0.3');
+        $spec->info = new Info(title: 'Test', version: '1.0.0');
+        $spec->operations[] = new Operation(path: '/test', method: 'get', responses: [new Response(response: 200, description: 'OK')]);
+
+        $diagnostics = $compiler->validate($spec);
+
+        $this->assertEmpty($diagnostics->errors);
+    }
+
+    public function testValidateExamplesArrayWarning(): void
+    {
+        $compiler = new OpenApi30Compiler();
+        $spec = new Specification();
+        $spec->openapi = new OpenApi(version: '3.0.3');
+        $spec->info = new Info(title: 'Test', version: '1.0.0');
+        $spec->operations[] = new Operation(path: '/test', method: 'get', responses: [new Response(response: 200, description: 'OK')]);
+        $spec->schemas[] = new Schema(schema: 'Color', type: 'string', examples: ['red', 'blue']);
+
+        $diagnostics = $compiler->validate($spec);
+
+        $this->assertNotEmpty($diagnostics->warnings);
+        $this->assertStringContainsString('examples', $diagnostics->warnings[0]->message);
+    }
+
+    public function testValidateArrayWithoutItems(): void
+    {
+        $compiler = new OpenApi30Compiler();
+        $spec = new Specification();
+        $spec->openapi = new OpenApi(version: '3.0.3');
+        $spec->info = new Info(title: 'Test', version: '1.0.0');
+        $spec->operations[] = new Operation(path: '/test', method: 'get', responses: [new Response(response: 200, description: 'OK')]);
+        $spec->schemas[] = new Schema(schema: 'List', type: 'array');
+
+        $diagnostics = $compiler->validate($spec);
+
+        $warnings = array_filter($diagnostics->warnings, fn ($d) => str_contains($d->message, 'items'));
+        $this->assertNotEmpty($warnings);
+    }
+
     private function buildSpec(array $schemas): Specification
     {
         $spec = new Specification();
