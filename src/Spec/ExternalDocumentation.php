@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD)]
-#[AllowedParents(Operation::class, Tag::class, Schema::class)]
 class ExternalDocumentation extends AbstractAttribute
 {
     /**
@@ -21,5 +20,10 @@ class ExternalDocumentation extends AbstractAttribute
         array $attachables = [],
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [Operation::class, Tag::class, Schema::class];
     }
 }

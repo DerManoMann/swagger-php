@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
-#[AllowedParents]
 class SecurityScheme extends AbstractAttribute
 {
     /**
@@ -30,5 +29,10 @@ class SecurityScheme extends AbstractAttribute
         array $attachables = [],
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [];
     }
 }

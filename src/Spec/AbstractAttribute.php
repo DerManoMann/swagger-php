@@ -23,4 +23,12 @@ abstract class AbstractAttribute implements OpenApiAttributeInterface
         public ?array $x = null,
     ) {
     }
+
+    /**
+     * @return list<class-string<AbstractAttribute>>|null null = unrestricted
+     */
+    public function allowedParents(): ?array
+    {
+        return null;
+    }
 }

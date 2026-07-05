@@ -1,73 +1,80 @@
-# #[AllowedParents] — Detail
+# allowedParents() — Detail
 
 ## Design
 
-```php
-#[Attribute(Attribute::TARGET_CLASS)]
-class AllowedParents
-{
-    /** @var list<class-string> */
-    public readonly array $parents;
+Method on `AbstractAttribute` that subclasses override to declare valid parents:
 
-    public function __construct(string ...$parents)
+```php
+abstract class AbstractAttribute implements OpenApiAttributeInterface
+{
+    /**
+     * @return list<class-string<AbstractAttribute>>|null null = unrestricted
+     */
+    public function allowedParents(): ?array
     {
-        $this->parents = $parents;
+        return null;
     }
 }
 ```
 
-Variadic — no brackets needed at call site:
+Subclasses override:
 
 ```php
-#[AllowedParents(Operation::class, PathItem::class)]
-class RateLimit extends Attachable { ... }
+class Schema extends AbstractAttribute
+{
+    public function allowedParents(): ?array
+    {
+        return [Property::class, Parameter::class, Header::class, MediaType::class];
+    }
+}
 ```
 
 ## Semantics
 
-- Present with classes → restricted to those parent types
-- Absent → unrestricted (any parent, same as `allowedParents()` returning `null`)
-- Present with empty list → no valid parents (class-level only)
+- Returns class list → restricted to those parent types
+- Returns `null` → unrestricted (any parent)
+- Returns `[]` → no valid parents (root-level only, never nests)
 
-## Factory integration
+## Assembler integration
 
-The factory reads `#[AllowedParents]` via reflection (one read per class, cached).
-Falls back to `allowedParents()` if the attribute is not present.
+The assembler calls `allowedParents()` directly — no reflection, no caching needed:
 
 ```php
-$allowedParents = $this->resolveAllowedParents($annotation);
-// 1. Check for #[AllowedParents] attribute on the class
-// 2. Fall back to $annotation->allowedParents()
-// 3. null means unrestricted
+$allowedParents = $instance->allowedParents();
+// null  → unrestricted (Attachable default)
+// []    → root-level only (Operation, Info, Tag, etc.)
+// [...]​ → nest if exactly one match exists on the same target
 ```
 
-## Deprecation of `allowedParents()`
+## Unified mechanism
 
-`allowedParents()` method is deprecated in v6.x. Downstream authors migrate:
+This replaces both:
+- Classic `$_parents` static (removed in v7)
+- The previously planned `#[AllowedParents]` attribute (not needed)
+
+One mechanism for everything: core DTOs, Attachable, and downstream extensions.
+Same method signature that Attachable already uses — downstream subclasses
+continue to work unchanged.
+
+## Migration for Attachable subclasses
+
+No migration needed — `allowedParents()` already exists on `Attachable`.
+Downstream authors already using the method keep their code as-is.
 
 ```php
-// Before
-class RateLimit extends Attachable {
-    public function allowedParents(): ?array {
-        return [Operation::class, PathItem::class];
+// Works today, works in v7
+class RateLimit extends Attachable
+{
+    public function allowedParents(): ?array
+    {
+        return [Operation::class];
     }
 }
-
-// After
-#[AllowedParents(Operation::class, PathItem::class)]
-class RateLimit extends Attachable { }
 ```
 
-## Why this carries forward
+## Why not an attribute?
 
-`Attachable` is the extension mechanism in all versions. Custom attributes that
-don't extend core classes attach via this path. `#[AllowedParents]` is the
-declarative way to restrict where they land — it's not tied to the classic
-annotation model.
-
-## Why not also `#[NestedAnnotation]`?
-
-`$_nested` (parent-side nesting rules) only serves the classic annotation model.
-The new DTO pipeline doesn't use it — the assembler knows the mapping externally.
-Introducing `#[NestedAnnotation]` would ask downstream authors to adopt it in v6,
-then drop it in v7. Not worth the churn.
+- No reflection overhead — just a method call
+- Already the pattern downstream Attachable users know
+- Simpler: one mechanism, not two (attribute + fallback method)
+- No caching complexity

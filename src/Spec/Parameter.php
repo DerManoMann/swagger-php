@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD | \Attribute::TARGET_PROPERTY | \Attribute::IS_REPEATABLE)]
-#[AllowedParents(Operation::class)]
 class Parameter extends AbstractAttribute
 {
     /**
@@ -42,5 +41,10 @@ class Parameter extends AbstractAttribute
         array $attachables = [],
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [Operation::class];
     }
 }

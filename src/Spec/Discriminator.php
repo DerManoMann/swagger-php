@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS)]
-#[AllowedParents(Schema::class)]
 class Discriminator extends AbstractAttribute
 {
     /**
@@ -22,5 +21,10 @@ class Discriminator extends AbstractAttribute
         array $attachables = [],
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [Schema::class];
     }
 }

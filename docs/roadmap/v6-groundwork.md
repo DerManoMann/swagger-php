@@ -9,7 +9,7 @@ Each creates a seam that the new architecture builds on.
 |--------|---------|---------|
 | `SourceLocation` | Typed source metadata | Drop `Context` dynamic properties |
 | Extract merge | Separable construction steps | Attributes become pure DTOs |
-| `#[AllowedParents]` | Declarative `Attachable` restrictions | Carries forward permanently |
+| `allowedParents()` | Unified parent declaration method | Carries forward permanently |
 | `SpecCompilerInterface` | Version-aware output layer | Drop `jsonSerialize()` version logic |
 
 All four can be developed in parallel. Zero impact on existing behavior.
@@ -36,18 +36,23 @@ Prerequisite for the new DTO path where the assembler handles merge externally.
 
 See [details](details/extract-merge.md).
 
-## #[AllowedParents]
+## allowedParents()
 
-Declarative attribute replacing `allowedParents()` method on `Attachable` subclasses.
-Variadic class-string parameters. Absence means unrestricted.
+Method on `AbstractAttribute` that all DTOs override to declare valid parent types.
+Same method that `Attachable` subclasses already use — unified for all attributes.
 
 ```php
-#[AllowedParents(Operation::class, PathItem::class)]
-class RateLimit extends Attachable { ... }
+class Schema extends AbstractAttribute
+{
+    public function allowedParents(): ?array
+    {
+        return [Property::class, Parameter::class, Header::class, MediaType::class];
+    }
+}
 ```
 
-Carries forward permanently — `Attachable` is the extension mechanism in all versions.
-`$_nested`/`$_parents` left as-is (removed in v7).
+Replaces both `$_parents` statics (removed in v7) and the previously considered
+`#[AllowedParents]` attribute. No reflection, no caching — just a method call.
 
 See [details](details/allowed-parents.md).
 

@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS)]
-#[AllowedParents]
 class Info extends AbstractAttribute
 {
     /**
@@ -25,5 +24,10 @@ class Info extends AbstractAttribute
         array $attachables = [],
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [];
     }
 }

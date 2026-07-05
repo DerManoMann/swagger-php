@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
-#[AllowedParents(Schema::class)]
 class Property extends AbstractAttribute
 {
     /**
@@ -21,5 +20,10 @@ class Property extends AbstractAttribute
         ?array $x = null,
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [Schema::class];
     }
 }

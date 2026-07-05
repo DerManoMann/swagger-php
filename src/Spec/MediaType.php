@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
-#[AllowedParents(Response::class, RequestBody::class)]
 class MediaType extends AbstractAttribute
 {
     /**
@@ -25,5 +24,10 @@ class MediaType extends AbstractAttribute
         array $attachables = [],
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [Response::class, RequestBody::class];
     }
 }

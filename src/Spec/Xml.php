@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_PROPERTY)]
-#[AllowedParents(Schema::class)]
 class Xml extends AbstractAttribute
 {
     /**
@@ -24,5 +23,10 @@ class Xml extends AbstractAttribute
         array $attachables = [],
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [Schema::class];
     }
 }

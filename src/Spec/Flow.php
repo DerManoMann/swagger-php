@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
-#[AllowedParents(SecurityScheme::class)]
 class Flow extends AbstractAttribute
 {
     /**
@@ -25,5 +24,10 @@ class Flow extends AbstractAttribute
         array $attachables = [],
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [SecurityScheme::class];
     }
 }

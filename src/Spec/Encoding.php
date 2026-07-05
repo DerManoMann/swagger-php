@@ -7,7 +7,6 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_PROPERTY | \Attribute::IS_REPEATABLE)]
-#[AllowedParents(MediaType::class)]
 class Encoding extends AbstractAttribute
 {
     /**
@@ -26,5 +25,10 @@ class Encoding extends AbstractAttribute
         array $attachables = [],
     ) {
         parent::__construct(attachables: $attachables, x: $x);
+    }
+
+    public function allowedParents(): ?array
+    {
+        return [MediaType::class];
     }
 }
