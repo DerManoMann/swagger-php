@@ -10,8 +10,8 @@ namespace OpenApi\Spec;
 class Property extends AbstractAttribute
 {
     /**
-     * @param array<string,mixed>|null $x
      * @param list<Attachable>         $attachables
+     * @param array<string,mixed>|null $x
      */
     public function __construct(
         public ?string $property = null,

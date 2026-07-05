@@ -12,7 +12,7 @@ class Flow extends AbstractAttribute
     /**
      * @param array<string,string>|null $scopes
      * @param array<string,mixed>|null  $x
-     * @param list<object>|null         $attachables
+     * @param list<Attachable>          $attachables
      */
     public function __construct(
         public ?string $flow = null,

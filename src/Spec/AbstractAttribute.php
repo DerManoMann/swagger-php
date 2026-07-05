@@ -13,7 +13,7 @@ abstract class AbstractAttribute implements OpenApiAttributeInterface
     protected ?\Reflector $reflector = null;
 
     /**
-     * @param list<Attachable> $attachables
+     * @param list<Attachable>         $attachables
      * @param array<string,mixed>|null $x
      */
     public function __construct(

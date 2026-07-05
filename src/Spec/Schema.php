@@ -12,20 +12,20 @@ use OpenApi\Generator;
 class Schema extends AbstractAttribute
 {
     /**
-     * @param string|class-string|null                $ref
-     * @param list<string>|null                       $required
-     * @param list<Property|Schema>|null              $properties
-     * @param string|non-empty-array<string>|null     $type
-     * @param list<Schema>|null                       $allOf
-     * @param list<Schema>|null                       $anyOf
-     * @param list<Schema>|null                       $oneOf
-     * @param list<Schema>|null                       $prefixItems
-     * @param list<string|int|float|bool|null>|null   $enum
-     * @param array<string,Schema>|null               $patternProperties
-     * @param array<string,list<string>>|null         $dependentRequired
-     * @param array<string,Schema>|null               $dependentSchemas
-     * @param array<string,mixed>|null                $x
-     * @param list<Attachable>                         $attachables
+     * @param string|class-string|null              $ref
+     * @param string|non-empty-array<string>|null   $type
+     * @param list<Schema>|null                     $prefixItems
+     * @param list<Property|Schema>|null            $properties
+     * @param list<string>|null                     $required
+     * @param array<string,Schema>|null             $patternProperties
+     * @param array<string,list<string>>|null       $dependentRequired
+     * @param array<string,Schema>|null             $dependentSchemas
+     * @param list<Schema>|null                     $allOf
+     * @param list<Schema>|null                     $anyOf
+     * @param list<Schema>|null                     $oneOf
+     * @param list<string|int|float|bool|null>|null $enum
+     * @param array<string,mixed>|null              $x
+     * @param list<Attachable>                      $attachables
      */
     public function __construct(
         // Identity / key

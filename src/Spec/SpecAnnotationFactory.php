@@ -59,6 +59,15 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
 
     public function build(\Reflector $reflector, Context $context): array
     {
+        if (!$reflector instanceof \ReflectionClass
+            && !$reflector instanceof \ReflectionMethod
+            && !$reflector instanceof \ReflectionProperty
+            && !$reflector instanceof \ReflectionParameter
+            && !$reflector instanceof \ReflectionClassConstant
+        ) {
+            return [];
+        }
+
         if ($reflector instanceof \ReflectionProperty && $reflector->isPromoted()) {
             return [];
         }
@@ -125,6 +134,7 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
             if ($attribute->getExtensions() !== null) {
                 $props['x'] = $attribute->getExtensions();
             }
+
             return new OA\OpenApi($props);
         }
 

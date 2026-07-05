@@ -8,7 +8,12 @@ namespace OpenApi\Spec;
 
 class Specification
 {
-    public ?OpenApi $openapi = null;
+    public OpenApi $openapi;
+
+    public function __construct()
+    {
+        $this->openapi = new OpenApi();
+    }
 
     public ?Info $info = null;
 

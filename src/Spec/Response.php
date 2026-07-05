@@ -14,7 +14,7 @@ class Response extends AbstractAttribute
      * @param list<MediaType>|null     $content
      * @param list<Link>|null          $links
      * @param array<string,mixed>|null $x
-     * @param list<object>|null        $attachables
+     * @param list<Attachable>         $attachables
      */
     public function __construct(
         public string|int|null $response = null,

@@ -12,7 +12,7 @@ class Encoding extends AbstractAttribute
     /**
      * @param array<string,Header>|null $headers
      * @param array<string,mixed>|null  $x
-     * @param list<object>|null         $attachables
+     * @param list<Attachable>          $attachables
      */
     public function __construct(
         public ?string $encoding = null,

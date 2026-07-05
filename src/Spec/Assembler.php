@@ -21,7 +21,7 @@ class Assembler
     /**
      * Collect all OpenAPI attributes from the given reflectors into the specification.
      */
-    public function collect(\Reflector ...$reflectors): static
+    public function collect(\ReflectionClass|\ReflectionMethod|\ReflectionProperty|\ReflectionParameter|\ReflectionClassConstant ...$reflectors): static
     {
         foreach ($reflectors as $reflector) {
             $this->collectFromReflector($reflector);
@@ -36,7 +36,7 @@ class Assembler
      *
      * @return list<OpenApiAttributeInterface>
      */
-    public function instantiate(\Reflector $reflector): array
+    public function instantiate(\ReflectionClass|\ReflectionMethod|\ReflectionProperty|\ReflectionParameter|\ReflectionClassConstant $reflector): array
     {
         $instances = [];
 
@@ -55,7 +55,7 @@ class Assembler
         return $this->resolveNesting($instances);
     }
 
-    protected function collectFromReflector(\Reflector $reflector): void
+    protected function collectFromReflector(\ReflectionClass|\ReflectionMethod|\ReflectionProperty|\ReflectionParameter|\ReflectionClassConstant $reflector): void
     {
         $instances = [];
 
@@ -98,7 +98,7 @@ class Assembler
      * Resolve nesting among a flat list of attributes from the same target.
      * Returns only root-level attributes (those not nested into a parent).
      *
-     * @param list<OpenApiAttributeInterface> $instances
+     * @param  list<OpenApiAttributeInterface> $instances
      * @return list<OpenApiAttributeInterface>
      */
     protected function resolveNesting(array $instances): array
@@ -165,6 +165,7 @@ class Assembler
             if ($type instanceof \ReflectionNamedType) {
                 if (!$type->isBuiltin() && ($childClass === $type->getName() || is_a($childClass, $type->getName(), true))) {
                     $prop->setValue($parent, $child);
+
                     return;
                 }
             }
@@ -193,6 +194,7 @@ class Assembler
                                 $current = $parent->{$paramName} ?? [];
                                 $current[] = $child;
                                 $parent->{$paramName} = $current;
+
                                 return;
                             }
                         }
@@ -219,7 +221,7 @@ class Assembler
     /**
      * @return \Generator<OpenApiAttributeInterface>
      */
-    protected function readAttributes(\Reflector $reflector): \Generator
+    protected function readAttributes(\ReflectionClass|\ReflectionMethod|\ReflectionProperty|\ReflectionParameter|\ReflectionClassConstant $reflector): \Generator
     {
         $attributes = $reflector->getAttributes(
             OpenApiAttributeInterface::class,

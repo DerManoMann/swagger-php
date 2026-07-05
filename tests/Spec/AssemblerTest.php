@@ -28,7 +28,6 @@ class AssemblerTest extends TestCase
 
         $spec = $assembler->getSpecification();
 
-        $this->assertNotNull($spec->openapi);
         $this->assertSame('3.1.0', $spec->openapi->version);
 
         // Info

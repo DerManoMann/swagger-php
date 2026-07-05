@@ -10,10 +10,10 @@ namespace OpenApi\Spec;
 class Header extends AbstractAttribute
 {
     /**
-     * @param list<MediaType>|null     $content
      * @param array<string,Example>|null $examples
-     * @param array<string,mixed>|null $x
-     * @param list<object>|null        $attachables
+     * @param list<MediaType>|null       $content
+     * @param array<string,mixed>|null   $x
+     * @param list<Attachable>           $attachables
      */
     public function __construct(
         public ?string $header = null,

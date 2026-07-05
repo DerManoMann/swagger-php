@@ -10,7 +10,6 @@ use OpenApi\Generator;
 
 class OpenApi31Compiler implements SpecCompilerInterface
 {
-
     public function getVersion(): string
     {
         return '3.1.0';
@@ -35,7 +34,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
 
     public function compile(Specification $specification): array
     {
-        $output = ['openapi' => $specification->openapi?->version ?? '3.1.0'];
+        $output = ['openapi' => $specification->openapi->version ?? '3.1.0'];
 
         if ($specification->info !== null) {
             $output['info'] = $this->compileInfo($specification->info);
@@ -59,7 +58,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
             $output['tags'] = array_map([$this, 'compileTag'], $specification->tags);
         }
 
-        if ($specification->openapi?->security) {
+        if ($specification->openapi->security) {
             $output['security'] = $specification->openapi->security;
         }
 
@@ -111,8 +110,8 @@ class OpenApi31Compiler implements SpecCompilerInterface
         if ($server->variables) {
             $variables = [];
             foreach ($server->variables as $variable) {
-                if ($variable->name !== null) {
-                    $variables[$variable->name] = $this->compileServerVariable($variable);
+                if ($variable->serverVariable !== null) {
+                    $variables[$variable->serverVariable] = $this->compileServerVariable($variable);
                 }
             }
             $variables = $variables ?: null;
@@ -152,7 +151,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
     }
 
     /**
-     * @param list<Operation> $operations
+     * @param  list<Operation>                     $operations
      * @return array<string, array<string, mixed>>
      */
     protected function compilePaths(array $operations): array
@@ -172,7 +171,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
     }
 
     /**
-     * @param list<Operation> $operations
+     * @param  list<Operation>                     $operations
      * @return array<string, array<string, mixed>>
      */
     protected function compileWebhooks(array $operations): array
@@ -246,7 +245,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
     }
 
     /**
-     * @param list<Response> $responses
+     * @param  list<Response>       $responses
      * @return array<string, mixed>
      */
     protected function compileResponses(array $responses): array
@@ -285,7 +284,6 @@ class OpenApi31Compiler implements SpecCompilerInterface
                 $name = $link->link ?? $link->operationId ?? 'link';
                 $links[$name] = $this->compileLink($link);
             }
-            $links = $links ?: null;
         }
 
         return $this->filter([
@@ -311,7 +309,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
     }
 
     /**
-     * @param list<MediaType> $mediaTypes
+     * @param  list<MediaType>      $mediaTypes
      * @return array<string, mixed>
      */
     protected function compileMediaTypes(array $mediaTypes): array
@@ -334,7 +332,6 @@ class OpenApi31Compiler implements SpecCompilerInterface
             foreach ($mediaType->encoding as $name => $enc) {
                 $encoding[$name] = $this->compileEncoding($enc);
             }
-            $encoding = $encoding ?: null;
         }
 
         return $this->filter([
@@ -456,7 +453,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
     }
 
     /**
-     * @param list<Property> $properties
+     * @param  list<Property>       $properties
      * @return array<string, mixed>
      */
     protected function compileProperties(array $properties): array
@@ -622,7 +619,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
     }
 
     /**
-     * @param list<Example> $examples
+     * @param  list<Example>        $examples
      * @return array<string, mixed>
      */
     protected function compileExamples(array $examples): array

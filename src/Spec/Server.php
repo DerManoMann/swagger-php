@@ -12,7 +12,7 @@ class Server extends AbstractAttribute
     /**
      * @param list<ServerVariable>|null $variables
      * @param array<string,mixed>|null  $x
-     * @param list<object>|null         $attachables
+     * @param list<Attachable>          $attachables
      */
     public function __construct(
         public ?string $url = null,

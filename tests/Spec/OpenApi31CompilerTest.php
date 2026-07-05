@@ -8,6 +8,7 @@ namespace OpenApi\Tests\Spec;
 
 use OpenApi\Spec\Assembler;
 use OpenApi\Spec\OpenApi31Compiler;
+use OpenApi\Spec\Specification;
 use OpenApi\Tests\Spec\Fixtures\PetStore;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Yaml\Yaml;
@@ -43,7 +44,7 @@ class OpenApi31CompilerTest extends TestCase
     public function testValidateMissingInfo(): void
     {
         $compiler = new OpenApi31Compiler();
-        $spec = new \OpenApi\Spec\Specification();
+        $spec = new Specification();
 
         $diagnostics = $compiler->validate($spec);
 

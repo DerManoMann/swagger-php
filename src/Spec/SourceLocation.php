@@ -22,7 +22,8 @@ final class SourceLocation
         public readonly ?array $uses = null,
         public readonly string|array|null $extends = null,
         public readonly ?array $implements = null,
-    ) {}
+    ) {
+    }
 
     public static function fromReflector(\Reflector $reflector): self
     {

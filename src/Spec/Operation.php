@@ -13,10 +13,10 @@ class Operation extends AbstractAttribute
      * @param list<string>|null        $tags
      * @param list<Parameter>|null     $parameters
      * @param list<Response>|null      $responses
-     * @param list<Server>|null        $servers
      * @param list<array>|null         $security
+     * @param list<Server>|null        $servers
      * @param array<string,mixed>|null $x
-     * @param list<object>|null        $attachables
+     * @param list<Attachable>         $attachables
      */
     public function __construct(
         public ?string $path = null,

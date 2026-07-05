@@ -12,7 +12,7 @@ class SecurityScheme extends AbstractAttribute
     /**
      * @param list<Flow>|null          $flows
      * @param array<string,mixed>|null $x
-     * @param list<object>|null        $attachables
+     * @param list<Attachable>         $attachables
      */
     public function __construct(
         public ?string $securityScheme = null,
