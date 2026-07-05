@@ -213,11 +213,7 @@ class Assembler
      */
     protected function getAllowedParents(OpenApiAttributeInterface $instance): ?array
     {
-        if ($instance instanceof AbstractAttribute) {
-            return $instance->allowedParents();
-        }
-
-        return null;
+        return $instance->allowedParents();
     }
 
     /**
@@ -237,10 +233,8 @@ class Assembler
 
             $instance = $attribute->newInstance();
 
-            if ($instance instanceof AbstractAttribute) {
-                $instance->sourceLocation = SourceLocation::fromReflector($reflector);
-                $instance->reflector = $reflector;
-            }
+            $instance->setSourceLocation(SourceLocation::fromReflector($reflector));
+            $instance->setReflector($reflector);
 
             yield $instance;
         }

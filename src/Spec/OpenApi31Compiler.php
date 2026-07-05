@@ -640,12 +640,12 @@ class OpenApi31Compiler implements SpecCompilerInterface
     /**
      * Remove null entries and apply x- extensions.
      */
-    protected function filter(array $result, AbstractAttribute $attribute): array
+    protected function filter(array $result, OpenApiAttributeInterface $attribute): array
     {
         $result = array_filter($result, fn ($value) => $value !== null && $value !== Generator::UNDEFINED && $value !== []);
 
-        if ($attribute->x !== null) {
-            foreach ($attribute->x as $key => $value) {
+        if ($attribute->getExtensions() !== null) {
+            foreach ($attribute->getExtensions() as $key => $value) {
                 $result['x-' . $key] = $value;
             }
         }

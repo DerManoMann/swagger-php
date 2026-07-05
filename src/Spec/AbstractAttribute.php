@@ -8,11 +8,9 @@ namespace OpenApi\Spec;
 
 abstract class AbstractAttribute implements OpenApiAttributeInterface
 {
-    /** @internal */
-    public ?SourceLocation $sourceLocation = null;
+    protected ?SourceLocation $sourceLocation = null;
 
-    /** @internal */
-    public ?\Reflector $reflector = null;
+    protected ?\Reflector $reflector = null;
 
     /**
      * @param list<Attachable> $attachables
@@ -24,11 +22,42 @@ abstract class AbstractAttribute implements OpenApiAttributeInterface
     ) {
     }
 
-    /**
-     * @return list<class-string<AbstractAttribute>>|null null = unrestricted
-     */
     public function allowedParents(): ?array
     {
         return null;
+    }
+
+    public function getReflector(): ?\Reflector
+    {
+        return $this->reflector;
+    }
+
+    public function setReflector(?\Reflector $reflector): static
+    {
+        $this->reflector = $reflector;
+
+        return $this;
+    }
+
+    public function getSourceLocation(): ?SourceLocation
+    {
+        return $this->sourceLocation;
+    }
+
+    public function setSourceLocation(?SourceLocation $sourceLocation): static
+    {
+        $this->sourceLocation = $sourceLocation;
+
+        return $this;
+    }
+
+    public function getExtensions(): ?array
+    {
+        return $this->x;
+    }
+
+    public function getAttachables(): array
+    {
+        return $this->attachables;
     }
 }
