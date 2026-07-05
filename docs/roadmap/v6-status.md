@@ -46,28 +46,42 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 | Converters as separate class(es) | Conversion logic lives in `SpecAnnotationFactory` directly | Single bridge class; converter extraction can happen later if needed |
 | Factory + AttributeEnricher as separate component | Not yet started | Phase 1 bridge works without it |
 
+## Generator Integration Strategy
+
+Two fully separate pipelines behind `Generator::generate()`, toggled via mode:
+
+```
+Classic (default in v6, deprecated in v7, removed in v8):
+  AnalyserInterface → Analysis → ProcessorPipeline → OA\OpenApi → jsonSerialize()
+
+Spec (opt-in in v6, default in v7):
+  SourceScanner → Assembler → Specification → AugmenterPipeline → Compiler → array
+```
+
+No shared interfaces between pipelines. No modifications to classic code. Generator is the router.
+
 ## Not Yet Touched
 
 | Component | Roadmap reference | Purpose |
 |-----------|-------------------|---------|
-| `AttributeFactory` | `details/factory.md` | New-path factory: namespace routing, enricher invocation, metadata assignment |
-| `AttributeEnricher` | `details/factory.md` | Translates non-OA attributes (validation, routing) into OA DTOs — key for Nelmio |
-| Extract merge from classic constructor | `details/extract-merge.md` | Split `__construct()` into `captureContext()` / `assignProperties()` / `performMerge()` — needed for Phase 2 flip |
+| `SourceScanner` | — | Discovers ReflectionClass[] from source paths (replaces analyser role in new pipeline) |
+| `SpecAugmenter` interface | — | `augment(Specification): void` — type resolution, validation rules, docblocks, route attrs |
+| `AugmenterPipeline` | — | Ordered list of augmenters, replaces ProcessorPipeline for new path |
+| Generator mode switch | — | `setMode('spec')` fork in `generate()`, compiler selection, output serialization |
 | Specification finders | `details/specification.md` | `schema()`, `operations()`, `find()`, `filter()`, `resolveRef()`, `schemaNameFor()` |
 | Schema registry / `$ref` resolution | `v6-details.md` | Late-bound ref resolution after all schemas registered |
-| `ProcessorInterface` (v7) | `details/processor-interface.md` | `process(Specification)` — replaces `__invoke(Analysis)` |
 | CompilerExtension wiring | `details/compiler-extension.md` | Registration on compiler, Attachable → output dispatch |
-| Generator integration | `details/spec-compiler.md` | `setCompiler()` on Generator, compiler as output path |
-| Namespace routing | `details/factory.md` | Per-class routing: `OpenApi\Spec\*` → new pipeline, `OpenApi\Attributes\*` → classic |
 
 ## Key Dependencies
 
 ```
-Extract-merge refactor ──► Phase 2 flip (classic attrs as thin DTOs)
-AttributeEnricher ──► Nelmio/framework integration
-Specification finders ──► ProcessorInterface (v7)
+SourceScanner ──► Generator mode switch (need source discovery for new path)
+SpecAugmenter ──► Type resolution, validation attr support
 Schema registry ──► $ref resolution in compiler
+Specification finders ──► Augmenters that need to look up schemas
 ```
+
+Classic pipeline has NO dependencies on new work — it stays frozen.
 
 ## What Works End-to-End Today
 
