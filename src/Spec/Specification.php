@@ -8,7 +8,7 @@ namespace OpenApi\Spec;
 
 class Specification
 {
-    public string $version = '3.1.0';
+    public ?OpenApi $openapi = null;
 
     public ?Info $info = null;
 
@@ -20,9 +20,6 @@ class Specification
 
     /** @var list<ExternalDocumentation> */
     public array $externalDocs = [];
-
-    /** @var list<array<string,list<string>>> */
-    public array $security = [];
 
     /** @var list<Operation> */
     public array $operations = [];
@@ -55,7 +52,7 @@ class Specification
     {
         foreach ($attributes as $attribute) {
             match (true) {
-                $attribute instanceof OpenApi => $this->version = $attribute->version ?? $this->version,
+                $attribute instanceof OpenApi => $this->openapi = $attribute,
                 $attribute instanceof Info => $this->info = $attribute,
                 $attribute instanceof Server => $this->servers[] = $attribute,
                 $attribute instanceof Tag => $this->tags[] = $attribute,

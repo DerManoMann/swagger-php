@@ -35,7 +35,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
 
     public function compile(Specification $specification): array
     {
-        $output = ['openapi' => $specification->version];
+        $output = ['openapi' => $specification->openapi?->version ?? '3.1.0'];
 
         if ($specification->info !== null) {
             $output['info'] = $this->compileInfo($specification->info);
@@ -59,8 +59,8 @@ class OpenApi31Compiler implements SpecCompilerInterface
             $output['tags'] = array_map([$this, 'compileTag'], $specification->tags);
         }
 
-        if ($specification->security) {
-            $output['security'] = $specification->security;
+        if ($specification->openapi?->security) {
+            $output['security'] = $specification->openapi->security;
         }
 
         if ($specification->externalDocs) {

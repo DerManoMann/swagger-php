@@ -6,6 +6,8 @@
 
 namespace OpenApi\Spec;
 
+use OpenApi\Generator;
+
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD | \Attribute::TARGET_PROPERTY | \Attribute::IS_REPEATABLE)]
 class Schema extends AbstractAttribute
 {
@@ -89,17 +91,17 @@ class Schema extends AbstractAttribute
 
         // Enum/const
         public ?array $enum = null,
-        public mixed $const = null,
+        public mixed $const = Generator::UNDEFINED,
 
         // Examples
-        public mixed $example = null,
+        public mixed $example = Generator::UNDEFINED,
         public ?array $examples = null,
 
         // Meta
         public ?bool $deprecated = null,
         public ?bool $readOnly = null,
         public ?bool $writeOnly = null,
-        public mixed $default = null,
+        public mixed $default = Generator::UNDEFINED,
 
         // OpenAPI extensions on Schema Object
         public ?Discriminator $discriminator = null,

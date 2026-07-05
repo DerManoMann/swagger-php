@@ -71,7 +71,8 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
 
         $annotations = [];
         foreach ($specAttributes as $instance) {
-            $converted = $this->convert($instance, $context);
+            $ctx = $this->resolveContext($instance, $context);
+            $converted = $this->convert($instance, $ctx);
             if ($converted !== null) {
                 $annotations[] = $converted;
             }
@@ -80,10 +81,52 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
         return $annotations;
     }
 
+    protected function resolveContext(OpenApiAttributeInterface $instance, Context $methodContext): Context
+    {
+        if (!$instance instanceof AbstractAttribute || $instance->reflector === null) {
+            return $methodContext;
+        }
+
+        $reflector = $instance->reflector;
+
+        if ($reflector instanceof \ReflectionParameter) {
+            $ctx = new Context([
+                'nested' => null,
+                'property' => $reflector->getName(),
+                'reflector' => $reflector,
+            ], $methodContext);
+
+            if ($reflector->isPromoted()) {
+                $ctx = new Context([
+                    'generated' => true,
+                    'annotations' => [],
+                    'property' => $reflector->getName(),
+                    'reflector' => $reflector,
+                ], $methodContext);
+
+                $property = $reflector->getDeclaringClass()->getProperty($reflector->getName());
+                if ($comment = $property->getDocComment()) {
+                    $ctx->comment = $comment;
+                }
+            }
+
+            return $ctx;
+        }
+
+        return $methodContext;
+    }
+
     protected function convert(OpenApiAttributeInterface $attribute, Context $context): ?OA\AbstractAnnotation
     {
         if ($attribute instanceof OpenApi) {
-            return new OA\OpenApi(['_context' => $context, 'openapi' => $attribute->version ?? OA\OpenApi::DEFAULT_VERSION]);
+            $props = ['_context' => $context, 'openapi' => $attribute->version ?? OA\OpenApi::DEFAULT_VERSION];
+            if ($attribute->security !== null) {
+                $props['security'] = $attribute->security;
+            }
+            if ($attribute->x !== null) {
+                $props['x'] = $attribute->x;
+            }
+            return new OA\OpenApi($props);
         }
 
         $classicClass = $this->resolveClassicClass($attribute);
@@ -91,8 +134,8 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
             return null;
         }
 
-        $properties = $this->extractProperties($attribute);
-        $this->flattenSchema($attribute, $classicClass, $properties);
+        $properties = $this->extractProperties($attribute, $context);
+        $this->flattenSchema($attribute, $classicClass, $properties, $context);
         $properties['_context'] = $context;
 
         return new $classicClass($properties);
@@ -128,7 +171,7 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
      *
      * @return array<string, mixed>
      */
-    protected function extractProperties(OpenApiAttributeInterface $attribute): array
+    protected function extractProperties(OpenApiAttributeInterface $attribute, ?Context $parentContext = null): array
     {
         $properties = [];
 
@@ -150,17 +193,21 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
 
             $value = $prop->getValue($attribute);
 
-            if ($value === null) {
+            if ($value === Generator::UNDEFINED) {
+                continue;
+            }
+
+            if ($value === null && !$this->hasUndefinedDefault($attribute, $name)) {
                 continue;
             }
 
             if ($value instanceof AbstractAttribute) {
-                $nested = $this->convertNested($value);
+                $nested = $this->convertNested($value, $parentContext);
                 if ($nested !== null) {
                     $properties[$name] = $nested;
                 }
             } elseif (is_array($value)) {
-                $properties[$name] = $this->convertArray($value);
+                $properties[$name] = $this->convertArray($value, $parentContext);
             } else {
                 $properties[$name] = $value;
             }
@@ -171,41 +218,72 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
                 $properties['x'] = $attribute->x;
             }
             if ($attribute->attachables !== []) {
-                $properties['attachables'] = $this->convertArray($attribute->attachables);
+                $properties['attachables'] = $this->convertArray($attribute->attachables, $parentContext);
             }
         }
 
         return $properties;
     }
 
-    protected function convertNested(AbstractAttribute $attribute): ?OA\AbstractAnnotation
+    protected function convertNested(AbstractAttribute $attribute, ?Context $parentContext = null): ?OA\AbstractAnnotation
     {
         $classicClass = self::CLASS_MAP[get_class($attribute)] ?? null;
         if ($classicClass === null) {
             return null;
         }
 
-        $properties = $this->extractProperties($attribute);
-        $this->flattenSchema($attribute, $classicClass, $properties);
-        $properties['_context'] = new Context(['nested' => null, 'generated' => true]);
+        $context = $this->buildNestedContext($attribute, $parentContext);
+        $properties = $this->extractProperties($attribute, $context);
+        $this->flattenSchema($attribute, $classicClass, $properties, $context);
+        $properties['_context'] = $context;
 
         return new $classicClass($properties);
     }
 
-    /**
-     * @return list<mixed>
-     */
-    protected function convertArray(array $items): array
+    protected function buildNestedContext(AbstractAttribute $attribute, ?Context $parentContext): Context
+    {
+        $reflector = $attribute->reflector;
+
+        if ($reflector instanceof \ReflectionParameter) {
+            $ctx = new Context([
+                'nested' => null,
+                'property' => $reflector->getName(),
+                'reflector' => $reflector,
+            ], $parentContext);
+
+            if ($reflector->isPromoted()) {
+                $ctx = new Context([
+                    'generated' => true,
+                    'annotations' => [],
+                    'property' => $reflector->getName(),
+                    'reflector' => $reflector,
+                ], $parentContext);
+
+                $property = $reflector->getDeclaringClass()->getProperty($reflector->getName());
+                if ($comment = $property->getDocComment()) {
+                    $ctx->comment = $comment;
+                }
+            }
+
+            return $ctx;
+        }
+
+        return new Context(['nested' => null, 'generated' => true, 'comment' => null], $parentContext);
+    }
+
+    protected function convertArray(array $items, ?Context $parentContext = null): array
     {
         $result = [];
-        foreach ($items as $item) {
+        foreach ($items as $key => $item) {
             if ($item instanceof AbstractAttribute) {
-                $nested = $this->convertNested($item);
+                $nested = $this->convertNested($item, $parentContext);
                 if ($nested !== null) {
-                    $result[] = $nested;
+                    $result[$key] = $nested;
                 }
+            } elseif (is_array($item)) {
+                $result[$key] = $this->convertArray($item, $parentContext);
             } else {
-                $result[] = $item;
+                $result[$key] = $item;
             }
         }
 
@@ -218,7 +296,7 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
      *
      * @param class-string<OA\AbstractAnnotation> $classicClass
      */
-    protected function flattenSchema(OpenApiAttributeInterface $attribute, string $classicClass, array &$properties): void
+    protected function flattenSchema(OpenApiAttributeInterface $attribute, string $classicClass, array &$properties, ?Context $parentContext = null): void
     {
         if (!$this->classicExtendsSchema($attribute)) {
             return;
@@ -226,9 +304,25 @@ class SpecAnnotationFactory implements AnnotationFactoryInterface
 
         $schema = $attribute->schema ?? null;
         if ($schema instanceof AbstractAttribute) {
-            $schemaProps = $this->extractProperties($schema);
+            $schemaProps = $this->extractProperties($schema, $parentContext);
             $properties = array_merge($properties, $schemaProps);
         }
+    }
+
+    protected function hasUndefinedDefault(OpenApiAttributeInterface $attribute, string $propertyName): bool
+    {
+        $ctor = (new \ReflectionClass($attribute))->getConstructor();
+        if ($ctor === null) {
+            return false;
+        }
+
+        foreach ($ctor->getParameters() as $param) {
+            if ($param->getName() === $propertyName) {
+                return $param->isDefaultValueAvailable() && $param->getDefaultValue() === Generator::UNDEFINED;
+            }
+        }
+
+        return false;
     }
 
     /**

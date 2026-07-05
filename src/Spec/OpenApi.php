@@ -7,10 +7,19 @@
 namespace OpenApi\Spec;
 
 #[\Attribute(\Attribute::TARGET_CLASS)]
-class OpenApi implements OpenApiAttributeInterface
+class OpenApi extends AbstractAttribute
 {
+    /**
+     * @param list<array<string,list<string>>>|null $security
+     * @param array<string,mixed>|null              $x
+     * @param list<Attachable>                      $attachables
+     */
     public function __construct(
         public ?string $version = null,
+        public ?array $security = null,
+        ?array $x = null,
+        array $attachables = [],
     ) {
+        parent::__construct(attachables: $attachables, x: $x);
     }
 }
