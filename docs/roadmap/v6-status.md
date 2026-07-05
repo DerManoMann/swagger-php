@@ -16,7 +16,6 @@ Snapshot of what has been prototyped vs. what remains, as of the current `roadma
 | `SpecCompilerInterface` | `src/Spec/SpecCompilerInterface.php` | Interface with `getVersion()`, `supports()`, `compile()`, `validate()` |
 | `OpenApi31Compiler` | `src/Spec/OpenApi31Compiler.php` | Full declarative implementation with `filter()`, nullable→type array, UNDEFINED-aware fields, version-specific validation |
 | `CompilerDiagnostics` / `Diagnostic` | `src/Spec/` | Error/warning collection for validation |
-| `CompilerExtension` / `CompilerContext` | `src/Spec/` | Interfaces declared (not wired into compiler yet) |
 | `Generator::UNDEFINED` reuse | `src/Spec/Schema.php` | `example`, `default`, `const` use UNDEFINED to distinguish "not set" from explicit null |
 | `SpecificationConverter` | `src/Spec/SpecificationConverter.php` | Phase 2 bridge: classic `OA\OpenApi` → `Specification`; handles nullable→type array, callbacks with nested annotations, $ref+description |
 | `OpenApi30Compiler` | `src/Spec/OpenApi30Compiler.php` | Downgrade compiler: type array→single+nullable, exclusiveMin boolean form, const→enum, strips 3.1+ keywords; validation: paths required, no examples array |
