@@ -1,0 +1,42 @@
+<?php declare(strict_types=1);
+
+/**
+ * @license Apache 2.0
+ */
+
+namespace OpenApi\Spec;
+
+#[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
+class Operation extends AbstractAttribute
+{
+    /**
+     * @param list<string>|null        $tags
+     * @param list<Parameter>|null     $parameters
+     * @param list<Response>|null      $responses
+     * @param list<Server>|null        $servers
+     * @param list<array>|null         $security
+     * @param array<string,mixed>|null $x
+     * @param list<object>|null        $attachables
+     */
+    public function __construct(
+        public ?string $path = null,
+        public ?string $webhook = null,
+        public ?string $method = null,
+        public ?string $operationId = null,
+        public ?string $summary = null,
+        public ?string $description = null,
+        public ?array $tags = null,
+        public ?array $parameters = null,
+        public ?RequestBody $requestBody = null,
+        public ?array $responses = null,
+        public ?array $callbacks = null,
+        public ?bool $deprecated = null,
+        public ?array $security = null,
+        public ?array $servers = null,
+        public ?ExternalDocumentation $externalDocs = null,
+        ?array $x = null,
+        array $attachables = [],
+    ) {
+        parent::__construct(attachables: $attachables, x: $x);
+    }
+}

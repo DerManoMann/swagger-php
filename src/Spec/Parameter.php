@@ -1,0 +1,45 @@
+<?php declare(strict_types=1);
+
+/**
+ * @license Apache 2.0
+ */
+
+namespace OpenApi\Spec;
+
+#[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_METHOD | \Attribute::TARGET_PROPERTY | \Attribute::IS_REPEATABLE)]
+class Parameter extends AbstractAttribute
+{
+    /**
+     * @param array<string,mixed>|null $x
+     * @param list<object>|null        $attachables
+     */
+    public function __construct(
+        public ?string $name = null,
+        public ?string $in = null,
+        public ?string $description = null,
+        public ?bool $required = null,
+        public ?bool $deprecated = null,
+        public ?bool $allowEmptyValue = null,
+        public ?string $ref = null,
+        public ?string $parameter = null,
+
+        // Serialization
+        public ?string $style = null,
+        public ?bool $explode = null,
+        public ?bool $allowReserved = null,
+
+        // Schema
+        public Schema|null $schema = null,
+        public mixed $example = null,
+        public ?array $examples = null,
+
+        // Content
+        public ?array $content = null,
+
+        // Extension
+        ?array $x = null,
+        array $attachables = [],
+    ) {
+        parent::__construct(attachables: $attachables, x: $x);
+    }
+}
