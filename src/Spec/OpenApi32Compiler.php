@@ -18,6 +18,8 @@ namespace OpenApi\Spec;
  */
 class OpenApi32Compiler extends OpenApi31Compiler
 {
+    public const VERSIONS = ['3.2.0'];
+
     public function getVersion(): string
     {
         return '3.2.0';
@@ -25,7 +27,7 @@ class OpenApi32Compiler extends OpenApi31Compiler
 
     public function supports(string $version): bool
     {
-        return str_starts_with($version, '3.2.');
+        return in_array($version, static::VERSIONS, true);
     }
 
     public function compile(Specification $specification): array

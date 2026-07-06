@@ -10,6 +10,8 @@ use OpenApi\Generator;
 
 class OpenApi31Compiler implements SpecCompilerInterface
 {
+    public const VERSIONS = ['3.1.0', '3.1.1', '3.1.2'];
+
     public function getVersion(): string
     {
         return '3.1.0';
@@ -17,7 +19,7 @@ class OpenApi31Compiler implements SpecCompilerInterface
 
     public function supports(string $version): bool
     {
-        return str_starts_with($version, '3.1.');
+        return in_array($version, static::VERSIONS, true);
     }
 
     public function validate(Specification $specification): CompilerDiagnostics

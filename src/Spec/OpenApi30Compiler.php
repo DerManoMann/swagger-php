@@ -19,6 +19,8 @@ use OpenApi\Generator;
  */
 class OpenApi30Compiler extends OpenApi31Compiler
 {
+    public const VERSIONS = ['3.0.0', '3.0.1', '3.0.2', '3.0.3', '3.0.4'];
+
     protected CompilerDiagnostics $diagnostics;
 
     public function getVersion(): string
@@ -28,7 +30,7 @@ class OpenApi30Compiler extends OpenApi31Compiler
 
     public function supports(string $version): bool
     {
-        return str_starts_with($version, '3.0.');
+        return in_array($version, static::VERSIONS, true);
     }
 
     public function compile(Specification $specification): array
