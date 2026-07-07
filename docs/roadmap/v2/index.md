@@ -79,3 +79,32 @@ The pipeline gap. `getDefaultAugmenters()` currently returns `[]`.
 - `UNDEFINED` retained on Schema for null-valid fields (`example`, `default`, `const`)
 - Canonical form is 3.1+ (JSON Schema 2020-12) — compilers downgrade
 - Processors stay as `__invoke(Analysis)` through v6; migrate in v7
+
+## Classic Prep Work — Done / Skipped
+
+The original plan (v1/v6-prep-work.md) identified prep work to decouple classic code before
+introducing spec pipeline code. Status:
+
+**Completed (on master):**
+- Extract `Generator::UNDEFINED` to standalone `Undefined` class (#2035)
+- Remove version branching from type resolvers (#2037)
+- Extract generic docblock parsing to `Utils\DocBlockParser` (#2038)
+- Move `TokenScanner` + others to `Utils` namespace (#2039)
+- Extract `TypeMapper` as pipeline-agnostic utility (#2040)
+- Extract `SourceScanner` from Generator (#2042)
+
+**Skipped — not needed:**
+- Decouple processors from Generator (inject TypeResolver directly)
+- Formal `ProcessorInterface` on classic side
+- `SourceLocation` on `AbstractAnnotation`
+- Extract merge from `AbstractAnnotation::__construct()`
+- `RefTrait` → static utility class
+- Bridges between classic and spec pipelines
+
+**Rationale:** With the Builder running both pipelines side by side independently, there's no
+need to refactor classic internals to support the new pipeline. The spec pipeline is a clean
+parallel system — it doesn't share processors, doesn't need classic code to be restructured,
+and doesn't require bridging. Classic stays frozen; new code is additive. The completed
+extractions (TypeMapper, DocBlockParser, SourceScanner, TokenScanner) provide the shared
+utilities both pipelines need. Everything else is unnecessary churn on code that will be
+retired in v8.

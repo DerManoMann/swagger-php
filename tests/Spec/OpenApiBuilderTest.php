@@ -6,13 +6,13 @@
 
 namespace OpenApi\Tests\Spec;
 
-use OpenApi\Pipeline;
+use OpenApi\Spec\AbstractAugmenter;
 use OpenApi\Spec\BuildResult;
 use OpenApi\Spec\CompilerDiagnostics;
 use OpenApi\Spec\OpenApiBuilder;
 use OpenApi\Spec\OpenApi31Compiler;
-use OpenApi\Spec\SpecAugmenter;
 use OpenApi\Spec\Specification;
+use OpenApi\Pipeline;
 use OpenApi\Tests\Spec\Fixtures\PetStore;
 use PHPUnit\Framework\TestCase;
 
@@ -69,7 +69,7 @@ class OpenApiBuilderTest extends TestCase
     {
         $called = false;
 
-        $augmenter = new class ($called) extends SpecAugmenter {
+        $augmenter = new class ($called) extends AbstractAugmenter {
             public function __construct(private bool &$called)
             {
             }
@@ -93,7 +93,7 @@ class OpenApiBuilderTest extends TestCase
     {
         $order = [];
 
-        $first = new class ($order) extends SpecAugmenter {
+        $first = new class ($order) extends AbstractAugmenter {
             public function __construct(private array &$order)
             {
             }
@@ -104,7 +104,7 @@ class OpenApiBuilderTest extends TestCase
             }
         };
 
-        $second = new class ($order) extends SpecAugmenter {
+        $second = new class ($order) extends AbstractAugmenter {
             public function __construct(private array &$order)
             {
             }
@@ -129,7 +129,7 @@ class OpenApiBuilderTest extends TestCase
 
     public function testRemoveAugmenter(): void
     {
-        $augmenter = new class extends SpecAugmenter {
+        $augmenter = new class extends AbstractAugmenter {
             public bool $called = false;
 
             public function augment(Specification $specification): void

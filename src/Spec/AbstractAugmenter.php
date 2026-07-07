@@ -6,10 +6,8 @@
 
 namespace OpenApi\Spec;
 
-abstract class SpecAugmenter
+abstract class AbstractAugmenter implements SpecAugmenterInterface
 {
-    abstract public function augment(Specification $specification): void;
-
     public function __invoke(Specification $specification): void
     {
         $this->augment($specification);

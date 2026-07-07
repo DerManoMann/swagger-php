@@ -340,7 +340,8 @@ class OpenApiBuilder
     /** @return list<callable> */
     private function getDefaultAugmenters(): array
     {
-        // Will be populated as augmenters are implemented
-        return [];
+        return [
+            new Augmenters\OperationIdAugmenter(),
+        ];
     }
 }
