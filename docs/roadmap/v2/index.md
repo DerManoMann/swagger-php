@@ -57,7 +57,20 @@ The pipeline gap. `getDefaultAugmenters()` currently returns `[]`.
 - Schema registry / `$ref` resolution
 - CompilerExtension wiring (Attachable → output)
 
-### Phase 4: Ship
+### Phase 4: Test Fixtures
+
+The current test suite has organically grown with mixed patterns and approaches. When
+reimplementing fixtures for the spec pipeline:
+
+- Consolidate duplicates (many scratch fixtures test overlapping things)
+- Drop PHP syntax fixtures that are no longer relevant (php7.php, older namespace tests)
+- Establish a single pattern: one fixture class → one expected YAML output
+- Spec pipeline tests should use the Assembler directly (no Analysis/Generator indirection)
+- Group by feature (security, parameters, schemas, inheritance) not by bug/PR
+
+This is a cleanup opportunity, not a blocker.
+
+### Phase 5: Ship
 
 - Wire OpenApiBuilder into Generator as opt-in
 - Documentation and migration guide
