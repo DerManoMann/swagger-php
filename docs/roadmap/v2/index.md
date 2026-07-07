@@ -19,6 +19,99 @@ Sources → Assembler → Specification → Augmenters → Compiler → Output
 
 All passing against real fixtures (PetStore, full API with callbacks/security/enums).
 
+## Attribute Strategy
+
+The spec attributes ship in two layers:
+
+### Layer 1: Full 3.1 Implementation
+
+A 1:1 mapping of OpenAPI 3.1 objects as attribute classes. Same structure as the spec,
+same field names. No shortcuts, no magic — just typed DTOs.
+
+Exception: `Schema` is used as a composite in places where the spec embeds a schema
+inline (Property, Parameter, Header, MediaType items). These get a `schema` property
+(or use `Schema` directly on the target) rather than duplicating all schema keywords.
+
+This is the canonical set:
+- OpenApi, Info, Contact, License
+- Server, ServerVariable
+- PathItem, Operation, Parameter, RequestBody, Response
+- MediaType, Encoding, Header, Link, Example
+- Schema, Discriminator, Xml, ExternalDocumentation
+- SecurityScheme, Flow
+- Tag, Callback
+
+### Layer 2: Polymorphic Convenience Subclasses
+
+Built on top of Layer 1 as sub-namespaced classes:
+
+```
+Operation\Get, Operation\Post, Operation\Put, Operation\Delete, Operation\Patch, ...
+Parameter\PathParameter, Parameter\QueryParameter, Parameter\HeaderParameter, Parameter\CookieParameter
+SecurityScheme\ApiKeyScheme, SecurityScheme\HttpScheme, SecurityScheme\OAuth2Scheme, ...
+Flow\ImplicitFlow, Flow\AuthorizationCodeFlow, Flow\PasswordFlow, Flow\ClientCredentialsFlow
+```
+
+Each subclass pre-sets the discriminator field and only exposes relevant constructor params.
+
+### Milestone
+
+This two-layer set is what ships in v6 — enough to:
+- Update all examples and documentation (dual tabs: classic attributes + spec attributes)
+- Reimplement all test fixtures against the spec pipeline
+- Prove the full pipeline end-to-end for real-world usage
+
+## Pipeline Modes
+
+Two modes, no hybrid merge:
+
+### Classic Mode
+
+The full current stack, untouched. `Generator` → Analysis → Processors → `jsonSerialize()`.
+This is the default in v6.
+
+### Spec Mode
+
+A single pipeline that handles **both** attribute namespaces:
+
+```
+Sources (scan)
+├── Classes with Spec\* attributes → Assembler → Specification
+├── Classes with OA\* attributes   → Classic Analyser + Bridge Processor → Specification
+│                                     (single processor: convert OA annotations to DTOs)
+↓
+Specification (unified model)
+↓
+Augmenters
+↓
+Compiler → Output
+```
+
+Key points:
+- One Specification instance — no dual-pipeline merge, no collision detection
+- `OA\*` classes run through a **minimal** set of classic processors — only those needed
+  to assemble the tree structure, not to augment/enrich data:
+  1. `MergeIntoOpenApi` — builds the `OA\OpenApi` root from loose annotations
+  2. `MergeIntoComponents` — nests schemas/responses into `OA\Components`
+  3. `BuildPaths` — groups operations into PathItems by path
+  4. `MergeJsonContent` / `MergeXmlContent` — structural shorthand expansion
+  - NOT needed: `CleanUnmerged` — spec pipeline will have its own cleanup strategy
+  - NOT needed: `ExpandClasses`/`ExpandInterfaces`/`ExpandTraits` — the spec pipeline's
+    InheritanceAugmenter handles this uniformly from reflectors for all DTOs
+- The `SpecificationConverter` then converts the structured tree to DTOs, propagating
+  reflectors from `$annotation->_context->reflector` via `setReflector()`
+- `Spec\*` classes go through the Assembler directly into the same Specification
+- Augmenters run uniformly on **all** DTOs in the Specification regardless of source —
+  bridged DTOs have reflectors too, so type inference, docblock extraction, ref resolution
+  etc. work identically
+- Classes are routed by which attribute namespace they use (auto-detected per class)
+- The Compiler only sees DTOs — it doesn't know or care about the source
+
+This means:
+- v6: both modes available, classic is default
+- v7: spec mode is default, classic available via explicit opt-in
+- v8: classic mode removed, bridge processor removed
+
 ## Remaining Work
 
 ### Phase 1: OpenApiBuilder
@@ -57,10 +150,21 @@ The pipeline gap. `getDefaultAugmenters()` currently returns `[]`.
 - Schema registry / `$ref` resolution
 - CompilerExtension wiring (Attachable → output)
 
-### Phase 4: Test Fixtures
+### Phase 4: Test Fixtures & Validation
 
-The current test suite has organically grown with mixed patterns and approaches. When
-reimplementing fixtures for the spec pipeline:
+**Acceptance criterion:** once augmenters are complete, the full existing test suite can run
+through the spec pipeline via the bridge (classic annotations → structural processors →
+SpecificationConverter → Specification → Augmenters → Compiler) and produce identical output
+to the classic pipeline. No new test expectations needed — the existing suite validates the
+spec pipeline by definition.
+
+This means:
+- Every classic test fixture is automatically a spec pipeline regression test
+- Parity failures pinpoint exactly which augmenter behaviour is missing or diverges
+- The spec pipeline is "done" when all classic tests pass through it unchanged
+
+Separately, the test suite itself has organically grown with mixed patterns. When adding
+spec-native fixtures:
 
 - Consolidate duplicates (many scratch fixtures test overlapping things)
 - Drop PHP syntax fixtures that are no longer relevant (php7.php, older namespace tests)

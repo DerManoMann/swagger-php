@@ -235,7 +235,6 @@ class Assembler
 
             $instance = $attribute->newInstance();
 
-            $instance->setSourceLocation(SourceLocation::fromReflector($reflector));
             $instance->setReflector($reflector);
 
             yield $instance;

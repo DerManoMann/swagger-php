@@ -29,8 +29,6 @@ interface OpenApiAttributeInterface
 
     public function getSourceLocation(): ?SourceLocation;
 
-    public function setSourceLocation(?SourceLocation $sourceLocation): static;
-
     /** @return array<string,mixed>|null */
     public function getExtensions(): ?array;
 

@@ -8,8 +8,6 @@ namespace OpenApi\Spec;
 
 abstract class AbstractAttribute implements OpenApiAttributeInterface
 {
-    protected ?SourceLocation $sourceLocation = null;
-
     protected ?\Reflector $reflector = null;
 
     /**
@@ -41,14 +39,11 @@ abstract class AbstractAttribute implements OpenApiAttributeInterface
 
     public function getSourceLocation(): ?SourceLocation
     {
-        return $this->sourceLocation;
-    }
+        if ($this->reflector === null) {
+            return null;
+        }
 
-    public function setSourceLocation(?SourceLocation $sourceLocation): static
-    {
-        $this->sourceLocation = $sourceLocation;
-
-        return $this;
+        return SourceLocation::fromReflector($this->reflector);
     }
 
     public function getExtensions(): ?array
