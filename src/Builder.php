@@ -9,6 +9,7 @@ namespace OpenApi;
 use OpenApi\Builder\CollectingLogger;
 use OpenApi\Builder\Result;
 use OpenApi\Utils\SourceScanner;
+use OpenApi\Utils\TokenScanner;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -28,6 +29,10 @@ class Builder
     protected ?string $version = null;
 
     protected ?LoggerInterface $logger = null;
+
+    protected bool $useSpec = false;
+
+    protected ?CompilerInterface $compiler = null;
 
     /** @var callable|null */
     protected $generatorHook;
@@ -80,6 +85,17 @@ class Builder
     }
 
     /**
+     * Switch to the spec attribute pipeline instead of the classic annotation/attribute pipeline.
+     */
+    public function withSpec(?CompilerInterface $compiler = null): static
+    {
+        $this->useSpec = true;
+        $this->compiler = $compiler;
+
+        return $this;
+    }
+
+    /**
      * Hook to configure the underlying Generator.
      *
      * The callable receives a default Generator and may either modify it in-place
@@ -97,7 +113,8 @@ class Builder
     public function build(): Result
     {
         return match ($this->mode) {
-            default => $this->doBuild(),
+            'classic' => $this->doBuild(),
+            default => throw new OpenApiException("Unsupported mode '{$this->mode}'"),
         };
     }
 
@@ -124,6 +141,13 @@ class Builder
         $openApi = $generator->generate($this->sources);
 
         return Result::fromClassic($this->resolveFiles(), $openApi, $collecting->entries());
+    }
+
+    protected function doBuildSpec(): Result
+    {
+        $files = $this->resolveFiles();
+
+        return Result::fromSpec($files, $output, $diagnostics);
     }
 
     /**
