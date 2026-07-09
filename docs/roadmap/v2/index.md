@@ -1,23 +1,29 @@
 # Roadmap v2
 
-Refined plan based on the validated prototype on the `roadmap` branch.
+Refined plan based on the validated prototype on the `roadmap` branch, now implemented
+on `openapi-builder` (Builder/classic) and `spec-attributes` (full spec pipeline).
 
-## What's Proven
+## What's Implemented
 
-The three-layer architecture works end-to-end:
+The three-layer architecture works end-to-end on the `spec-attributes` branch:
 
 ```
-Sources → Assembler → Specification → Augmenters → Compiler → Output
+Sources → Assembler → Specification → Compiler → Output
 ```
 
-- **DTOs** (`OpenApi\Spec\*`) — 23 classes, version-agnostic, pure value containers
-- **Assembler** — reflection-based, `allowedParents()` nesting, no intermediate stack
+- **Builder** (`OpenApi\Builder`) — unified entry point with `setMode('classic'|'spec')`, `Result` container, NullLogger default for programmatic use (`openapi-builder` branch, merged into `spec-attributes`)
+- **DTOs** (`OpenApi\Spec\*`) — 28 classes (Layer 1 + Layer 2 polymorphic subclasses), version-agnostic, pure value containers
+- **Assembler** — reflection-based, two-pass nesting via `merge()`/`contains()`/`isRoot()` on each attribute
 - **Specification** — flat typed collections with `add()` routing
-- **Compilers** — 3.0 (downgrade), 3.1 (canonical), 3.2 (forward-looking)
-- **Both bridges** — new→classic and classic→new, producing identical output
-- **OpenApiBuilder** — unified entry point, dual-mode, auto-detection, `BuildResult` contract
+- **Compilers** — 3.0 (downgrade from 3.1), 3.1 (canonical), 3.2 (extends 3.1)
+- **CompilerInterface** — `supports(version)`, `validate(specification)`, `compile(specification)`
+- **ExamplesTest** — wired to run spec examples through the spec pipeline via `setMode('spec')`
+- **CompilerTest** — 47+ tests with data providers covering version-specific compilation
+- **AssemblerTest** — tests for nesting, hierarchy resolution, error reporting
+- **CLI** — `GenerateCommand` refactored to use Builder
 
-All passing against real fixtures (PetStore, full API with callbacks/security/enums).
+The `api` example passes end-to-end with fully explicit spec attributes. Real-world
+examples (petstore, etc.) are blocked on augmenters — the pipeline has no inference yet.
 
 ## Attribute Strategy
 
@@ -63,139 +69,206 @@ This two-layer set is what ships in v6 — enough to:
 
 ## Pipeline Modes
 
-Two modes, no hybrid merge:
+Selected via `Builder::setMode()`. Three planned modes:
 
-### Classic Mode
+### Classic Mode (`setMode('classic')` — default)
 
 The full current stack, untouched. `Generator` → Analysis → Processors → `jsonSerialize()`.
-This is the default in v6.
+Builder wraps Generator internally; `withGenerator()` provides configuration access.
+Handles both `OA\*` annotations and `OA\*` attributes.
 
-### Spec Mode
+### Spec Mode (`setMode('spec')`)
 
-A single pipeline that handles **both** attribute namespaces:
+Pure spec attribute pipeline. Only processes `OpenApi\Spec\*` attributes:
+
+```
+Sources (scan) → TokenScanner → ReflectionClass[]
+    → Assembler (collect + resolve nesting)
+    → Specification (flat typed collections)
+    → Augmenters (enrich from reflectors)
+    → Compiler (version-specific output)
+    → Output
+```
+
+Key points:
+- Only `Spec\*` attributes are processed — `OA\*` annotations/attributes are ignored
+- No bridge, no conversion from classic annotations
+- Augmenters operate on DTOs with reflector access for inference
+- The Compiler only sees DTOs — all version logic is centralized there
+
+### Hybrid Mode (`setMode('hybrid')` — future)
+
+Runs classic `OA\*` annotations/attributes through a bridge into the spec pipeline:
 
 ```
 Sources (scan)
 ├── Classes with Spec\* attributes → Assembler → Specification
-├── Classes with OA\* attributes   → Classic Analyser + Bridge Processor → Specification
-│                                     (single processor: convert OA annotations to DTOs)
+├── Classes with OA\* attributes   → Classic Analyser + Bridge → Specification
 ↓
 Specification (unified model)
 ↓
-Augmenters
-↓
-Compiler → Output
+Augmenters → Compiler → Output
 ```
 
-Key points:
-- One Specification instance — no dual-pipeline merge, no collision detection
-- `OA\*` classes run through a **minimal** set of classic processors — only those needed
-  to assemble the tree structure, not to augment/enrich data:
-  1. `MergeIntoOpenApi` — builds the `OA\OpenApi` root from loose annotations
-  2. `MergeIntoComponents` — nests schemas/responses into `OA\Components`
-  3. `BuildPaths` — groups operations into PathItems by path
-  4. `MergeJsonContent` / `MergeXmlContent` — structural shorthand expansion
-  - NOT needed: `CleanUnmerged` — spec pipeline will have its own cleanup strategy
-  - NOT needed: `ExpandClasses`/`ExpandInterfaces`/`ExpandTraits` — the spec pipeline's
-    InheritanceAugmenter handles this uniformly from reflectors for all DTOs
-- The `SpecificationConverter` then converts the structured tree to DTOs, propagating
-  reflectors from `$annotation->_context->reflector` via `setReflector()`
-- `Spec\*` classes go through the Assembler directly into the same Specification
-- Augmenters run uniformly on **all** DTOs in the Specification regardless of source —
-  bridged DTOs have reflectors too, so type inference, docblock extraction, ref resolution
-  etc. work identically
-- Classes are routed by which attribute namespace they use (auto-detected per class)
-- The Compiler only sees DTOs — it doesn't know or care about the source
+This enables gradual migration: existing `OA\*` code and new `Spec\*` code coexist
+in the same project, processed by the same pipeline. Not yet implemented.
 
-This means:
-- v6: both modes available, classic is default
-- v7: spec mode is default, classic available via explicit opt-in
-- v8: classic mode removed, bridge processor removed
+### Timeline
 
-## Remaining Work
+- v6: `classic` (default) and `spec` available
+- v7: `spec` default, `hybrid` available for migration, `classic` opt-in
+- v8: `classic` removed, `hybrid` removed
 
-### Phase 1: OpenApiBuilder
+## Progress
 
-Introduce the Builder as the new public entry point. The new pipeline concepts (Specification, Assembler, Augmenters, Compilers) don't fit into Generator's design, so this is a clean break rather than an extension.
+### Phase 1: Builder ✓
 
-The base Builder (using defaults only) provides the same API for both classic and new pipelines — users adopt it first, then migrate annotations at their own pace.
+Implemented on `openapi-builder` branch (merged into `spec-attributes`).
 
 ```php
-$yaml = (new OpenApiBuilder())
-    ->withLogger($logger)
-    ->withSources(new SourceFinder(['src/Controllers', 'src/Models']))
-    ->build()
-    ->toYaml();
+$result = (new \OpenApi\Builder())
+    ->addSource('src/Controllers')
+    ->setMode('spec')       // or 'classic' (default)
+    ->setVersion('3.1.0')
+    ->build();
+
+echo $result->toYaml();
 ```
 
-- Unified `BuildResult` contract (files, diagnostics, output)
-- Classic mode wraps Generator internally
-- Spec mode runs new pipeline (Assembler → Augmenters → Compiler)
+**Done:**
+- `Builder` — fluent API: `addSource()`, `setSources()`, `setVersion()`, `setLogger()`, `setMode()`, `setCompiler()`, `withGenerator()`
+- `Result` — unified contract: `openApi()`, `toArray()`, `toJson()`, `toYaml()`, `saveAs()`, `files()`, `log()`, `warnings()`, `errors()`, `isValid()`
+- `Result::fromClassic()` / `Result::fromSpec()` — factory methods for dual-pipeline output
+- `CollectingLogger` — captures log entries for Result diagnostics
+- Classic mode wraps Generator internally via `withGenerator()` hook
+- Spec mode runs Assembler → Compiler pipeline
+- NullLogger default (silent for programmatic use; CLI sets its own logger)
+- `GenerateCommand` refactored to use Builder
+- Tests migrated from Generator to Builder (ExamplesTest, ScratchTest, ContextTest, processor tests)
+- Documentation: `docs/reference/builder.md`
 
-### Phase 2: Augmenters
+### Phase 2: Spec Attributes — In Progress
 
-The pipeline gap. `getDefaultAugmenters()` currently returns `[]`.
+Implemented on `spec-attributes` branch. Core infrastructure is complete; the pipeline
+produces correct output only when attributes are fully explicit (no inference from code).
 
-- Docblock → summary/description
-- Type resolution → schema types/formats/$refs
-- Enum → enum values from PHP enums
-- Inheritance → allOf from interfaces/traits
-- OperationId → auto-generation
-- Cleanup → unused component removal
+**Done:**
+- Layer 1 DTOs (`OpenApi\Spec\*`): OpenApi, Info, Contact, License, Server, ServerVariable, Operation, Parameter, RequestBody, Response, MediaType, Encoding, Header, Link, Example, Schema, Property, Discriminator, Xml, ExternalDocumentation, SecurityScheme, Flow, Tag
+- Layer 2 polymorphic subclasses: `Operation\{Get,Post,Put,Delete,Patch,Options,Head,Trace}`, `Parameter\{Path,Query,Header,Cookie}Parameter`, `SecurityScheme\{ApiKey,Http,MutualTls,OAuth2,OpenIdConnect}Scheme`, `Flow\{Implicit,AuthorizationCode,Password,ClientCredentials}Flow`
+- `AbstractAttribute` base with `SourceLocation`, reflector tracking
+- `AttributeInterface` with `merge()`, `contains()`, `isRoot()`
+- `Assembler` — two-pass: `resolveNesting()` (stack-resolve siblings) + `resolveHierarchy()` (absorb from inner reflectors)
+- `Specification` — flat typed collections
+- `CompilerInterface` — `supports()`, `validate()`, `compile()`
+- `OpenApi31Compiler` — canonical (800+ lines, full spec coverage)
+- `OpenApi30Compiler` — downgrades from 3.1 (nullable keyword, boolean exclusive bounds, no $ref siblings, no webhooks/const/prefixItems/if-then-else)
+- `OpenApi32Compiler` — extends 3.1 (ready for Tag summary/parent/kind)
+- Version/compiler auto-resolution in Builder
+- `api` example with spec attributes (fully explicit — passes without augmenters)
+- CompilerTest with 47+ data-driven tests
+- AssemblerTest covering nesting, hierarchy, edge cases
+- ExamplesTest wired with `setMode('spec')` for spec implementation directories
 
-### Phase 3: Integration
+**Not yet working:**
+- Real-world spec examples (petstore, etc.) — blocked on augmenters for type/description inference
+- Callback attribute (not yet implemented)
+- PathItem attribute (operations grouped by compiler, no standalone PathItem DTO yet)
 
-- SourceScanner — shared infrastructure extracted from `Generator::scanSources()`. Resolves mixed inputs (strings, iterables, directories, SplFileInfo) into a file list. Both pipelines use it: classic feeds files to the Analyser, spec feeds them to TokenScanner → ReflectionClass[] → Assembler.
-- Specification finders (`schema()`, `find()`, `filter()`, `resolveRef()`)
-- Schema registry / `$ref` resolution
+### Phase 3: Augmenters — Not Started
+
+The pipeline gap. Without augmenters, spec attributes must declare everything explicitly —
+no inference from PHP types, docblocks, or class structure. This is the main blocker for
+making the spec pipeline usable for real-world code.
+
+Each augmenter operates on a `Specification` and enriches DTOs using their attached reflectors:
+
+| Augmenter | What it does | Classic equivalent |
+|-----------|-------------|-------------------|
+| **TypeResolver** | Infer schema `type`/`format`/`$ref` from PHP type hints | `AugmentSchemas` (type part) |
+| **DocblockReader** | Fill `summary`/`description` from `/** */` comments | `AugmentSchemas` (docblock part) |
+| **EnumValues** | Populate `enum` from PHP enum cases | `AugmentSchemas` (enum part) |
+| **Inheritance** | Build `allOf`/property merging from interfaces/traits | `ExpandClasses`/`ExpandInterfaces`/`ExpandTraits` |
+| **OperationId** | Auto-generate `operationId` from method names | `OperationId` |
+| **ParameterAugmenter** | Infer parameter types from method signatures | `AugmentParameters` |
+| **DefaultValues** | Fill `default` from PHP default values | `AugmentProperties` |
+| **CleanUnused** | Remove unreferenced component schemas | `CleanUnusedComponents` |
+
+Priority order for unblocking examples:
+1. TypeResolver — needed by virtually every schema
+2. DocblockReader — summary/description on operations and schemas
+3. Inheritance — needed for polymorphism/using-traits/using-interfaces examples
+4. OperationId — needed if not explicitly set
+5. EnumValues, ParameterAugmenter, DefaultValues — fill in gaps
+6. CleanUnused — nice-to-have, not blocking
+
+### Phase 4: Integration
+
+Partially done, remaining:
+
+**Done:**
+- SourceScanner — shared infrastructure, resolves mixed inputs into file lists (extracted to `Utils\SourceScanner` on master)
+- TokenScanner — discovers classes in source files for reflection
+
+**Remaining:**
+- Specification finders (`schema()`, `find()`, `filter()`, `resolveRef()`) — needed by augmenters that resolve `$ref` targets
+- Schema registry / `$ref` resolution — needed for Inheritance augmenter and cross-references
 - CompilerExtension wiring (Attachable → output)
+- Validation pipeline (currently `validate()` on CompilerInterface, needs richer diagnostics)
 
-### Phase 4: Test Fixtures & Validation
+### Phase 5: Test Fixtures & Examples
 
-**Acceptance criterion:** once augmenters are complete, the full existing test suite can run
-through the spec pipeline via the bridge (classic annotations → structural processors →
-SpecificationConverter → Specification → Augmenters → Compiler) and produce identical output
-to the classic pipeline. No new test expectations needed — the existing suite validates the
-spec pipeline by definition.
+**Acceptance criterion:** each existing example produces identical YAML output when
+re-implemented with spec attributes and run through the spec pipeline. The examples
+are the primary validation that augmenters work correctly.
 
-This means:
-- Every classic test fixture is automatically a spec pipeline regression test
-- Parity failures pinpoint exactly which augmenter behaviour is missing or diverges
-- The spec pipeline is "done" when all classic tests pass through it unchanged
+| Example | Spec variant | Status |
+|---------|-------------|--------|
+| api | ✓ exists | ✓ passes (fully explicit) |
+| petstore | not yet | blocked on TypeResolver, DocblockReader |
+| misc | not yet | blocked on TypeResolver |
+| nesting | not yet | blocked on TypeResolver |
+| polymorphism | not yet | blocked on Inheritance |
+| using-interfaces | not yet | blocked on Inheritance |
+| using-links | not yet | blocked on TypeResolver |
+| using-refs | not yet | blocked on TypeResolver |
+| using-traits | not yet | blocked on Inheritance |
+| webhooks | not yet | blocked on Callback DTO |
 
-Separately, the test suite itself has organically grown with mixed patterns. When adding
+Separately, the test suite has organically grown with mixed patterns. When adding
 spec-native fixtures:
 
-- Consolidate duplicates (many scratch fixtures test overlapping things)
-- Drop PHP syntax fixtures that are no longer relevant (php7.php, older namespace tests)
 - Establish a single pattern: one fixture class → one expected YAML output
 - Spec pipeline tests should use the Assembler directly (no Analysis/Generator indirection)
 - Group by feature (security, parameters, schemas, inheritance) not by bug/PR
 
-This is a cleanup opportunity, not a blocker.
+### Phase 6: Ship
 
-### Phase 5: Ship
-
-- Wire OpenApiBuilder into Generator as opt-in
-- Documentation and migration guide
+- Documentation and migration guide (spec attributes)
+- Update all examples with spec attribute variants (dual tabs in docs)
 - Deprecation notices on classic path
+- Announce spec mode as opt-in for v6
 
 ## Version Timeline
 
 | Version | What happens |
 |---------|-------------|
 | v6.x | Builder ships. Classic default. Spec mode opt-in. |
-| v7 | Spec mode default. Classic available via `setMode('classic')`. Remove legacy namespaces, Context, Analysis, doctrine support. Introduce `ProcessorInterface::process(Specification)`. |
-| v8 | Classic mode removed entirely. |
+| v7 | Spec mode default. Hybrid mode for migration. Classic opt-in. Remove legacy namespaces, Context, Analysis, doctrine support. |
+| v8 | Classic and hybrid removed. Spec only. |
 
 ## Key Design Decisions (validated)
 
 - No `AttributeStack` — Assembler works directly with flat lists
 - No separate Factory — Assembler reads attributes via reflection directly
-- `allowedParents()` method over `#[AllowedParents]` attribute or `$_parents` statics
+- `merge()`/`contains()`/`isRoot()` on each attribute over static `$_parents`/`$_nested` maps
 - `UNDEFINED` retained on Schema for null-valid fields (`example`, `default`, `const`)
 - Canonical form is 3.1+ (JSON Schema 2020-12) — compilers downgrade
 - Processors stay as `__invoke(Analysis)` through v6; migrate in v7
+- Builder named `Builder` (not `OpenApiBuilder`) — simpler, same namespace disambiguates
+- `setMode('classic'|'spec')` over boolean flag or separate builder classes — transitional, extensible
+- NullLogger default on Builder — silent for programmatic use; CLI sets its own logger
+- `Result` with factory methods (`fromClassic`/`fromSpec`) — single return type, dual internals
+- `withGenerator(callable)` as escape hatch for Generator configuration — avoids duplicating Generator's full API on Builder
 
 ## Classic Prep Work — Done / Skipped
 

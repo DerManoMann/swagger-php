@@ -17,18 +17,19 @@ and opens clean extension points (augmenters, compiler extensions) without requi
 
 | Classic (current) | Spec (new) | Role |
 |-------------------|------------|------|
-| `Generator` | `OpenApiBuilder` | Entry point |
+| `Generator` | `Builder` (unified, `setMode('classic'\|'spec')`) | Entry point |
 | `OpenApi\Annotations\*` / `OpenApi\Attributes\*` | `OpenApi\Spec\*` DTOs | User-facing declaration |
 | `Analysis` | `Specification` | Root container for the spec model |
-| Processors (`__invoke(Analysis)`) | Augmenters (`augment(Specification)`) | Enrich/transform the model |
+| Processors (`__invoke(Analysis)`) | Augmenters (TBD) | Enrich/transform the model |
 | `jsonSerialize()` + `isVersion()` branching | Compilers (one per version) | Version-specific output |
 | `Context` | `SourceLocation` + `Reflector` | Source metadata |
-| `$_nested` / `$_parents` / `merge()` | `allowedParents()` + Assembler | Structural nesting |
-| `Generator::UNDEFINED` | `null` (except null-valid fields) | "Not set" sentinel |
+| `$_nested` / `$_parents` / `merge()` | `merge()` / `contains()` / `isRoot()` + Assembler | Structural nesting |
+| `Generator::UNDEFINED` | `null` (except null-valid fields via `Undefined`) | "Not set" sentinel |
 
 ## Current: [v2](v2/index.md)
 
-Refined plan based on validated prototype. High-level phases and remaining work.
+Implementation progress and remaining work. Builder and spec attributes are implemented;
+augmenters are next.
 
 ## Archive: [v1](v1/index.md)
 
