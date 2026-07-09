@@ -16,16 +16,15 @@ use Psr\Log\NullLogger;
 /**
  * Unified entry point for generating OpenAPI documents.
  *
- * Version resolution (spec pipeline):
- *   setVersion() on the builder > #[OpenApi(version: ...)] from source > 3.1.0 fallback
- *
- * Compiler resolution:
- *   withSpec($compiler) explicit instance > auto-resolved from version
- *
  * Mode:
- *   setMode()
- *   classic — annotation/attribute pipeline via Generator (default)
- *   spec    - new, lightweight pipeline via Assembler
+ *   setMode('classic') — annotation/attribute pipeline via Generator (default)
+ *   setMode('spec')    — spec attribute pipeline via Assembler + Compiler
+ *
+ * Version resolution (spec pipeline):
+ *   setVersion() > #[OpenApi(version: ...)] from source > '3.1.0' fallback
+ *
+ * Compiler resolution (spec pipeline):
+ *   setCompiler() explicit > auto-resolved from version
  */
 class Builder
 {
@@ -37,8 +36,6 @@ class Builder
     protected ?string $version = null;
 
     protected ?LoggerInterface $logger = null;
-
-    protected bool $useSpec = false;
 
     protected ?CompilerInterface $compiler = null;
 
@@ -88,12 +85,8 @@ class Builder
         return $this;
     }
 
-    /**
-     * Switch to the spec attribute pipeline instead of the classic annotation/attribute pipeline.
-     */
-    public function withSpec(?CompilerInterface $compiler = null): static
+    public function setCompiler(CompilerInterface $compiler): static
     {
-        $this->useSpec = true;
         $this->compiler = $compiler;
 
         return $this;
@@ -117,8 +110,8 @@ class Builder
     public function build(): Result
     {
         return match ($this->mode) {
-            'classic' => $this->doBuild(),
-            default => throw new OpenApiException("Unsupported mode '{$this->mode}'"),
+            'spec' => $this->doBuildSpec(),
+            default => $this->doBuild(),
         };
     }
 
