@@ -16,8 +16,16 @@ use Psr\Log\NullLogger;
 /**
  * Unified entry point for generating OpenAPI documents.
  *
+ * Version resolution (spec pipeline):
+ *   setVersion() on the builder > #[OpenApi(version: ...)] from source > 3.1.0 fallback
+ *
+ * Compiler resolution:
+ *   withSpec($compiler) explicit instance > auto-resolved from version
+ *
  * Mode:
- *   setMode('classic') — annotation/attribute pipeline via Generator (default)
+ *   setMode()
+ *   classic — annotation/attribute pipeline via Generator (default)
+ *   spec    - new, lightweight pipeline via Assembler
  */
 class Builder
 {
@@ -57,11 +65,7 @@ class Builder
     /**
      * Select the processing mode.
      *
-     * Available modes:
-     *   - 'classic': scans source files for annotations/attributes and assembles
-     *                the OpenAPI document via Generator (default)
-     *
-     * @param string $mode 'classic' (default)
+     * @param string $mode 'classic' (default) or 'spec'
      */
     public function setMode(string $mode): static
     {
@@ -146,8 +150,44 @@ class Builder
     protected function doBuildSpec(): Result
     {
         $files = $this->resolveFiles();
+        $tokenScanner = new TokenScanner();
+        $assembler = new Assembler();
+
+        foreach ($files as $file) {
+            require_once $file;
+            foreach (array_keys($tokenScanner->scanFile($file)) as $class) {
+                if (class_exists($class) || interface_exists($class) || enum_exists($class)) {
+                    $assembler->collect(new \ReflectionClass($class));
+                }
+            }
+        }
+
+        $specification = $assembler->getSpecification();
+        $version = $this->version ?? $specification->openapi->version ?? '3.1.0';
+        $specification->openapi->version = $version;
+        $compiler = $this->compiler ?? $this->resolveCompiler($version);
+
+        $diagnostics = $compiler->validate($specification);
+        $output = $compiler->compile($specification);
 
         return Result::fromSpec($files, $output, $diagnostics);
+    }
+
+    protected function resolveCompiler(string $version): CompilerInterface
+    {
+        $compilers = [
+            new Compiler\OpenApi30Compiler(),
+            new Compiler\OpenApi31Compiler(),
+            new Compiler\OpenApi32Compiler(),
+        ];
+
+        foreach ($compilers as $compiler) {
+            if ($compiler->supports($version)) {
+                return $compiler;
+            }
+        }
+
+        throw new OpenApiException("No compiler available for version '{$version}'");
     }
 
     /**
