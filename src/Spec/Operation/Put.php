@@ -27,6 +27,7 @@ class Put extends OA\Operation
      */
     public function __construct(
         ?string $path = null,
+        ?string $webhook = null,
         ?string $operationId = null,
         ?string $summary = null,
         ?string $description = null,
@@ -43,6 +44,7 @@ class Put extends OA\Operation
     ) {
         parent::__construct(
             path: $path,
+            webhook: $webhook,
             method: 'put',
             operationId: $operationId,
             summary: $summary,
