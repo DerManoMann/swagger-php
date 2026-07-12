@@ -103,13 +103,14 @@ class AttributeFactory
      */
     public function hasOnlyProperties(\ReflectionMethod $method): bool
     {
-        $attributes = $this->readAttributes($method);
-        if ($attributes === []) {
+        $reflectionAttributes = $method->getAttributes(AttributeInterface::class, \ReflectionAttribute::IS_INSTANCEOF);
+        if ($reflectionAttributes === []) {
             return false;
         }
 
-        foreach ($attributes as $attribute) {
-            if (!$attribute instanceof OA\Property && !$attribute instanceof OA\Schema) {
+        foreach ($reflectionAttributes as $reflectionAttribute) {
+            $name = $reflectionAttribute->getName();
+            if (!is_a($name, OA\Property::class, true) && !is_a($name, OA\Schema::class, true)) {
                 return false;
             }
         }
@@ -244,6 +245,12 @@ class AttributeFactory
             $current[] = $child;
             $parent->{$property} = $current;
         } else {
+            if ($parent->{$slot} instanceof AttributeInterface) {
+                throw OpenApiException::fromSource(
+                    sprintf('Duplicate merge: %s already has a %s in slot "%s"', $parent::class, $parent->{$slot}::class, $slot),
+                    $child->getSourceLocation(),
+                );
+            }
             $parent->{$slot} = $child;
         }
     }
