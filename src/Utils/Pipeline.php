@@ -40,6 +40,10 @@ class Pipeline
         $this->logger = $logger ?? new NullLogger();
 
         if ($groups !== null) {
+            if ($groups === []) {
+                throw new OpenApiException('Groups must not be empty when provided');
+            }
+
             $this->groups = array_map(self::groupKey(...), $groups);
             $defaultKey = $defaultGroup !== null ? self::groupKey($defaultGroup) : null;
 
@@ -144,7 +148,7 @@ class Pipeline
 
     public function walk(callable $walker): Pipeline
     {
-        foreach ($this->pipes as $pipe) {
+        foreach ($this->ordered() as $pipe) {
             $walker($pipe);
         }
 
@@ -162,7 +166,7 @@ class Pipeline
             if ($pipe instanceof LoggerAwareInterface) {
                 $pipe->setLogger($this->logger);
             }
-            $payload = $pipe($payload) ?: $payload;
+            $payload = $pipe($payload) ?? $payload;
         }
 
         return $payload;
@@ -194,6 +198,6 @@ class Pipeline
 
     protected static function groupKey(string|\BackedEnum $group): string
     {
-        return $group instanceof \BackedEnum ? $group->value : $group;
+        return $group instanceof \BackedEnum ? (string) $group->value : $group;
     }
 }
