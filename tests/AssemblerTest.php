@@ -79,7 +79,7 @@ final class AssemblerTest extends TestCase
         $this->expectExceptionMessageMatches('/Non-root attribute.*Parameter.*remains after resolution/');
 
         $assembler = new Assembler();
-        $assembler->collect(new \ReflectionClass(Fixtures\Augmenter\PathItemOrphanParameter::class));
+        $assembler->collect(new \ReflectionClass(Fixtures\Assembler\OrphanParameter::class));
     }
 
     public function testSecurityRequirementOnClassWithoutPathItemThrows(): void
@@ -88,6 +88,6 @@ final class AssemblerTest extends TestCase
         $this->expectExceptionMessageMatches('/Non-root attribute.*Requirement.*remains after resolution/');
 
         $assembler = new Assembler();
-        $assembler->collect(new \ReflectionClass(Fixtures\Augmenter\PathItemOrphanSecurity::class));
+        $assembler->collect(new \ReflectionClass(Fixtures\Assembler\OrphanSecurity::class));
     }
 }
