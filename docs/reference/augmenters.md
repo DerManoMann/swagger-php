@@ -73,6 +73,14 @@ Rules for name vs. value:
 
 &nbsp;&nbsp;&nbsp;&nbsp;If set, stores enum case names in a vendor extension with this key (e.g. <code>x-enum-varnames</code>).<br>
 
+### [PathItemResolve](https://github.com/zircote/swagger-php/tree/master/src/Augmenter/PathItemResolve.php)
+Resolves PathItem prefixes, clones metadata to operations, and sets path-level output.
+
+Walks the class hierarchy to compose path prefixes from ancestor PathItems,
+prepends them to operation paths, clones tags/security/responses to operations
+that don't declare their own, and marks PathItems that have spec-level output
+(parameters, summary, description, servers) with their resolved path.
+
 ### [Type](https://github.com/zircote/swagger-php/tree/master/src/Augmenter/Type.php)
 Infers schema type, format, nullable, items, etc. from PHP type declarations and docblocks.
 
