@@ -38,13 +38,7 @@ class OpenApi30Compiler extends OpenApi31Compiler
 
     public function validate(Specification $specification): array
     {
-        $diagnostics = [];
-
-        if (!$specification->info instanceof OA\Info) {
-            $diagnostics[] = ['level' => 'error', 'message' => 'info is required'];
-        } elseif ($specification->info->title === null) {
-            $diagnostics[] = ['level' => 'error', 'message' => 'info.title is required'];
-        }
+        $diagnostics = parent::validate($specification);
 
         $hasPaths = (bool) array_filter($specification->operations, fn (OA\Operation $op): bool => $op->path !== null);
         if (!$hasPaths) {
@@ -108,8 +102,8 @@ class OpenApi30Compiler extends OpenApi31Compiler
 
         $type = $schema->type;
         if (is_array($type)) {
-            $type = array_filter($type, fn (string $t): bool => $t !== 'null');
-            $type = count($type) === 1 ? reset($type) : ($type[0] ?? null);
+            $type = array_values(array_filter($type, fn (string $t): bool => $t !== 'null'));
+            $type = count($type) === 1 ? $type[0] : ($type[0] ?? null);
         }
 
         $nullable = $schema->nullable;
@@ -198,6 +192,8 @@ class OpenApi30Compiler extends OpenApi31Compiler
         }
         if ($schema->example !== Undefined::UNDEFINED) {
             $result['example'] = $schema->example;
+        } elseif ($schema->examples !== null && $schema->examples !== []) {
+            $result['example'] = $schema->examples[0];
         }
         // const is not supported in 3.0 — fall back to enum
         if ($schema->const !== Undefined::UNDEFINED && !isset($result['enum'])) {
@@ -221,49 +217,49 @@ class OpenApi30Compiler extends OpenApi31Compiler
             if ($type === 'array' && $schema->items === null) {
                 $diagnostics[] = [
                     'level' => 'warning',
-                    'message' => 'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ' has type "array" but no items',
+                    'message' => 'Schema' . ($schema->schema ? " \"$schema->schema\"" : '') . ' has type "array" but no items',
                 ];
             }
 
             if ($schema->prefixItems !== null) {
                 $diagnostics[] = [
                     'level' => 'warning',
-                    'message' => 'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ': prefixItems is not supported in OpenAPI 3.0',
+                    'message' => 'Schema' . ($schema->schema ? " \"$schema->schema\"" : '') . ': prefixItems is not supported in OpenAPI 3.0',
                 ];
             }
 
             if ($schema->unevaluatedProperties !== null) {
                 $diagnostics[] = [
                     'level' => 'warning',
-                    'message' => 'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ': unevaluatedProperties is not supported in OpenAPI 3.0',
+                    'message' => 'Schema' . ($schema->schema ? " \"$schema->schema\"" : '') . ': unevaluatedProperties is not supported in OpenAPI 3.0',
                 ];
             }
 
             if ($schema->unevaluatedItems !== null) {
                 $diagnostics[] = [
                     'level' => 'warning',
-                    'message' => 'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ': unevaluatedItems is not supported in OpenAPI 3.0',
+                    'message' => 'Schema' . ($schema->schema ? " \"$schema->schema\"" : '') . ': unevaluatedItems is not supported in OpenAPI 3.0',
                 ];
             }
 
             if ($schema->if instanceof OA\Schema || $schema->then instanceof OA\Schema || $schema->else instanceof OA\Schema) {
                 $diagnostics[] = [
                     'level' => 'warning',
-                    'message' => 'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ': if/then/else is not supported in OpenAPI 3.0',
+                    'message' => 'Schema' . ($schema->schema ? " \"$schema->schema\"" : '') . ': if/then/else is not supported in OpenAPI 3.0',
                 ];
             }
 
             if ($schema->const !== Undefined::UNDEFINED) {
                 $diagnostics[] = [
                     'level' => 'warning',
-                    'message' => 'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ': const is not supported in OpenAPI 3.0, using enum fallback',
+                    'message' => 'Schema' . ($schema->schema ? " \"$schema->schema\"" : '') . ': const is not supported in OpenAPI 3.0, using enum fallback',
                 ];
             }
 
             if ($schema->examples !== null) {
                 $diagnostics[] = [
                     'level' => 'warning',
-                    'message' => 'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ': examples array is not supported in OpenAPI 3.0, using first value as example',
+                    'message' => 'Schema' . ($schema->schema ? " \"$schema->schema\"" : '') . ': examples array is not supported in OpenAPI 3.0, using first value as example',
                 ];
             }
         }

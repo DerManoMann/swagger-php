@@ -45,7 +45,7 @@ class SpecificationWalker
     /**
      * Single traversal driving both schema and ref visitors.
      *
-     * @param (callable(OA\Schema): void)|null                                                                                    $schemaVisitor
+     * @param (callable(OA\Schema): void)|null                                                                                         $schemaVisitor
      * @param (callable(OA\Schema|OA\Parameter|OA\Response|OA\Header|OA\RequestBody|OA\Link|OA\Example|OA\Security\Scheme): void)|null $refVisitor
      */
     protected function walk(?callable $schemaVisitor, ?callable $refVisitor): void

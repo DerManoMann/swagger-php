@@ -403,7 +403,12 @@ class OpenApi31Compiler implements CompilerInterface
             'description' => $header->description,
             'required' => $header->required,
             'deprecated' => $header->deprecated,
+            'style' => $header->style,
+            'explode' => $header->explode,
             'schema' => $header->schema instanceof OA\Schema ? $this->compileSchema($header->schema) : null,
+            'example' => $header->example,
+            'examples' => $header->examples !== null ? $this->compileExamples($header->examples) : null,
+            'content' => $header->content !== null ? $this->compileMediaTypes($header->content) : null,
         ], $header);
     }
 
@@ -428,8 +433,9 @@ class OpenApi31Compiler implements CompilerInterface
         $encoding = null;
         if ($mediaType->encoding) {
             $encoding = [];
-            foreach ($mediaType->encoding as $name => $enc) {
-                $encoding[$name] = $this->compileEncoding($enc);
+            foreach ($mediaType->encoding as $enc) {
+                $key = $enc->encoding ?? (string) count($encoding);
+                $encoding[$key] = $this->compileEncoding($enc);
             }
         }
 
@@ -443,8 +449,20 @@ class OpenApi31Compiler implements CompilerInterface
 
     protected function compileEncoding(OA\Encoding $encoding): array
     {
+        $headers = null;
+        if ($encoding->headers) {
+            $headers = [];
+            foreach ($encoding->headers as $header) {
+                if ($header->header !== null) {
+                    $headers[$header->header] = $this->compileHeader($header);
+                }
+            }
+            $headers = $headers ?: null;
+        }
+
         return $this->filter([
             'contentType' => $encoding->contentType,
+            'headers' => $headers,
             'style' => $encoding->style,
             'explode' => $encoding->explode,
             'allowReserved' => $encoding->allowReserved,
@@ -485,7 +503,9 @@ class OpenApi31Compiler implements CompilerInterface
         $type = $schema->type;
         if ($schema->nullable === true && $type !== null) {
             $type = (array) $type;
-            $type[] = 'null';
+            if (!in_array('null', $type, true)) {
+                $type[] = 'null';
+            }
         }
 
         $result = $this->filter([
@@ -692,14 +712,19 @@ class OpenApi31Compiler implements CompilerInterface
     }
 
     /**
+     * Passing raw arrays is deprecated; use OA\Security\Requirement instances instead.
+     *
      * @param list<OA\Security\Requirement|array<string,list<string>>> $security
-     */
-    /**
-     * @param list<OA\Security\Requirement> $security
      */
     protected function compileSecurity(array $security): array
     {
-        return array_map(static fn (OA\Security\Requirement $item): array => $item->toArray(), $security);
+        return array_map(static function (OA\Security\Requirement|array $item): array {
+            if ($item instanceof OA\Security\Requirement) {
+                return $item->toArray();
+            }
+
+            return $item;
+        }, $security);
     }
 
     protected function compileSecurityScheme(OA\Security\Scheme $scheme): array
@@ -780,7 +805,7 @@ class OpenApi31Compiler implements CompilerInterface
                 if ($schema->items === null) {
                     $diagnostics[] = [
                         'level' => 'warning',
-                        'message' => 'Schema' . ($schema->schema ? " \"{$schema->schema}\"" : '') . ' has type "array" but no items',
+                        'message' => 'Schema' . ($schema->schema ? " \"$schema->schema\"" : '') . ' has type "array" but no items',
                     ];
                 }
             }

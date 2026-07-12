@@ -536,4 +536,37 @@ final class CompilerTest extends TestCase
         $this->assertEquals('petType', $result['discriminator']['propertyName']);
         $this->assertEquals(['dog' => '#/components/schemas/Dog'], $result['discriminator']['mapping']);
     }
+
+    // --- Security (raw array BC) ---
+
+    public function testSecurityWithRequirementDto(): void
+    {
+        $spec = $this->createSpecification('3.1.0');
+        $spec->openapi->security = [
+            new OA\Security\Requirement(scheme: 'bearerAuth'),
+            new OA\Security\Requirement(schemes: ['oauth2' => ['read', 'write'], 'apiKey' => []]),
+        ];
+
+        $output = (new OpenApi31Compiler())->compile($spec);
+
+        $this->assertCount(2, $output['security']);
+        $this->assertEquals(['bearerAuth' => []], $output['security'][0]);
+        $this->assertEquals(['oauth2' => ['read', 'write'], 'apiKey' => []], $output['security'][1]);
+    }
+
+    public function testSecurityWithRawArrayBc(): void
+    {
+        $spec = $this->createSpecification('3.1.0');
+        /* @phpstan-ignore assign.propertyType (intentionally testing BC with raw arrays) */
+        $spec->openapi->security = [
+            new OA\Security\Requirement(scheme: 'bearerAuth'),
+            ['oauth2' => ['read', 'write']],
+        ];
+
+        $output = (new OpenApi31Compiler())->compile($spec);
+
+        $this->assertCount(2, $output['security']);
+        $this->assertEquals(['bearerAuth' => []], $output['security'][0]);
+        $this->assertEquals(['oauth2' => ['read', 'write']], $output['security'][1]);
+    }
 }
