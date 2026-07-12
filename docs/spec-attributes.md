@@ -329,6 +329,33 @@ class SharedComponents {
 
 These components can then be referenced via `$ref` from operations, PathItems, or other DTOs.
 
+## Merge plan
+
+The spec-attributes work is being merged into master as focused PRs in batches.
+
+### Batch 1 (in progress — all based on `feat/spec-dto`)
+
+| PR | Branch | Content | Status |
+|---|---|---|---|
+| #2054 | `feat/spec-dto` | Spec DTOs, Specification container, SpecificationWalker, SourceLocation | Open |
+| — | `feat/assembler` | Assembler + AttributeFactory | Ready |
+| — | `feat/compilers` | OpenApi 3.0/3.1/3.2 compilers + CompilerInterface | Ready |
+| — | `feat/pipeline-groups` | Pipeline grouping, PipeInterface, @template generics, get() | Ready |
+
+### Batch 2 (after batch 1 merges — based on updated master)
+
+| Branch | Content |
+|---|---|
+| `feat/builder-spec-mode` | Builder with `setMode('spec')`, spec examples, ExamplesTest integration |
+| `feat/augmenters` | All 11 augmenters (Type, Ref, Docblock, OperationId, Tag, InferNames, Enums, CleanUnused, PathFilter, MediaType, ExpandHierarchy), SpecificationWalker enhancements, reflector helpers |
+| `feat/hybrid-bridge` | HybridBridge, hybrid Builder mode, Analysis iteration, PathItemResolve augmenter, Components promotion |
+
+### After merge
+
+- Documentation pass (augmenter reference, migration guide)
+- Additional test coverage (scratch tests, snippet tests in spec/hybrid modes)
+- Mark spec attributes as beta in v6 for community feedback
+
 ## What's next
 
 ### Hybrid mode hardening
