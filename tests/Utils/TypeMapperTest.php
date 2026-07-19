@@ -9,8 +9,9 @@ namespace OpenApi\Tests\Utils;
 use OpenApi\Tests\OpenApiTestCase;
 use OpenApi\Utils\TypeMapper;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
-final class TypeMapperTest extends OpenApiTestCase
+final class TypeMapperTest extends TestCase
 {
     private TypeMapper $mapper;
 

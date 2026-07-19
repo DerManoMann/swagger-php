@@ -11,8 +11,9 @@ use OpenApi\Tests\OpenApiTestCase;
 use OpenApi\Utils\SourceFinder;
 use OpenApi\Utils\SourceScanner;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
-final class SourceScannerTest extends OpenApiTestCase
+final class SourceScannerTest extends TestCase
 {
     use UsesExamples;
 

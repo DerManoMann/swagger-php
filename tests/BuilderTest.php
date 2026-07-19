@@ -9,12 +9,14 @@ namespace OpenApi\Tests;
 use OpenApi\Augmenter\OperationIds;
 use OpenApi\Builder;
 use OpenApi\Generator;
+use OpenApi\Tests\Concerns\ExpectsLoggerContains;
 use OpenApi\Tests\Concerns\UsesExamples;
 use OpenApi\Utils\SourceFinder;
 use Psr\Log\NullLogger;
 
 final class BuilderTest extends OpenApiTestCase
 {
+    use ExpectsLoggerContains;
     use UsesExamples;
 
     public function testBuild(): void
@@ -110,12 +112,12 @@ final class BuilderTest extends OpenApiTestCase
 
     public function testBuildEmptySources(): void
     {
-        $this->assertOpenApiLogEntryContains('Required @OA\Info() not found');
-        $this->assertOpenApiLogEntryContains('Required @OA\PathItem() not found');
+        $this->expectLoggerContains('Required @OA\Info() not found');
+        $this->expectLoggerContains('Required @OA\PathItem() not found');
 
         $result = (new Builder())
             ->setSources([])
-            ->setLogger($this->getTrackingLogger())
+            ->setLogger($this->getAssertingLogger())
             ->build();
 
         $this->assertEmpty($result->files());

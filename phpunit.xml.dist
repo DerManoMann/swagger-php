@@ -3,17 +3,23 @@
          processIsolation="false" stopOnFailure="false"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd" cacheDirectory=".phpunit.cache"
          backupStaticProperties="false">
+
     <groups>
         <exclude>
             <group>performance</group>
         </exclude>
     </groups>
+
     <coverage/>
+
+    <extensions>
+        <bootstrap class="OpenApi\Tests\PHPUnitExtension"/>    </extensions>
     <testsuites>
         <testsuite name="Swagger PHP Test Suite">
             <directory>tests</directory>
         </testsuite>
     </testsuites>
+
     <source>
         <include>
             <directory>src</directory>
