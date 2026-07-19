@@ -10,12 +10,15 @@ use OpenApi\Annotations as OA;
 use OpenApi\Augmenter\Cleanup;
 use OpenApi\Builder;
 use OpenApi\Generator;
+use OpenApi\Tests\Concerns\ExpectsLoggerContains;
 use OpenApi\TypeResolverInterface;
 use OpenApi\Utils\Pipeline;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 final class ScratchTest extends OpenApiTestCase
 {
+    use ExpectsLoggerContains;
+
     public static function scratchTestCases(): iterable
     {
         // scratch (.php) iterator
@@ -84,7 +87,7 @@ final class ScratchTest extends OpenApiTestCase
     public function testScratch(TypeResolverInterface $typeResolver, string $scratch, Builder\Mode $mode, string $spec, string $version, array $expectedLogs): void
     {
         foreach ($expectedLogs as $logLine) {
-            $this->assertOpenApiLogEntryContains($logLine);
+            $this->expectLoggerContains($logLine);
         }
 
         require_once $scratch;
@@ -93,7 +96,7 @@ final class ScratchTest extends OpenApiTestCase
             ->setMode($mode)
             ->addSource($scratch)
             ->setVersion($version)
-            ->setLogger($this->getTrackingLogger())
+            ->setLogger($this->getAssertingLogger())
             ->withAugmenters(function (Pipeline $pipeline) use ($mode): void {
                 if ($mode->isHybrid()) {
                     $pipeline->get(Cleanup::class)->setEnabled(false);

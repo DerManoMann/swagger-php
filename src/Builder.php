@@ -160,8 +160,8 @@ class Builder
 
     protected function doBuildClassic(): Result
     {
-        $collecting = new CollectingLogger($this->getLogger());
-        $generator = new Generator($collecting);
+        $collectingLogger = new CollectingLogger($this->getLogger());
+        $generator = new Generator($collectingLogger);
 
         if ($this->version !== null) {
             $generator->setVersion($this->version);
@@ -173,7 +173,7 @@ class Builder
 
         $openApi = $generator->generate($this->sources);
 
-        return Result::fromClassic($this->resolveFiles(), $openApi, $collecting->entries());
+        return Result::fromClassic($this->resolveFiles(), $openApi, $collectingLogger->entries());
     }
 
     protected function doBuildSpec(): Result

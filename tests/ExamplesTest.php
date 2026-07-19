@@ -10,12 +10,14 @@ use OpenApi\Annotations as OA;
 use OpenApi\Builder;
 use OpenApi\Generator;
 use OpenApi\Serializer;
+use OpenApi\Tests\Concerns\ExpectsLoggerContains;
 use OpenApi\Tests\Concerns\UsesExamples;
 use OpenApi\TypeResolverInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 final class ExamplesTest extends OpenApiTestCase
 {
+    use ExpectsLoggerContains;
     use UsesExamples;
 
     public static function exampleSpecs(): iterable
@@ -77,7 +79,7 @@ final class ExamplesTest extends OpenApiTestCase
         $result = (new Builder())
             ->addSource($path)
             ->setVersion($version)
-            ->setLogger($this->getTrackingLogger())
+            ->setLogger($this->getAssertingLogger())
             ->withGenerator(fn (Generator $generator): Generator => $generator->setTypeResolver($typeResolver))
             ->build();
         // file_put_contents($specFilename, $result->toYaml());

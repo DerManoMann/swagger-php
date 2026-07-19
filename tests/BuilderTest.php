@@ -25,7 +25,7 @@ final class BuilderTest extends OpenApiTestCase
 
         $result = (new Builder())
             ->addSource(self::examplePath('petstore/annotations'))
-            ->setLogger($this->getTrackingLogger())
+            ->setLogger($this->getAssertingLogger())
             ->withGenerator(function (Generator $generator): void {
                 $generator->setAnalyser($this->getAnalyzer());
                 $generator->setTypeResolver($this->getTypeResolver());

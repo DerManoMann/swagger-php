@@ -9,6 +9,7 @@ namespace OpenApi\Tests;
 use OpenApi\Attributes\OpenApi;
 use OpenApi\Generator;
 use OpenApi\Processors\OperationId;
+use OpenApi\Tests\Concerns\ExpectsLoggerContains;
 use OpenApi\Tests\Concerns\UsesExamples;
 use OpenApi\Utils\Pipeline;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -16,6 +17,7 @@ use Symfony\Component\Finder\Finder;
 
 final class DocSnippetsTest extends OpenApiTestCase
 {
+    use ExpectsLoggerContains;
     use UsesExamples;
 
     public static function snippetSets(): iterable
@@ -52,7 +54,7 @@ final class DocSnippetsTest extends OpenApiTestCase
             file_put_contents($tmp, $contents);
             require_once $tmp;
 
-            $openapi = (new Generator($this->getTrackingLogger()))
+            $openapi = (new Generator($this->getAssertingLogger()))
                 ->setVersion($version)
                 ->setTypeResolver($this->getTypeResolver())
                  ->withProcessorPipeline(fn (Pipeline $processorPipeline): Pipeline => $processorPipeline->remove(OperationId::class))

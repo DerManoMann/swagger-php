@@ -73,8 +73,8 @@ class ExpectsLoggerContainsSubscriber
                 /** @var array{0:string,1:string,2:array} $actual level, logLine, context */
                 $actual = $testCase::$actualLoggerMessages[$index];
                 $testCase::assertStringContainsString(
-                    $actual[1],
                     $expected[0],
+                    $actual[1],
                     empty($expected[1]) ? 'AssertingLogger: message not logged: "' . $expected[0] . '"' : $expected[1]
                 );
                 $testCase::$expectedLoggerMessages[$index] = null;
