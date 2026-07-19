@@ -6,7 +6,6 @@
 
 namespace OpenApi\Tests\Utils;
 
-use OpenApi\Tests\OpenApiTestCase;
 use OpenApi\Utils\TypeMapper;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

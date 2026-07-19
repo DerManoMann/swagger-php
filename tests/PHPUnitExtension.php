@@ -10,11 +10,10 @@ use PHPUnit\TextUI\Configuration\Configuration;
 
 class PHPUnitExtension implements Extension
 {
-
     public function bootstrap(Configuration $configuration, Facade $facade, ParameterCollection $parameters): void
     {
         $facade->registerSubscribers(
-            ...ExpectsLoggerContainsSubscriber::subscribers(),
+            ...array_values(ExpectsLoggerContainsSubscriber::subscribers()),
         );
     }
 }

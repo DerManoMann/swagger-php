@@ -6,15 +6,17 @@
 
 namespace OpenApi\Tests\Utils;
 
+use OpenApi\Tests\Concerns\ExpectsLoggerContains;
 use OpenApi\Tests\Concerns\UsesExamples;
-use OpenApi\Tests\OpenApiTestCase;
 use OpenApi\Utils\SourceFinder;
 use OpenApi\Utils\SourceScanner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 
 final class SourceScannerTest extends TestCase
 {
+    use ExpectsLoggerContains;
     use UsesExamples;
 
     public static function sourcesProvider(): iterable
@@ -29,7 +31,7 @@ final class SourceScannerTest extends TestCase
     #[DataProvider('sourcesProvider')]
     public function testScan(iterable $sources): void
     {
-        $scanner = new SourceScanner($this->getTrackingLogger());
+        $scanner = new SourceScanner(new NullLogger());
         $files = $scanner->scan($sources);
 
         $this->assertNotEmpty($files);
@@ -41,9 +43,9 @@ final class SourceScannerTest extends TestCase
 
     public function testScanInvalidSource(): void
     {
-        $this->assertOpenApiLogEntryContains('Skipping invalid source: /tmp/__swagger_php_does_not_exist__');
+        $this->expectLoggerContains('Skipping invalid source: /tmp/__swagger_php_does_not_exist__');
 
-        $scanner = new SourceScanner($this->getTrackingLogger());
+        $scanner = new SourceScanner($this->getAssertingLogger());
         $files = $scanner->scan(['/tmp/__swagger_php_does_not_exist__']);
 
         $this->assertEmpty($files);
@@ -54,7 +56,7 @@ final class SourceScannerTest extends TestCase
         $sourceDir = self::examplePath('petstore/annotations');
         $nested = [[new SourceFinder($sourceDir)]];
 
-        $scanner = new SourceScanner($this->getTrackingLogger());
+        $scanner = new SourceScanner(new NullLogger());
         $files = $scanner->scan($nested);
 
         $this->assertNotEmpty($files);
@@ -67,7 +69,7 @@ final class SourceScannerTest extends TestCase
         $splFiles = iterator_to_array($finder);
         $first = reset($splFiles);
 
-        $scanner = new SourceScanner($this->getTrackingLogger());
+        $scanner = new SourceScanner(new NullLogger());
         $files = $scanner->scan([$first]);
 
         $this->assertCount(1, $files);
