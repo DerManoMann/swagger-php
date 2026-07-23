@@ -48,6 +48,7 @@ function getReferenceSidebar() {
     {
       text: 'Reference',
       items: [
+        { text: 'Spec Attributes', link: '/reference/spec-attributes' },
         { text: 'Attributes', link: '/reference/attributes' },
         { text: 'Annotations', link: '/reference/annotations' },
       ]

@@ -6,11 +6,13 @@ use OpenApi\Tools\Docs\Reference\AttributeGenerator;
 use OpenApi\Tools\Docs\Reference\AugmenterGenerator;
 use OpenApi\Tools\Docs\Reference\ExampleGenerator;
 use OpenApi\Tools\Docs\Reference\ProcessorGenerator;
+use OpenApi\Tools\Docs\Reference\SpecAttributeGenerator;
 
 $projectRoot = __DIR__ . '/../';
 
 $generators = [
     'ref' => new AttributeGenerator($projectRoot),
+    'spec' => new SpecAttributeGenerator($projectRoot),
     'proc' => new ProcessorGenerator($projectRoot),
     'aug' => new AugmenterGenerator($projectRoot),
     'example' => new ExampleGenerator($projectRoot),
@@ -24,6 +26,7 @@ if ($requested) {
 $outputMap = [
     'annotations' => 'reference/annotations.md',
     'attributes' => 'reference/attributes.md',
+    'spec-attributes' => 'reference/spec-attributes.md',
     'processors' => 'reference/processors.md',
     'augmenters' => 'reference/augmenters.md',
     'examples' => 'guide/examples.md',
