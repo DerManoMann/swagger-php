@@ -8,9 +8,46 @@ namespace OpenApi\Tools\Docs\Reference;
 
 use OpenApi\Builder;
 use OpenApi\Tools\Docs\DocGenerator;
+use OpenApi\Tools\Docs\Renderer;
+use OpenApi\Tools\Docs\Sections\ConfigSettingsSection;
+use OpenApi\Tools\Docs\Sections\DescriptionSection;
+use OpenApi\Tools\Docs\Sections\ReferencesSection;
+use OpenApi\Tools\Docs\Sections\SectionInterface;
 
 class AugmenterGenerator extends DocGenerator
 {
+    /** @var list<SectionInterface> */
+    protected array $sections;
+
+    public function __construct(string $projectRoot, ?Renderer $renderer = null)
+    {
+        parent::__construct($projectRoot, $renderer);
+
+        $this->sections = $this->defaultSections();
+    }
+
+    /**
+     * @return list<SectionInterface>
+     */
+    protected function defaultSections(): array
+    {
+        return [
+            new DescriptionSection(),
+            new ConfigSettingsSection(),
+            new ReferencesSection(),
+        ];
+    }
+
+    /**
+     * @param list<SectionInterface> $sections
+     */
+    public function setSections(array $sections): static
+    {
+        $this->sections = $sections;
+
+        return $this;
+    }
+
     public function generate(): array
     {
         $content = $this->renderer->preamble(
@@ -21,17 +58,14 @@ class AugmenterGenerator extends DocGenerator
         $content .= $this->renderConfigSection();
         $content .= "\n" . $this->renderer->sectionHeader('Default Augmenters');
 
-        foreach ($this->collectAugmenterDetails() as $details) {
-            $content .= "\n" . $this->renderer->classHeader($details['name'], 'Augmenter');
-            $content .= $this->renderer->classDescription($details['description']);
+        foreach ($this->collectAugmenterDetails() as $data) {
+            $content .= "\n" . $this->renderer->classHeader($data['name'], 'Augmenter');
 
-            if ($details['options']) {
-                $configPrefix = lcfirst($details['name']) . '.';
-                $content .= "\n" . $this->renderer->processorOptions($details['options'], $configPrefix);
-            }
-
-            if ($details['see']) {
-                $content .= "\n" . $this->renderer->references($details['see']);
+            foreach ($this->sections as $section) {
+                $rendered = $section->render($data);
+                if ($rendered !== '') {
+                    $content .= "\n" . $rendered;
+                }
             }
         }
 
@@ -72,7 +106,7 @@ EOT;
     }
 
     /**
-     * @return list<array{name: string, description: string, options: list<array{name: string, type: string, default: string, description: string}>, see: list<string>}>
+     * @return list<array{name: string, description: string, configPrefix: string, options: list<array{name: string, type: string, default: string, description: string}>, see: list<string>}>
      */
     protected function collectAugmenterDetails(): array
     {
@@ -95,6 +129,7 @@ EOT;
         return [
             'name' => $rc->getShortName(),
             'description' => trim($description),
+            'configPrefix' => lcfirst($rc->getShortName()) . '.',
             'options' => $this->collectOptions($rc),
             'see' => $classDoc['see'],
         ];
