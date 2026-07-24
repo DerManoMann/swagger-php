@@ -179,4 +179,4 @@ This is for the current state (beta). We deliberately do NOT:
 
 - **v7 docs split** — when spec becomes default, freeze current classic docs as "v6" archive and promote the spec section to primary. The sidebar section structure makes this a config change, not a rewrite.
 - **Migration guide** — `guide/migrating-to-v7.md` covering classic → spec migration. Depends on the pipeline being stable/non-beta.
-- **Extension docs** — AttributeEnricher, CompilerExtension, custom Attachables. Blocked on implementation.
+- **Extension docs** — AttributeTranslater, extending Compilers, custom Attachables. - needs examples ideally custom attachable stack - no named parameter execpt generic `attachables: new MyAttr()`
