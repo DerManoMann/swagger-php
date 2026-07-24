@@ -6,7 +6,7 @@
 
 namespace OpenApi\Tools\Docs\Reference;
 
-use OpenApi\Spec\AbstractAttribute;
+use OpenApi\Spec as OA;
 use OpenApi\Tools\Docs\DocGenerator;
 use OpenApi\Tools\Docs\Renderer;
 use OpenApi\Tools\Docs\Sections\AllowedInSection;
@@ -106,7 +106,7 @@ class SpecAttributeGenerator extends DocGenerator
             }
 
             $rc = new \ReflectionClass($fqdn);
-            if ($rc->isAbstract() || !$rc->isSubclassOf(AbstractAttribute::class)) {
+            if ($rc->isAbstract() || !$rc->isSubclassOf(OA\AbstractAttribute::class)) {
                 continue;
             }
 
@@ -205,7 +205,7 @@ class SpecAttributeGenerator extends DocGenerator
     /**
      * @return list<array{name: string, anchor: string}>
      */
-    protected function collectNested(AbstractAttribute $instance): array
+    protected function collectNested(OA\AbstractAttribute $instance): array
     {
         $nested = [];
 
@@ -220,7 +220,7 @@ class SpecAttributeGenerator extends DocGenerator
     /**
      * @return list<array{name: string, anchor: string}>
      */
-    protected function collectMergeParents(AbstractAttribute $instance): array
+    protected function collectMergeParents(OA\AbstractAttribute $instance): array
     {
         $parents = [];
 
