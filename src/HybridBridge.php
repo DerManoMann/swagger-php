@@ -68,8 +68,8 @@ class HybridBridge
     }
 
     /**
-     * @param array<string, Annotations\Schema> $classSchemas
-     * @param list<Annotations\Property>        $allMembers
+     * @param array<string, list<Annotations\Schema>> $classSchemas
+     * @param list<Annotations\Property>              $allMembers
      */
     protected function convertSchemaWithMembers(Annotations\Schema $schema, string $className, array $classSchemas, array $allMembers): Spec\Schema
     {
@@ -94,7 +94,7 @@ class HybridBridge
     /**
      * Get the class itself plus non-schema ancestors and interfaces (they contribute properties to this schema).
      *
-     * @param array<string, Annotations\Schema> $classSchemas
+     * @param array<string, list<Annotations\Schema>> $classSchemas
      *
      * @return list<string>
      */

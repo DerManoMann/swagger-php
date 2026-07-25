@@ -74,11 +74,13 @@ final class DocSnippetsTest extends OpenApiTestCase
             ->withGenerator(function (Generator $generator): void {
                 $generator
                 ->setTypeResolver($this->getTypeResolver())
-                ->withProcessorPipeline(fn (Pipeline $processorPipeline): Pipeline => $processorPipeline
+                ->withProcessorPipeline(
+                    fn (Pipeline $processorPipeline): Pipeline => $processorPipeline
                     ->remove(OperationId::class)
                 );
             })
-            ->withAugmenters(fn (Pipeline $augmenters): Pipeline => $augmenters
+            ->withAugmenters(
+                fn (Pipeline $augmenters): Pipeline => $augmenters
                 ->remove(OperationIds::class)
                 ->remove(Cleanup::class)
             )
