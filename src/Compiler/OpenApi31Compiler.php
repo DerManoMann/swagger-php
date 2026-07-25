@@ -563,7 +563,7 @@ class OpenApi31Compiler implements CompilerInterface
             'else' => $schema->else instanceof OA\Schema ? $this->compileSchema($schema->else) : null,
 
             // Examples
-            'examples' => $schema->examples,
+            'examples' => $schema->examples !== null ? $this->compileExamples($schema->examples) : null,
 
             // Meta
             'deprecated' => $schema->deprecated,
