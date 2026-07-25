@@ -411,3 +411,4 @@ Re-evaluate support for convenience attributes that reduce boilerplate in common
 - A `OA\Schema\Ref` attribute (with title/description 3.1.0+), $ref required attribute - extends `OA\Schema`
 - test to verify merges()/contains() consistency (with property type checks)
 - attachable example/test
+- review [] property types that could also accept a single: type|list<type>
