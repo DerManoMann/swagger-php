@@ -24,7 +24,7 @@ final class DocSnippetsTest extends OpenApiTestCase
     {
         $finder = (new Finder())
             ->in(__DIR__ . '/../docs/snippets/')
-            ->name('*api_an.php');
+            ->name('*_an.php');
 
         foreach ($finder as $file) {
             $key = str_replace('_an', '', $file->getBasename('.php'));
