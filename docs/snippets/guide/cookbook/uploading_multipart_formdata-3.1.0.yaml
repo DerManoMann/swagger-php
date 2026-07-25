@@ -7,13 +7,14 @@ paths:
         content:
           multipart/form-data:
             schema:
+              type: object
               properties:
-                name: {}
+                name:
+                  description: 'the file name'
                 avatar:
-                  description: 'file to upload'
                   type: string
                   format: binary
-              type: object
+                  description: 'file to upload'
       responses:
-        '200':
+        200:
           description: Success

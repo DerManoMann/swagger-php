@@ -16,6 +16,7 @@ class OpenApiSpec
                     properties: [
                         new OA\Property(
                             property: 'name',
+                            schema: new OA\Schema(description: 'the file name')
                         ),
                         new OA\Property(
                             property: 'avatar',
