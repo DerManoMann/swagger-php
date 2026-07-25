@@ -9,7 +9,7 @@ use OpenApi\Spec as OA;
     securityScheme: 'api_key',
     in: 'header',
 )]
-#[OA\Security\Scheme\Oauth2(
+#[OA\Security\Scheme\OAuth2(
     securityScheme: 'petstore_auth',
     flows: [
         new OA\Flow(
