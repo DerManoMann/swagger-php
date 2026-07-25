@@ -6,6 +6,7 @@
 
 namespace OpenApi\Tests;
 
+use OpenApi\Augmenter\Cleanup;
 use OpenApi\Augmenter\OperationIds;
 use OpenApi\Builder;
 use OpenApi\Builder\Mode;
@@ -73,11 +74,17 @@ final class DocSnippetsTest extends OpenApiTestCase
             ->withGenerator(function (Generator $generator): void {
                 $generator
                 ->setTypeResolver($this->getTypeResolver())
-                ->withProcessorPipeline(fn (Pipeline $processorPipeline): Pipeline => $processorPipeline->remove(OperationId::class));
+                ->withProcessorPipeline(fn (Pipeline $processorPipeline): Pipeline => $processorPipeline
+                    ->remove(OperationId::class)
+                );
             })
-            ->withAugmenters(fn (Pipeline $augmenters): Pipeline => $augmenters->remove(OperationIds::class))
+            ->withAugmenters(fn (Pipeline $augmenters): Pipeline => $augmenters
+                ->remove(OperationIds::class)
+                ->remove(Cleanup::class)
+            )
             ->build();
 
+        // file_put_contents($spec, $result->toYaml());
         $this->assertSpecEquals(file_get_contents($spec), $result->toArray());
     }
 }
