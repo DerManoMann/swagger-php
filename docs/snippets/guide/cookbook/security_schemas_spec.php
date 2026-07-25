@@ -2,21 +2,19 @@
 
 namespace Openapi\Snippets\Cookbook\SecuritySchemas;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Spec as OA;
 
-#[OA\SecurityScheme(
-    type: 'apiKey',
+#[OA\Security\Scheme\ApiKey(
     name: 'api_key',
-    in: 'header',
     securityScheme: 'api_key',
+    in: 'header',
 )]
-#[OA\SecurityScheme(
-    type: 'oauth2',
+#[OA\Security\Scheme\Oauth2(
     securityScheme: 'petstore_auth',
     flows: [
         new OA\Flow(
-            authorizationUrl: 'http://petstore.swagger.io/oauth/dialog',
             flow: 'implicit',
+            authorizationUrl: 'http://petstore.swagger.io/oauth/dialog',
             scopes: [
                 'read:pets' => 'read your pets',
                 'write:pets' => 'modify pets in your account',
