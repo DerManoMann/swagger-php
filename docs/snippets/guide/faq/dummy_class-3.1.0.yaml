@@ -6,7 +6,5 @@ info:
     name: 'Swagger API Team'
   version: '1.0'
 servers:
-  -
-    url: 'https://example.localhost'
+  - url: 'https://example.localhost'
     description: 'API server'
-tags: []
