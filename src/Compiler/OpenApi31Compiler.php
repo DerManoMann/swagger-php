@@ -762,7 +762,7 @@ class OpenApi31Compiler implements CompilerInterface
             'authorizationUrl' => $flow->authorizationUrl,
             'tokenUrl' => $flow->tokenUrl,
             'refreshUrl' => $flow->refreshUrl,
-            'scopes' => $flow->scopes !== null ? (object) $flow->scopes : null,
+            'scopes' => $flow->scopes !== null ? $flow->scopes : new \stdClass(),
         ], $flow);
     }
 
