@@ -176,6 +176,8 @@ class HybridBridge
                 $this->convertWebhook($webhook, $spec);
             }
         }
+
+        $spec->openapi->x =  $this->extensions($openApi);
     }
 
     protected function methodFromAnnotation(Annotations\Operation $op): string
