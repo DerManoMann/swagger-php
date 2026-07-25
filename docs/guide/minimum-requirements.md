@@ -22,6 +22,11 @@ With the above in mind, a minimal API with a single endpoint could look like thi
 <<< @/snippets/minimal_api_an.php
 
   </template>
+  <template v-slot:spec>
+
+<<< @/snippets/minimal_api_spec.php
+
+  </template>
 </codeblock>
 
 with the resulting OpenAPI document like this
