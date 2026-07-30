@@ -1,19 +1,5 @@
 # Spec Attributes Pipeline
 
-> Living document — tracks design decisions and progress for the spec attributes pipeline.
-> Will become a formal ADR once the feature is complete.
-
-## Context
-
-The classic swagger-php pipeline was designed around annotation objects that are deeply mutable, carry their own serialization logic (`jsonSerialize`), and rely on a complex processor chain for assembly. Over time this has created several pain points:
-
-- Annotations are both data containers and serialization logic, making them hard to reason about
-- The processor chain is order-dependent and difficult to extend
-- Nesting rules are encoded implicitly via `$_nested` arrays and reflection-heavy logic
-- No clear separation between "collecting what the user wrote" and "producing the output document"
-
-The spec attributes pipeline introduces a clean separation of concerns with explicit, typed PHP 8.1+ attributes.
-
 ### Additional augmenter pipes
 
 - **`EnumDescriptions`** — generate human-readable descriptions from PHP enum cases (ported from openapi-extras). Ships in the default pipeline but disabled by default; enable via `$builder->getAugmenters()->get(EnumDescriptions::class)->setEnabled(true)`.
@@ -44,3 +30,4 @@ Re-evaluate support for convenience attributes that reduce boilerplate in common
 - ~~attachable example/test~~
 - ~~review [] property types that could also accept a single: type|list<type>~~
 - ~~enums for fixed strings, like flows->implicit, etc~~
+- add spec versions and mode support to the scratch tests
