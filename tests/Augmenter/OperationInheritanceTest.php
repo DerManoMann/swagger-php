@@ -64,6 +64,36 @@ final class OperationInheritanceTest extends TestCase
         $this->assertSame(['Invoices'], $spec->operations[0]->tags);
     }
 
+    public function testDiscoveryWhenOnlyChildAssembled(): void
+    {
+        $spec = $this->assemble(
+            Fixtures\Augmenter\InvoiceDocumentController::class,
+        );
+
+        $this->assertCount(0, $spec->operations, 'Assembler skips inherited methods');
+
+        (new Augmenter\OperationInheritance())($spec);
+
+        $this->assertCount(1, $spec->operations, 'Discovered from unvisited ancestor');
+        $this->assertSame(
+            Fixtures\Augmenter\InvoiceDocumentController::class,
+            $spec->operations[0]->getClassName(),
+            'Associated with child class',
+        );
+    }
+
+    public function testDiscoveryPrefixApplied(): void
+    {
+        $spec = $this->assemble(
+            Fixtures\Augmenter\InvoiceDocumentController::class,
+        );
+
+        (new Augmenter\OperationInheritance())($spec);
+        (new Augmenter\PathItems())($spec);
+
+        $this->assertSame('/invoices', $spec->operations[0]->path);
+    }
+
     public function testDirectOperationsNotDuplicated(): void
     {
         $spec = $this->assemble(

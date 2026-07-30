@@ -66,10 +66,6 @@ class OperationInheritance implements PipeInterface
 
         $ancestorOperations = $this->findInheritableOperations($payload, $pathItemClasses);
 
-        if ($ancestorOperations === []) {
-            return null;
-        }
-
         $this->cloneToChildren($payload, $pathItemClasses, $ancestorOperations);
 
         return null;
@@ -115,10 +111,10 @@ class OperationInheritance implements PipeInterface
     }
 
     /**
-     * For each PathItem class, walk ancestors and clone inheritable operations.
+     * For each PathItem class, walk ancestors and clone or discover inheritable operations.
      *
      * @param array<class-string, true>               $pathItemClasses
-     * @param array<class-string, list<OA\Operation>> $ancestorOperations
+     * @param array<class-string, list<OA\Operation>> $ancestorOperations Already-assembled operations
      */
     protected function cloneToChildren(Specification $specification, array $pathItemClasses, array $ancestorOperations): void
     {
@@ -142,6 +138,10 @@ class OperationInheritance implements PipeInterface
                         $specification->add($clone);
                         $toRemove[spl_object_id($operation)] = true;
                     }
+                } else {
+                    foreach ($this->discoverOperations($parent, $reflector) as $operation) {
+                        $specification->add($operation);
+                    }
                 }
 
                 $parent = $parent->getParentClass();
@@ -154,5 +154,38 @@ class OperationInheritance implements PipeInterface
                 static fn (OA\Operation $op): bool => !isset($toRemove[spl_object_id($op)]),
             ));
         }
+    }
+
+    /**
+     * Scan an ancestor class for operations and associate them with the child reflector.
+     *
+     * @return list<OA\Operation>
+     */
+    protected function discoverOperations(\ReflectionClass $ancestor, \ReflectionClass $childReflector): array
+    {
+        $operations = [];
+        $scannerDetails = $this->tokenScanner->detailsFor($ancestor);
+
+        foreach ($ancestor->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+            if ($method->isConstructor()
+                || $method->getDeclaringClass()->getName() !== $ancestor->getName()
+                || ($scannerDetails && !in_array($method->getName(), $scannerDetails['methods'], true))
+            ) {
+                continue;
+            }
+
+            if ($this->attributeFactory->hasOnlyProperties($method)) {
+                continue;
+            }
+
+            foreach ($this->attributeFactory->fromReflector($method) as $root) {
+                if ($root instanceof OA\Operation) {
+                    $root->setReflector($childReflector);
+                    $operations[] = $root;
+                }
+            }
+        }
+
+        return $operations;
     }
 }
