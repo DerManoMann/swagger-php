@@ -19,7 +19,7 @@ use PHPUnit\Framework\TestCase;
  * Verifies that both spec and classic pipelines produce the same structural
  * composition (allOf refs + property names) for identical class hierarchies.
  */
-final class InheritanceBcTest extends TestCase
+final class SchemaInheritanceBcTest extends TestCase
 {
     use AssertsSchemaStructure;
 
@@ -53,7 +53,7 @@ final class InheritanceBcTest extends TestCase
 
         $specification = $assembler->getSpecification();
 
-        (new Augmenter\Inheritance())($specification);
+        (new Augmenter\SchemaInheritance())($specification);
         (new Augmenter\Names())($specification);
         (new Augmenter\Types())($specification);
         (new Augmenter\Refs())($specification);

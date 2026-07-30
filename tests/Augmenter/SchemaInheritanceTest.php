@@ -12,7 +12,7 @@ use OpenApi\Tests\Concerns\AssertsSchemaStructure;
 use OpenApi\Tests\Fixtures\Augmenter\Hierarchy\Spec as Fixtures;
 use PHPUnit\Framework\TestCase;
 
-final class InheritanceTest extends TestCase
+final class SchemaInheritanceTest extends TestCase
 {
     use AssertsSchemaStructure;
 
@@ -32,7 +32,7 @@ final class InheritanceTest extends TestCase
         );
 
         $spec = $assembler->getSpecification();
-        (new Augmenter\Inheritance())($spec);
+        (new Augmenter\SchemaInheritance())($spec);
 
         $this->assertSpecificationSchemasMatchFile(
             $spec,

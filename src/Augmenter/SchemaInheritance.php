@@ -24,7 +24,7 @@ use OpenApi\Utils\TokenScanner;
  *
  * @implements PipeInterface<Specification>
  */
-class Inheritance implements PipeInterface
+class SchemaInheritance implements PipeInterface
 {
     protected AttributeFactory $attributeFactory;
 

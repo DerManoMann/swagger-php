@@ -235,7 +235,7 @@ class Builder
         }
 
         // share the token scanner cache ...
-        $this->getAugmenters()->get(Augmenter\Inheritance::class)
+        $this->getAugmenters()->get(Augmenter\SchemaInheritance::class)
             ?->setAttributeFactory($attributeFactory);
 
         $this->getAugmenters()->process($specification);
@@ -301,7 +301,7 @@ class Builder
     protected function getDefaultAugmenters(): array
     {
         return [
-            new Augmenter\Inheritance(),
+            new Augmenter\SchemaInheritance(),
             new Augmenter\Names(),
             new Augmenter\Enums(),
             new Augmenter\Shortcuts(),
