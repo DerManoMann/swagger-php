@@ -362,6 +362,13 @@ class AttributeFactory
             $attributes = $translator->translate($attributes, $current, $reflector);
         }
 
+        // final pass in case translators didn't set reflector
+        foreach ($attributes as $item) {
+            if ($item instanceof AttributeInterface && $item->getReflector() === null) {
+                $item->setReflector($reflector);
+            }
+        }
+
         return array_values(array_filter($attributes, static fn (object $item): bool => $item instanceof AttributeInterface));
     }
 }
