@@ -364,7 +364,7 @@ class AttributeFactory
 
         // final pass in case translators didn't set reflector
         foreach ($attributes as $item) {
-            if ($item instanceof AttributeInterface && $item->getReflector() === null) {
+            if ($item instanceof AttributeInterface && !$item->getReflector() instanceof \Reflector) {
                 $item->setReflector($reflector);
             }
         }
