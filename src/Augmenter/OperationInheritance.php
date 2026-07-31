@@ -31,22 +31,20 @@ use OpenApi\Utils\TokenScanner;
  */
 class OperationInheritance implements PipeInterface
 {
+    protected AttributeFactory $attributeFactory;
+
+    protected TokenScanner $tokenScanner;
+
     public function __construct(
-        protected AttributeFactory $attributeFactory = new AttributeFactory(),
-        protected TokenScanner $tokenScanner = new TokenScanner(),
+        AttributeFactory $attributeFactory = new AttributeFactory(),
     ) {
+        $this->setAttributeFactory($attributeFactory);
     }
 
     public function setAttributeFactory(AttributeFactory $attributeFactory): static
     {
         $this->attributeFactory = $attributeFactory;
-
-        return $this;
-    }
-
-    public function setTokenScanner(TokenScanner $tokenScanner): static
-    {
-        $this->tokenScanner = $tokenScanner;
+        $this->tokenScanner = $attributeFactory->getTokenScanner();
 
         return $this;
     }

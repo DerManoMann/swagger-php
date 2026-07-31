@@ -39,7 +39,7 @@ class SchemaInheritance implements PipeInterface
     public function setAttributeFactory(AttributeFactory $attributeFactory): static
     {
         $this->attributeFactory = $attributeFactory;
-        $this->tokenScanner = $this->attributeFactory->getTokenScanner();
+        $this->tokenScanner = $attributeFactory->getTokenScanner();
 
         return $this;
     }
