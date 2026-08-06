@@ -20,6 +20,7 @@ use OpenApi\Spec as OA;
  *
  * @see [Security Scheme Object](https://spec.openapis.org/oas/v3.1.1.html#security-scheme-object)
  */
+#[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
 class Scheme extends OA\AbstractAttribute
 {
     public ?string $type = null;
