@@ -7,6 +7,9 @@
 namespace OpenApi\Spec\Security;
 
 use OpenApi\Spec as OA;
+use OpenApi\Spec\Components;
+use OpenApi\Spec\Header;
+use OpenApi\Spec\Parameter;
 
 /**
  * Defines a security scheme that can be used by the operations.
@@ -65,8 +68,17 @@ class Scheme extends OA\AbstractAttribute
         return true;
     }
 
+    public function merge(): array
+    {
+        return [
+            Components::class => 'securitySchemes[]',
+        ];
+    }
+
     public function contains(): array
     {
-        return [OA\Flow::class => 'flows[]'];
+        return [
+            OA\Flow::class => 'flows[]',
+        ];
     }
 }
