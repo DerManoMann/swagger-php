@@ -23,8 +23,19 @@ class MultipartFormDataSpec
     #[OA\Property]
     public EncodingMetadataSpec $metadata;
 
-    #[OA\Property]
-    public \stdClass $avatar;
+    #[OA\Property\Encoded(
+        contentType: 'image/png, image/jpeg',
+        headers: [
+            new OA\Header(
+                header: 'X-Rate-Limit-Limit',
+                description: 'The number of allowed requests in the current period',
+                schema: new OA\Schema(
+                    type: 'integer',
+                ),
+            ),
+        ],
+    )]
+    public $avatar;
 }
 
 #[OA\Info(title: 'Encoding', version: '1.0')]
@@ -42,19 +53,6 @@ class EncodingControllerSpec
                     new OA\Encoding(
                         encoding: 'metadata',
                         contentType: 'application/xml; charset=utf-8',
-                    ),
-                    new OA\Encoding(
-                        encoding: 'avatar',
-                        contentType: 'image/png, image/jpeg',
-                        headers: [
-                            new OA\Header(
-                                header: 'X-Rate-Limit-Limit',
-                                description: 'The number of allowed requests in the current period',
-                                schema: new OA\Schema(
-                                    type: 'integer',
-                                ),
-                            ),
-                        ],
                     ),
                 ]
             ),
@@ -80,19 +78,6 @@ class EncodingControllerSpec
                     new OA\Encoding(
                         encoding: 'metadata',
                         contentType: 'application/xml; charset=utf-8',
-                    ),
-                    new OA\Encoding(
-                        encoding: 'avatar',
-                        contentType: 'image/png, image/jpeg',
-                        headers: [
-                            new OA\Header(
-                                header: 'X-Rate-Limit-Limit',
-                                description: 'The number of allowed requests in the current period',
-                                schema: new OA\Schema(
-                                    type: 'integer',
-                                ),
-                            ),
-                        ],
                     ),
                 ]
             ),

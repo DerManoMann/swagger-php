@@ -310,6 +310,7 @@ class Builder
             new Augmenter\Refs(),
             new Augmenter\PathFilter(),
             new Augmenter\Cleanup(),
+            new Augmenter\PropertyEncodings(),
             new Augmenter\MediaTypes(),
             new Augmenter\Docblocks(),
             new Augmenter\OperationIds(),
