@@ -46,7 +46,7 @@ array output (JSON/YAML)
 - `AttributeInterface` — declares `isRoot()`, `merge()`, `contains()`
 - `AttributeTranslatorInterface` — pluggable attribute discovery/transformation
 - `SpecificationWalker` — traversal helpers for augmenters
-- No `Generator::UNDEFINED` — nulls are used throughout
+- Limited `Generator::UNDEFINED` — nulls are used where possible
 - No `Context` object — `Reflector` is stored directly on attributes
 - No `Analysis` — replaced by `Specification`
 
@@ -59,7 +59,7 @@ The `OA\Spec\*` attributes are **strongly typed** with native PHP types:
 | `$property->type` is `string\|UNDEFINED` | `$schema->type` is `string\|array\|null` |
 | `$property->nullable` is `bool\|UNDEFINED` | `$schema->nullable` is `?bool` |
 | `$property->properties` is `Property[]\|UNDEFINED` | `$schema->properties` is `?array` |
-| `$schema->ref` is `string\|class-string\|ModelAnnotation\|UNDEFINED` | `$schema->ref` is `?string` |
+| `$schema->ref` is `string\|class-string\|UNDEFINED` | `$schema->ref` is `?string` |
 | Properties carry their own type inline | `Property` has a `$schema` slot (separate Schema object) |
 | `OA\Items` extends `OA\Schema` | `Schema\Items` extends `Schema` (shorthand) |
 | `OA\JsonContent`/`OA\XmlContent` pseudo-annotations | `MediaType\Json`/`MediaType\Xml` proper attributes |
