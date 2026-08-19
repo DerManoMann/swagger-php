@@ -20,7 +20,7 @@ use OpenApi\Utils\TypedList;
  *
  * Typically, this will happen from processing sources via reflection where not all source files are known upfront.
  */
-final class AutoAnnotate implements PipeInterface
+class AutoAnnotate implements PipeInterface
 {
     protected Assembler $assembler;
 
@@ -44,7 +44,7 @@ final class AutoAnnotate implements PipeInterface
         return null;
     }
 
-    public function group(): \BackedEnum
+    public function group(): string|\BackedEnum
     {
         return Group::Resolve;
     }
@@ -56,7 +56,11 @@ final class AutoAnnotate implements PipeInterface
                 $ref = $attribute->ref instanceof OA\Schema\Ref
                     ? $attribute->ref->ref
                     : $attribute->ref;
-                $this->collectModel($ref, $specification);
+
+                if (!str_starts_with($ref, '#/') && class_exists($ref)) {
+                    $this->collectModel($ref, $specification);
+                }
+
                 $attribute->ref = $ref;
             }
         });
@@ -64,6 +68,9 @@ final class AutoAnnotate implements PipeInterface
         $schemas = $this->assembler->getSpecification()->schemas;
         $specification->add(...$schemas);
         $this->assembler->getSpecification()->schemas = [];
+
+        (new Names())($specification);
+        (new Types())($specification);
     }
 
     protected function collectModel(string $fqcn, Specification $specification): void
@@ -74,8 +81,25 @@ final class AutoAnnotate implements PipeInterface
 
         $this->collected[$fqcn] = true;
 
-        $this->assembler->collect(new \ReflectionClass($fqcn));
-        $this->collectReferencedTypes(new \ReflectionClass($fqcn), $specification);
+        if ($this->hasSchema($fqcn, $specification)) {
+            return;
+        }
+
+        $reflector = new \ReflectionClass($fqcn);
+        $this->assembler->collect($reflector);
+        $this->collectReferencedTypes($reflector, $specification);
+    }
+
+    protected function hasSchema(string $fqcn, Specification $specification): bool
+    {
+        foreach ($specification->schemas as $schema) {
+            $reflector = $schema->getClassReflector();
+            if ($reflector !== null && $reflector->getName() === $fqcn) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function collectReferencedTypes(\ReflectionClass $reflector, Specification $specification): void

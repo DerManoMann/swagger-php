@@ -19,15 +19,15 @@ class AutoSchemaTranslator extends AbstractAttributeTranslator
     {
         $processed = parent::translate($attributes, $created, $reflector);
 
-        if ($reflector instanceof \ReflectionClass) {
+        if ($reflector instanceof \ReflectionClass && !$this->hasInstanceOf($processed, OA\Schema::class)) {
             $processed[] = new OA\Schema();
         }
 
-        if ($reflector instanceof \ReflectionProperty && $reflector->isPublic()) {
+        if ($reflector instanceof \ReflectionProperty && $reflector->isPublic() && !$this->hasInstanceOf($processed, OA\Property::class)) {
             $processed[] = new OA\Property();
         }
 
-        if ($reflector instanceof \ReflectionParameter) {
+        if ($reflector instanceof \ReflectionParameter && !$this->hasInstanceOf($processed, OA\Property::class)) {
             $method = $reflector->getDeclaringFunction();
             if ($method->getName() === '__construct') {
                 $processed[] = new OA\Property();
@@ -35,5 +35,16 @@ class AutoSchemaTranslator extends AbstractAttributeTranslator
         }
 
         return $processed;
+    }
+
+    protected function hasInstanceOf(array $attributes, string $class): bool
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute instanceof $class) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
