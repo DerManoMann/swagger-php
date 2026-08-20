@@ -16,20 +16,6 @@ use PHPUnit\Framework\TestCase;
 
 final class AutoAnnotateTest extends TestCase
 {
-    protected function buildWithAutoAnnotate(string ...$classes): Specification
-    {
-        $builder = new Builder();
-        $builder->setMode(Builder\Mode::SPEC);
-        foreach ($classes as $class) {
-            $builder->addSource(new \ReflectionClass($class));
-        }
-        $builder->withAugmenters(function (Pipeline $augmenters) {
-            $augmenters->insert(new Augmenter\AutoAnnotate(), Augmenter\Refs::class);
-        });
-
-        return $builder->build()->specification();
-    }
-
     public function testCollectsUnannotatedRefTarget(): void
     {
         $spec = $this->buildWithAutoAnnotate(Fixtures\Augmenter\AutoAnnotateController::class);
@@ -108,5 +94,19 @@ final class AutoAnnotateTest extends TestCase
         $this->assertContains('name', $propertyNames);
         $this->assertContains('price', $propertyNames);
         $this->assertContains('address', $propertyNames);
+    }
+
+    protected function buildWithAutoAnnotate(string ...$classes): Specification
+    {
+        $builder = new Builder();
+        $builder->setMode(Builder\Mode::SPEC);
+        foreach ($classes as $class) {
+            $builder->addSource(new \ReflectionClass($class));
+        }
+        $builder->withAugmenters(function (Pipeline $augmenters) {
+            $augmenters->insert(new Augmenter\AutoAnnotate(), Augmenter\Refs::class);
+        });
+
+        return $builder->build()->specification();
     }
 }
