@@ -158,3 +158,30 @@ $builder->addResolver(new AutoAnnotateResolver());
 
 - `Assembler\AutoSchemaTranslator` — unchanged, assembly-time translation concern
 - All existing augmenters — unchanged, run once after resolution
+
+
+================================================
+
+        public ?string $kind = null,                  // ComponentIndex bucket; null = any
+      ) {}
+}
+
+?\Reflector is the right type — ReflectionProperty and ReflectionParameter both implement it, so a provider gets the specific property or parameter, not just the declaring class. That's what makes inspection actually useful: the provider can read attributes
+on the property, nullability, the docblock (Collection<Foo>), default values. Field named $reflector to match Schema::getClassReflector().
+
+Fill it from what each collection source already has on hand: collectFromReflectors() has the \ReflectionProperty/\ReflectionParameter in scope, collectFromRefs() has the attribute. Neither needs new plumbing.
+
+2. Builder\ComponentProviderInterface — one method:
+
+/** @return list<AttributeInterface> empty if not handled */
+public function provide(MissingComponent $missing, Specification $specification): array;
+
+3. Builder\ComponentProviders — extends TypedList, holds the list, the loop, and the finding (rename Discovery.php to this; findUnresolved/collectFrom* become protected helpers returning MissingComponents).
+
+And drop the ComponentKind enum for now — ?string $kind against the existing BUCKET_MAP keys does the job, and you can promote it to an enum later if ComponentIndex ever gets typed the same way. That was the piece that was genuinely scope creep; the DTO
+isn't, it's just string $fqcn grown two context fields.
+
+Net change from what's on disk: one file renamed, two small files added, one getComponentProviders()/withComponentProviders() pair on Builder, one call in doBuildSpec().
+
+The findSchema() → find() fix in the refs path is worth doing regardless of how the rest lands — that one's a bug, not a design question.
+

@@ -53,7 +53,7 @@ class TypeDiscovery
                 return;
             }
 
-            if ($index->findSchema($ref) === null) {
+            if ($index->find($ref) === null) {
                 $unresolved[] = $ref;
             }
         });
