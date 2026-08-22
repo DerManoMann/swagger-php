@@ -4,12 +4,9 @@
  * @license Apache 2.0
  */
 
-namespace OpenApi\Builder;
+namespace OpenApi;
 
-use OpenApi\AttributeInterface;
-use OpenApi\ResolverInterface;
 use OpenApi\Spec as OA;
-use OpenApi\Specification;
 use OpenApi\Specification\ComponentIndex;
 use OpenApi\Utils\TypedList;
 
@@ -67,21 +64,23 @@ class Resolver
 
     /**
      * Resolve all found unresolved FQCN in the given specification.
+     *
+     * The first resolver to claim success will resolve the FQCN.
      */
     public function resolve(Specification $specification): void
     {
         do {
             $unresolved = $this->findUnresolved($specification);
-            $found = false;
+            $resolved = false;
             foreach ($unresolved as $fqcn) {
                 foreach ($this->resolvers as $resolver) {
                     if ($resolver->resolve($fqcn, $specification)) {
-                        $found = true;
+                        $resolved = true;
                         break;
                     }
                 }
             }
-        } while ($found);
+        } while ($resolved);
     }
 
     protected function collectFromRefs(Specification $specification, ComponentIndex $index, array &$unresolved): void

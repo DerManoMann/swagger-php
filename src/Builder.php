@@ -7,7 +7,6 @@
 namespace OpenApi;
 
 use OpenApi\Builder\Mode;
-use OpenApi\Builder\Resolver;
 use OpenApi\Builder\Result;
 use OpenApi\Utils\AttributeFactory;
 use OpenApi\Utils\CollectingLogger;
