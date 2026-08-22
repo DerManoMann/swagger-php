@@ -49,20 +49,6 @@ class Resolver
     }
 
     /**
-     * @return list<string> FQCNs that are referenced but have no schema in the specification
-     */
-    public function findUnresolved(Specification $specification): array
-    {
-        $index = $specification->buildComponentIndex();
-        $unresolved = [];
-
-        $this->collectFromRefs($specification, $index, $unresolved);
-        $this->collectFromReflectors($specification, $index, $unresolved);
-
-        return array_values(array_unique($unresolved));
-    }
-
-    /**
      * Resolve all found unresolved FQCN in the given specification.
      *
      * The first resolver to claim success will resolve the FQCN.
@@ -81,6 +67,20 @@ class Resolver
                 }
             }
         } while ($resolved);
+    }
+
+    /**
+     * @return list<string> FQCNs that are referenced but have no schema in the specification
+     */
+    protected function findUnresolved(Specification $specification): array
+    {
+        $index = $specification->buildComponentIndex();
+        $unresolved = [];
+
+        $this->collectFromRefs($specification, $index, $unresolved);
+        $this->collectFromReflectors($specification, $index, $unresolved);
+
+        return array_values(array_unique($unresolved));
     }
 
     protected function collectFromRefs(Specification $specification, ComponentIndex $index, array &$unresolved): void
@@ -126,7 +126,7 @@ class Resolver
                     continue;
                 }
 
-                if (!$index->findSchema($fqcn) instanceof OA\Schema) {
+                if (!$index->find($fqcn) instanceof AttributeInterface) {
                     $unresolved[] = $fqcn;
                 }
             }
