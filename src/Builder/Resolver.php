@@ -7,19 +7,51 @@
 namespace OpenApi\Builder;
 
 use OpenApi\AttributeInterface;
-use OpenApi\ComponentIndex;
+use OpenApi\ResolverInterface;
 use OpenApi\Spec as OA;
 use OpenApi\Specification;
+use OpenApi\Specification\ComponentIndex;
+use OpenApi\Utils\TypedList;
+
 
 /**
- * Discovers FQCNs referenced by the specification that have no corresponding schema.
+ * Finds and resolves FQCNs referenced by the specification that have no corresponding schema.
  *
  * Two sources are inspected:
  * 1. Ref values that are raw FQCNs (not yet rewritten to `#/components/...` paths)
  * 2. Property/parameter type hints on schema class reflectors
  */
-class TypeDiscovery
+class Resolver
 {
+    /**
+     * @param TypedList<ResolverInterface> $resolvers
+     */
+    public function __construct(protected TypedList $resolvers = new TypedList())
+    {
+    }
+
+    /**
+     * @param TypedList<ResolverInterface> $resolvers
+     */
+    public function setResolvers(TypedList $resolvers): static
+    {
+        $this->resolvers = $resolvers;
+
+        return $this;
+    }
+
+    /**
+     * Configure the resolvers via callable.
+     *
+     * @param callable(TypedList<ResolverInterface>): (TypedList<ResolverInterface>|void) $hook
+     */
+    public function withResolvers(callable $hook): static
+    {
+        $hook($this->resolvers);
+
+        return $this;
+    }
+
     /**
      * @return list<string> FQCNs that are referenced but have no schema in the specification
      */
@@ -32,6 +64,25 @@ class TypeDiscovery
         $this->collectFromReflectors($specification, $index, $unresolved);
 
         return array_values(array_unique($unresolved));
+    }
+
+    /**
+     * Resolve all found unresolved FQCN in the given specification.
+     */
+    public function resolve(Specification $specification): void
+    {
+        do {
+            $unresolved = $this->findUnresolved($specification);
+            $found = false;
+            foreach ($unresolved as $fqcn) {
+                foreach ($this->resolvers as $resolver) {
+                    if ($resolver->resolve($fqcn, $specification)) {
+                        $found = true;
+                        break;
+                    }
+                }
+            }
+        } while ($found);
     }
 
     protected function collectFromRefs(Specification $specification, ComponentIndex $index, array &$unresolved): void
@@ -53,7 +104,7 @@ class TypeDiscovery
                 return;
             }
 
-            if ($index->find($ref) === null) {
+            if (!$index->find($ref) instanceof AttributeInterface) {
                 $unresolved[] = $ref;
             }
         });
@@ -77,7 +128,7 @@ class TypeDiscovery
                     continue;
                 }
 
-                if ($index->findSchema($fqcn) === null) {
+                if (!$index->findSchema($fqcn) instanceof OA\Schema) {
                     $unresolved[] = $fqcn;
                 }
             }

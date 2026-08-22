@@ -4,9 +4,11 @@
  * @license Apache 2.0
  */
 
-namespace OpenApi;
+namespace OpenApi\Specification;
 
+use OpenApi\AttributeInterface;
 use OpenApi\Spec as OA;
+use OpenApi\Specification;
 
 /**
  * Resolves `$ref` values to their corresponding component objects.

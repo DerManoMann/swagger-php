@@ -20,7 +20,7 @@ final class AutoAnnotateTest extends TestCase
     {
         $spec = $this->buildWithAutoAnnotate(Fixtures\Augmenter\AutoAnnotateController::class);
 
-        $schemaNames = array_map(fn (OA\Schema $s) => $s->schema, $spec->schemas);
+        $schemaNames = array_map(fn (OA\Schema $s): ?string => $s->schema, $spec->schemas);
         $this->assertContains('UnannotatedProduct', $schemaNames);
     }
 
@@ -28,7 +28,7 @@ final class AutoAnnotateTest extends TestCase
     {
         $spec = $this->buildWithAutoAnnotate(Fixtures\Augmenter\AutoAnnotateController::class);
 
-        $schemaNames = array_map(fn (OA\Schema $s) => $s->schema, $spec->schemas);
+        $schemaNames = array_map(fn (OA\Schema $s): ?string => $s->schema, $spec->schemas);
         $this->assertContains('UnannotatedAddress', $schemaNames);
     }
 
@@ -39,7 +39,7 @@ final class AutoAnnotateTest extends TestCase
             Fixtures\Augmenter\RefController::class,
         );
 
-        $refTargetSchemas = array_filter($spec->schemas, fn (OA\Schema $s) => $s->schema === 'RefTarget');
+        $refTargetSchemas = array_filter($spec->schemas, fn (OA\Schema $s): bool => $s->schema === 'RefTarget');
         $this->assertCount(1, $refTargetSchemas);
     }
 
@@ -72,7 +72,7 @@ final class AutoAnnotateTest extends TestCase
         }
 
         $this->assertInstanceOf(OA\Schema::class, $addressSchema);
-        $propertyNames = array_map(fn (OA\Property $p) => $p->property, $addressSchema->properties ?? []);
+        $propertyNames = array_map(fn (OA\Property $p): ?string => $p->property, $addressSchema->properties ?? []);
         $this->assertContains('street', $propertyNames);
         $this->assertContains('city', $propertyNames);
     }
@@ -90,7 +90,7 @@ final class AutoAnnotateTest extends TestCase
         }
 
         $this->assertInstanceOf(OA\Schema::class, $productSchema);
-        $propertyNames = array_map(fn (OA\Property $p) => $p->property, $productSchema->properties ?? []);
+        $propertyNames = array_map(fn (OA\Property $p): ?string => $p->property, $productSchema->properties ?? []);
         $this->assertContains('name', $propertyNames);
         $this->assertContains('price', $propertyNames);
         $this->assertContains('address', $propertyNames);
@@ -103,7 +103,7 @@ final class AutoAnnotateTest extends TestCase
         foreach ($classes as $class) {
             $builder->addSource(new \ReflectionClass($class));
         }
-        $builder->withAugmenters(function (Pipeline $augmenters) {
+        $builder->withAugmenters(function (Pipeline $augmenters): void {
             $augmenters->insert(new Augmenter\AutoAnnotate(), Augmenter\Refs::class);
         });
 
