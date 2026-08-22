@@ -13,7 +13,6 @@ use OpenApi\Specification;
 use OpenApi\Specification\ComponentIndex;
 use OpenApi\Utils\TypedList;
 
-
 /**
  * Finds and resolves FQCNs referenced by the specification that have no corresponding schema.
  *
