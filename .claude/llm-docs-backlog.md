@@ -14,12 +14,16 @@ which the code and the docs do not record.
 ## Where this stands
 
 Merged: **#2134** (spec docs cleanup), **#2135** (rector rule changes), **#2136** (developer
-docs, and the writing rules). **#2130** (resolver step) is rebased and mergeable, with its
-doc changes re-homed onto the page split #2136 introduced. `test/spec-coverage` is pushed
-and unopened — `ComponentIndex`, slot-target validation, and the attributes nothing was
-compiling. `fix/compiler-logger` (PR 13) is pushed and unopened. `docs/readme-review` carries
-the README corrections that turned up PR 16. pcov is installed locally, so coverage numbers
-are now real rather than inferred: spec pipeline 94.2%, classic 92.9%, project 90.6%.
+docs, and the writing rules), **#2137** (`ComponentIndex`, slot-target validation, and the
+attributes nothing was compiling), **#2138** (compiler diagnostics reaching the configured
+logger, PR 13), **#2139** (README corrections).
+
+Open: **#2130** (resolver step), rebased and mergeable, with its doc changes re-homed onto
+the page split #2136 introduced. **#2140** fixes a `ScratchTest` failure that #2137 and
+#2138 produced only once merged — see PR 15.
+
+pcov is installed locally, so coverage numbers are real rather than inferred: spec pipeline
+94.2%, classic 92.9%, project 90.6%.
 
 Suggested order for what is left:
 
@@ -27,7 +31,7 @@ Suggested order for what is left:
    already produced one real bug, and both PR 1 and PR 6 get cheaper afterwards because
    there is a single extraction path to change instead of two.
 2. **PR 9** — scratch fixtures. Cheap, and it widens what Redocly validates rather than what
-   we assert about ourselves. Probably supersedes part of `test/spec-coverage`.
+   we assert about ourselves. Probably supersedes part of #2137.
 3. **PR 1** — `#[Config]`, so `-D` output and the reference pages derive from one
    declaration rather than two rules aligned by hand.
 4. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
@@ -43,6 +47,10 @@ Suggested order for what is left:
    done any coverage figure understates reality by an unknown amount.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8).
+
+The scripts behind every number in PR 16 and PR 17 are in
+[`.claude/benchmarks/`](benchmarks/README.md), so the measurements can be re-run rather than
+trusted.
 
 ---
 
@@ -416,7 +424,7 @@ Mechanics worth knowing before starting:
 - `$expectedLogs` is keyed `{fixture}-{version}` with no mode component, so a warning raised
   in one mode only cannot be registered without skipping the other mode's case.
 
-### PR 13 — compiler diagnostics never reach `Builder::setLogger()`
+### PR 13 — compiler diagnostics never reach `Builder::setLogger()` — **done, #2138**
 
 `Builder::resolveCompiler()` constructs compilers with no logger, so `CollectingLogger` has
 nothing to forward to. Compiler warnings reach `Result::warnings()` but never the PSR logger
@@ -468,26 +476,32 @@ the Spec Attributes reference.
 *expected*, because the key applies to both and the unmatched expectation fails the other
 mode's case. They can only be tolerated, which asserts nothing.
 
-Two are tolerated today as a result, both surfaced by `fix/compiler-logger`:
+Three are tolerated today as a result:
 
 - `Schema: const is not supported in OpenAPI 3.0, using enum fallback` — Docblocks-3.0.0
 - `Tag "invalidparent" references non-existent parent "nah"` — Tags-3.2.0
+- `mutualTLS security schemes are not supported in OpenAPI 3.0` — Auth-3.0.0
 
-The second is the reason to bother. A fixture called `Tags` contains a tag named
-`invalidparent` pointing at a parent named `nah`; it exists to provoke that warning, and the
-warning has never been observable, so nothing has been checking it fires. Tolerating it keeps
-the suite green while still asserting nothing.
+The `Tags` one is the reason to bother. That fixture contains a tag named `invalidparent`
+pointing at a parent named `nah`; it exists to provoke that warning, and the warning has
+never been observable, so nothing has been checking it fires. Tolerating it keeps the suite
+green while still asserting nothing.
 
 Adding a mode component to the key — `{fixture}-{version}-{mode}`, falling back to the
-current form — would let both become expectations. Small change, and it converts two silent
-tolerances into two real assertions.
+current form — would let all three become expectations. Small change, and it converts three
+silent tolerances into three real assertions.
+
+The third arrived as a semantic merge conflict (#2140), which is worth recording as a
+pattern rather than a one-off. #2137 added the mutualTLS warning while compiler diagnostics
+still went nowhere, so it had nothing to declare. #2138 routed those diagnostics to the
+configured logger and seeded `$ignoredLogs` with the two entries *it* surfaced. Both were
+green alone; only the merged state failed, and only on `master` after the fact. Any PR that
+adds a compiler diagnostic now has to know about a list a different PR introduced —
+a coupling that mode-aware keys would not remove, but that reviewers should expect until
+some check catches it.
 
 Worth checking at the same time whether other fixtures were written to provoke diagnostics
 that the strict-FIFO tracking logger has been swallowing.
-
-The scripts behind every number in PR 16 and PR 17 are in
-[`.claude/benchmarks/`](benchmarks/README.md), so the measurements can be re-run rather than
-trusted.
 
 ### PR 16 — the mode performance comparison nobody has run
 
