@@ -401,6 +401,39 @@ Passing the logger through is a one-line fix, and it was tried: it surfaces a pr
 Worth doing, but as its own change — those ten registrations are the actual work, and they
 document warnings nobody currently sees.
 
+### PR 14 — apply the documentation rules to docblocks
+
+`docs/dev/writing-docs.md` was written for markdown pages, but most of what it says is about
+precision and economy, and those apply to docblocks unchanged. Docblocks in `src/Spec/`,
+`src/Augmenter/`, `src/Processors/` and `src/Annotations/` are additionally *spliced into the
+generated reference pages*, so an imprecise one ships to users as published documentation.
+
+Every defect the rules exist to catch has already turned up in a docblock during this work:
+
+- **Stale references** — `AttributeFactory` cited `ExpandHierarchy`, a class that no longer
+  exists, and `contains()` for a method actually named `contained()`
+- **Inverted precision** — `AttributeInterface::contained()` described the slot as living on
+  the declaring attribute; it lives on the parent
+- **Self-description** — a fixture docblock explained that it "doubles as a worked example …
+  the translation people usually have to guess at"
+- **Filler** — "Convenience empty/noop base imlementation", typo included
+
+Rules that transfer directly: do not claim what you have not verified; do not cite line
+numbers; detail in exactly one place; no volatile values; no open-ended enumerations; do not
+describe the thing you are writing in. Rules that do not: site-absolute links, the
+generated-page conventions.
+
+Two things to do while there:
+
+- Generalise the checklist wording from "page" to "page or file". The self-description item
+  says *page*, which is why the fixture docblock slipped past a checklist run.
+- Decide whether `writing-docs.md` covers both, or whether docblock guidance belongs beside
+  the code. One document is probably right — the rules are identical and duplicating them
+  would break the rule they state.
+
+Worth pairing with a sweep: `src/Spec/` docblocks are the ones users read, since they become
+the Spec Attributes reference.
+
 ---
 
 ## Not doing
