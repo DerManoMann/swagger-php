@@ -35,6 +35,8 @@ Suggested order for what is left:
 6. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
    enough on its own. Verifying is much cheaper than generating.
 7. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
+8. **PR 10** — free the last two spec tests from `OpenApiTestCase`. Worth doing before v8
+   rather than as part of removing classic: it turns that removal into a deletion.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8).
 
@@ -275,6 +277,49 @@ accepts is an expectation the specification wrote.
 Candidates for new fixtures: the typed operation subclasses (`Head`, `Options`, `Trace`),
 the OAuth flows, `MutualTls` / `OpenIdConnect`, and `Link` — which has an `isRoot()`
 condition that no example currently exercises.
+
+### PR 10 — extract the pipeline-agnostic half of `OpenApiTestCase` into concerns
+
+`tests/OpenApiTestCase.php` is 332 lines and 52 test classes extend it. Most of it is
+classic — `getAnalyzer()`, `initializeProcessors()`, `processorPipeline()`,
+`analysisFromFixtures()`, `allAnnotationClasses()`, `allAttributeClasses()`,
+`annotationsFromDocBlockParser()`, `getContext()`, `createOpenApiWithInfo()` — and can be
+deleted with classic in v8.
+
+But some of it is not classic at all, and today the only way to reach it is by extending a
+classic-flavoured base class.
+
+The spec side has already mostly escaped: all sixteen augmenter tests, plus
+`SlotMapConsistencyTest`, `AssemblerTest` and `CompilerTest`, extend plain `TestCase` and
+compose traits from `tests/Concerns/`. **Only two hold out**, and between them they need
+five members:
+
+| Test | Needs |
+|---|---|
+| `ScratchTest` | `getTrackingLogger()`, `assertOpenApiLogEntryContains()`, `assertSpecEquals()` |
+| `BuilderTest` | the same three, plus `getAnalyzer()` and `getTypeResolver()` |
+
+So the extraction is small and well-bounded:
+
+- **`TracksLogEntries`** — `getTrackingLogger()` + `assertOpenApiLogEntryContains()`, plus the
+  `setUp`/`tearDown` that manage the captured entries. Overlaps `AssertsBuilderResult`, which
+  asserts on `Result::warnings()`/`errors()`; decide whether these merge or stay separate for
+  the two different capture points.
+- **`AssertsSpecEquals`** — `assertSpecEquals()`. Overlaps `AssertsSchemaStructure`, which
+  compares `allOf` refs and property names order-independently. Same question.
+- **`ProvidesTypeResolvers`** — `getTypeResolver()` / `getTypeResolvers()`, used as a data
+  provider by both pipelines.
+- **`UsesFixtures`** — `fixture()` / `fixtures()`. Path helpers, wanted everywhere.
+
+`getAnalyzer()` is classic and should stay behind; `BuilderTest` needs it only for the
+classic-mode cases.
+
+Do the overlap review as part of this rather than after: `tests/Concerns/` has grown to six
+traits and at least two of them cover ground `OpenApiTestCase` also covers. Extracting
+without reconciling would just move the duplication.
+
+Once the two holdouts are converted, `OpenApiTestCase` is classic-only and its removal is a
+straight deletion when classic goes, rather than an untangling.
 
 ---
 
