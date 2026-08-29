@@ -434,6 +434,29 @@ Two things to do while there:
 Worth pairing with a sweep: `src/Spec/` docblocks are the ones users read, since they become
 the Spec Attributes reference.
 
+### PR 15 — make `ScratchTest` log expectations mode-aware
+
+`$expectedLogs` is keyed `{fixture}-{version}`. Diagnostics raised in one mode only cannot be
+*expected*, because the key applies to both and the unmatched expectation fails the other
+mode's case. They can only be tolerated, which asserts nothing.
+
+Two are tolerated today as a result, both surfaced by `fix/compiler-logger`:
+
+- `Schema: const is not supported in OpenAPI 3.0, using enum fallback` — Docblocks-3.0.0
+- `Tag "invalidparent" references non-existent parent "nah"` — Tags-3.2.0
+
+The second is the reason to bother. A fixture called `Tags` contains a tag named
+`invalidparent` pointing at a parent named `nah`; it exists to provoke that warning, and the
+warning has never been observable, so nothing has been checking it fires. Tolerating it keeps
+the suite green while still asserting nothing.
+
+Adding a mode component to the key — `{fixture}-{version}-{mode}`, falling back to the
+current form — would let both become expectations. Small change, and it converts two silent
+tolerances into two real assertions.
+
+Worth checking at the same time whether other fixtures were written to provoke diagnostics
+that the strict-FIFO tracking logger has been swallowing.
+
 ---
 
 ## Not doing
