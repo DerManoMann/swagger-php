@@ -15,20 +15,26 @@ which the code and the docs do not record.
 
 Merged: **#2134** (spec docs cleanup), **#2135** (rector rule changes), **#2136** (developer
 docs, and the writing rules). **#2130** (resolver step) is rebased and mergeable, with its
-doc changes re-homed onto the page split #2136 introduced.
+doc changes re-homed onto the page split #2136 introduced. `test/spec-coverage` is pushed
+and unopened — `ComponentIndex`, slot-target validation, and the attributes nothing was
+compiling.
 
 Suggested order for what is left:
 
 1. **PR 4** — deduplicate the two doc generators. It collapses the divergence that has
    already produced one real bug, and both PR 1 and PR 6 get cheaper afterwards because
    there is a single extraction path to change instead of two.
-2. **PR 1** — `#[Config]`, so `-D` output and the reference pages derive from one
+2. **PR 9** — scratch fixtures. Cheap, and it widens what Redocly validates rather than what
+   we assert about ourselves. Probably supersedes part of `test/spec-coverage`.
+3. **PR 1** — `#[Config]`, so `-D` output and the reference pages derive from one
    declaration rather than two rules aligned by hand.
-3. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
+4. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
    already specifies the runnable half; this is implementing it.
-4. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
+5. **PR 8** — the remaining test gaps. Run coverage in CI first; the survey behind it used a
+   structural proxy and cannot see weakly-exercised code.
+6. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
    enough on its own. Verifying is much cheaper than generating.
-5. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
+7. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8).
 
@@ -219,6 +225,56 @@ Same split as was applied to the resolver in #2130: `builder.md` owns wiring, be
 to write an augmenter. Delete "Configuring augmenters" from `architecture.md`.
 
 Predates all of this work; noticed while re-homing the resolver docs.
+
+### PR 8 — remaining spec test gaps
+
+From a coverage survey on 2026-08-29. Note the survey used a structural proxy — *is this
+class executed by anything at all* — because no coverage driver is installed locally. It
+finds dead spots, not weakly-exercised ones. CI runs with pcov, so
+`composer test -- --coverage-text` in a workflow would give real numbers cheaply, and is
+probably worth doing before acting on any of this.
+
+Already closed in `test/spec-coverage`: `ComponentIndex`, slot-target validation, and the
+attributes nothing was compiling.
+
+Still open:
+
+- **`ValidateRelationsTest` has no full spec analogue.** Classic asserts its nesting map is
+  bidirectional — if A names B as a parent, B must name A as nested. The spec side now
+  checks that slots name real properties, but not the reverse direction: that a class
+  claiming it can nest into a parent is one the parent will actually accept.
+- **The `null` vs `Undefined::UNDEFINED` convention is undecided.** Classic has
+  `AnnotationPropertiesDefinedTest` asserting no property defaults to `null`. Spec is
+  deliberately mixed, and the reasoning survives only as a comment in `Augmenter/Types.php`
+  ("Can't use `??=` here — const defaults to `Undefined::UNDEFINED`, not null"). Decide what
+  the invariant is, then it can be asserted. This is a design call, not a test-writing one.
+- **No direct tests**: `Assembler/DefaultAttributeTranslator`,
+  `Assembler/OptionalPropertyAttributeTranslator`, `Utils/SourceLocation`,
+  `Utils/SpecificationWalker`.
+
+### PR 9 — scratch fixtures as end-to-end coverage, and more for Redocly to check
+
+`tests/Spec/UncoveredAttributesTest.php` covers the previously-unexercised attributes by
+building a `Specification` by hand and asserting compiler output. That is a unit test: it
+skips assembly and augmentation entirely.
+
+Scratch fixtures would be better, and probably should replace it. A fixture under
+`tests/Fixtures/Scratch/` exercises the whole pipeline — assembler, augmenters, compiler —
+and produces a YAML file per OpenAPI version. Two things follow from that:
+
+- the attributes get *end-to-end* coverage rather than compiler-only
+- the emitted YAML lands in the set `composer redocly` already lints
+  (`tests/Fixtures/Scratch/*.yaml`, currently 123 files), so the output is checked against
+  the OpenAPI schema rather than only against our own expectations
+
+Worth going further: generate more spec output to file generally, so Redocly validates a
+wider surface, and so tests can assert against the same files rather than restating expected
+structure inline. Anything asserted inline is an expectation we wrote; anything Redocly
+accepts is an expectation the specification wrote.
+
+Candidates for new fixtures: the typed operation subclasses (`Head`, `Options`, `Trace`),
+the OAuth flows, `MutualTls` / `OpenIdConnect`, and `Link` — which has an `isRoot()`
+condition that no example currently exercises.
 
 ---
 
