@@ -17,7 +17,8 @@ Merged: **#2134** (spec docs cleanup), **#2135** (rector rule changes), **#2136*
 docs, and the writing rules). **#2130** (resolver step) is rebased and mergeable, with its
 doc changes re-homed onto the page split #2136 introduced. `test/spec-coverage` is pushed
 and unopened — `ComponentIndex`, slot-target validation, and the attributes nothing was
-compiling.
+compiling. pcov is installed locally, so coverage numbers are now real rather than inferred:
+spec pipeline 94.2%, classic 92.9%, project 90.6%.
 
 Suggested order for what is left:
 
@@ -37,6 +38,8 @@ Suggested order for what is left:
 7. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
 8. **PR 10** — free the last two spec tests from `OpenApiTestCase`. Worth doing before v8
    rather than as part of removing classic: it turns that removal into a deletion.
+9. **PR 11** — audit the thirteen providers that construct objects. Cheap, and until it is
+   done any coverage figure understates reality by an unknown amount.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8).
 
@@ -230,11 +233,13 @@ Predates all of this work; noticed while re-homing the resolver docs.
 
 ### PR 8 — remaining spec test gaps
 
-From a coverage survey on 2026-08-29. Note the survey used a structural proxy — *is this
-class executed by anything at all* — because no coverage driver is installed locally. It
-finds dead spots, not weakly-exercised ones. CI runs with pcov, so
-`composer test -- --coverage-text` in a workflow would give real numbers cheaply, and is
-probably worth doing before acting on any of this.
+From a coverage survey on 2026-08-29, initially with a structural proxy and then with real
+numbers once pcov was installed. Line coverage at that point: spec pipeline 94.2%, classic
+92.9%, project 90.6%. Weakest areas were `src/Specification` (84.8%) and `src/Augmenter/`
+(91.1%); `src/Spec/` reached 99.2% after the fix below.
+
+Worth adding `--coverage-text` to a CI workflow so the number is visible per PR rather than
+measured ad hoc.
 
 Already closed in `test/spec-coverage`: `ComponentIndex`, slot-target validation, and the
 attributes nothing was compiling.
@@ -320,6 +325,40 @@ without reconciling would just move the duplication.
 
 Once the two holdouts are converted, `OpenApiTestCase` is classic-only and its removal is a
 straight deletion when classic goes, rather than an untangling.
+
+### PR 11 — audit data providers that construct objects
+
+PHPUnit evaluates data providers while collecting tests, before coverage recording starts.
+Anything constructed inside a provider is asserted but **never counted as covered**, and the
+tests pass either way, so the only symptom is a class reading as untouched despite having
+tests.
+
+Found the hard way: `UncoveredAttributesTest` was written with construction in the
+providers. Every case passed, and `Operation\Head`, `Options`, `Trace`, three `Flow` classes,
+`MutualTls` and `OpenIdConnect` all still reported 0%. Moving construction into the test body
+took each to 100% and `src/Spec/` from 79.3% to 99.2%, with no change to the assertions.
+Fixed in `test/spec-coverage`, and written up in `docs/dev/testing.md`.
+
+**Thirteen other providers do the same thing**, and should be checked for classes that are
+only ever built there:
+
+- `CompilerTest`: `nullableProvider`, `exclusiveBoundsProvider`, `schemaFeatureProvider`,
+  `defaultAndExampleProvider`, `validationProvider`
+- `GeneratorTest`: `sourcesProvider`, `processorCases`
+- `DocSnippetsTest::snippetSets`, `Utils/SourceScannerTest::sourcesProvider`,
+  `Annotations/AbstractAnnotationTest::identityCases`,
+  `Type/TypeResolverTest::resolverAugmentCases`,
+  `Analysers/ReflectionAnalyserTest::analysers`,
+  `tools/CSFixer/SpecNamespaceAliasFixerTest::provideFixCases`
+
+Most will be harmless — the classes involved are covered elsewhere, so the lost attribution
+does not show. The ones to fix are those where a provider is the only place a class is
+constructed. Diff coverage before and after moving construction into the test body to tell
+which is which.
+
+Note the first scan for this reported no matches at all, from a broken detector. Any re-run
+should be sanity-checked against a provider known to construct objects — `nullableProvider`
+is a good canary.
 
 ---
 
