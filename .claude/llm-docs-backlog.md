@@ -307,9 +307,8 @@ five members:
 So the extraction is small and well-bounded:
 
 - **`TracksLogEntries`** — `getTrackingLogger()` + `assertOpenApiLogEntryContains()`, plus the
-  `setUp`/`tearDown` that manage the captured entries. Overlaps `AssertsBuilderResult`, which
-  asserts on `Result::warnings()`/`errors()`; decide whether these merge or stay separate for
-  the two different capture points.
+  `setUp`/`tearDown` that manage the captured entries. Overlaps `AssertsBuilderResult`; see
+  below, the overlap now has an answer.
 - **`AssertsSpecEquals`** — `assertSpecEquals()`. Overlaps `AssertsSchemaStructure`, which
   compares `allOf` refs and property names order-independently. Same question.
 - **`ProvidesTypeResolvers`** — `getTypeResolver()` / `getTypeResolvers()`, used as a data
@@ -325,6 +324,34 @@ without reconciling would just move the duplication.
 
 Once the two holdouts are converted, `OpenApiTestCase` is classic-only and its removal is a
 straight deletion when classic goes, rather than an untangling.
+
+#### Which log mechanism wins
+
+There are now three overlapping ways to declare what a test expects from diagnostics:
+
+| Mechanism | Channel | Semantics |
+|---|---|---|
+| `AssertsBuilderResult::expectResultWarnings()` | `Result::warnings()` | tolerance — may appear |
+| `assertOpenApiLogEntryContains()` | PSR logger | expectation — must appear, in order |
+| `ignoreLogEntries()` | PSR logger | tolerance — may appear |
+
+**Consolidate on the logger.** `Utils\CollectingLogger` both records to `entries()` *and*
+forwards to its delegate, and `CompilerInterface::validate()` returns those same entries. So
+since `fix/compiler-logger`, `Result::warnings()` and the PSR logger are two views of one
+stream, not two sources. The logger is the general capture point; `Result::warnings()` is a
+convenience over it.
+
+The cost of keeping both is already visible: `ExamplesTest` declares the same two compiler
+warnings twice, once per mechanism, because they arrive on both channels.
+
+Prior art on a stale branch: `origin/expexts-logger-contains` has an `ExpectsLoggerContains`
+trait plus a PHPUnit event subscriber that moves assertions from `tearDown()` to
+`afterTestMethodCalled`. That timing change is the interesting part and worth keeping.
+Treat it as reference only — it predates `doBuildSpec($hybrid)` so it is based on an old
+master, and the implementation is not known to be settled.
+
+Do this before or with the extraction, not after: extracting `TracksLogEntries` while the
+overlap stands would just relocate it.
 
 ### PR 11 — audit data providers that construct objects
 
