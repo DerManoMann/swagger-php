@@ -360,6 +360,47 @@ Note the first scan for this reported no matches at all, from a broken detector.
 should be sanity-checked against a provider known to construct objects — `nullableProvider`
 is a good canary.
 
+### PR 12 — scratch fixtures for the remaining uncovered DTOs
+
+Ongoing rather than a single change: each fixture may surface real bugs, as the first one
+did.
+
+`Fixtures/Scratch/Auth{,-spec}.php` covers the security schemes and OAuth flows. Writing it
+found two things a unit test could not:
+
+- the pipeline emitted `type: mutualTLS` into **3.0** documents, where that type does not
+  exist. Redocly rejected it the moment the fixture produced a real file. Fixed: the 3.0
+  compiler now warns and omits, as it already did for webhooks.
+- classic cannot express `mutualTLS` at all — `OAT\SecurityScheme` validates `type` against
+  http / apiKey / oauth2 / openIdConnect only. Left as-is; classic is frozen.
+
+Still wanted, same treatment: `Operation\{Head,Options,Trace}`, `MediaType\Xml`, `Link`
+(its `isRoot()` condition is unexercised), and anything the next coverage run shows thin.
+
+Mechanics worth knowing before starting:
+
+- Discovery globs `Scratch/*.php` and skips `-spec` names, so a **classic `.php` file is
+  required** even for spec-only material. Omitting the classic *YAML* is how you skip the
+  classic cases — `$spec === null` continues.
+- Regenerate by uncommenting `file_put_contents` in `ScratchTest::testScratch()`. Always
+  pair it with `--filter <Fixture>`: an unfiltered run rewrites **every** fixture, and the
+  current dumper differs from what is committed, so the diff is enormous and mostly noise.
+- `$expectedLogs` is keyed `{fixture}-{version}` with no mode component, so a warning raised
+  in one mode only cannot be registered without skipping the other mode's case.
+
+### PR 13 — compiler diagnostics never reach `Builder::setLogger()`
+
+`Builder::resolveCompiler()` constructs compilers with no logger, so `CollectingLogger` has
+nothing to forward to. Compiler warnings reach `Result::warnings()` but never the PSR logger
+the caller supplied. The classic path does forward — `doBuildClassic()` wraps the user's
+logger — so the two pipelines behave differently for the same `setLogger()` call.
+
+Passing the logger through is a one-line fix, and it was tried: it surfaces a pre-existing
+`Schema: const is not supported in OpenAPI 3.0, using enum fallback` warning across ten
+`ExamplesTest` and `ScratchTest` cases, each of which then needs the expectation registered.
+Worth doing, but as its own change — those ten registrations are the actual work, and they
+document warnings nobody currently sees.
+
 ---
 
 ## Not doing
