@@ -485,6 +485,10 @@ tolerances into two real assertions.
 Worth checking at the same time whether other fixtures were written to provoke diagnostics
 that the strict-FIFO tracking logger has been swallowing.
 
+The scripts behind every number in PR 16 and PR 17 are in
+[`.claude/benchmarks/`](benchmarks/README.md), so the measurements can be re-run rather than
+trusted.
+
 ### PR 16 — the mode performance comparison nobody has run
 
 The README claimed hybrid was "faster" than classic. Nothing measured that, and a
