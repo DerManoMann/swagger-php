@@ -13,37 +13,34 @@ which the code and the docs do not record.
 
 ## Where this stands
 
-Merged: **#2134** (spec docs cleanup), **#2135** (rector rule changes), **#2136** (developer
-docs, and the writing rules), **#2137** (`ComponentIndex`, slot-target validation, and the
-attributes nothing was compiling), **#2138** (compiler diagnostics reaching the configured
-logger, PR 13), **#2139** (README corrections).
+Nothing is open. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
+changes), **#2136** (developer docs, and the writing rules), **#2137** (`ComponentIndex`,
+slot-target validation, and the attributes nothing was compiling), **#2138** (compiler
+diagnostics reaching the configured logger, PR 13), **#2139** (README corrections),
+**#2140** (the `ScratchTest` failure #2137 and #2138 produced only once merged, see PR 15),
+**#2141** (the doc generator merge, PR 4), **#2142** (`.dist` convention for the phpstan
+config), **#2130** (resolver step), **#2143** (rector 2.6.5, and pinned tooling).
 
-Open: **#2130** (resolver step), rebased and mergeable, with its doc changes re-homed onto
-the page split #2136 introduced. **#2140** fixes a `ScratchTest` failure that #2137 and
-#2138 produced only once merged — see PR 15.
-
-pcov is installed locally, so coverage numbers are real rather than inferred: spec pipeline
-94.2%, classic 92.9%, project 90.6%.
+phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
+first time. pcov is installed locally, so coverage numbers are real rather than inferred:
+spec pipeline 94.2%, classic 92.9%, project 90.6%.
 
 Suggested order for what is left:
 
-1. **PR 4** — deduplicate the two doc generators. It collapses the divergence that has
-   already produced one real bug, and both PR 1 and PR 6 get cheaper afterwards because
-   there is a single extraction path to change instead of two.
-2. **PR 9** — scratch fixtures. Cheap, and it widens what Redocly validates rather than what
+1. **PR 9** — scratch fixtures. Cheap, and it widens what Redocly validates rather than what
    we assert about ourselves. Probably supersedes part of #2137.
-3. **PR 1** — `#[Config]`, so `-D` output and the reference pages derive from one
+2. **PR 1** — `#[Config]`, so `-D` output and the reference pages derive from one
    declaration rather than two rules aligned by hand.
-4. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
+3. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
    already specifies the runnable half; this is implementing it.
-5. **PR 8** — the remaining test gaps. Run coverage in CI first; the survey behind it used a
+4. **PR 8** — the remaining test gaps. Run coverage in CI first; the survey behind it used a
    structural proxy and cannot see weakly-exercised code.
-6. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
+5. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
    enough on its own. Verifying is much cheaper than generating.
-7. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
-8. **PR 10** — free the last two spec tests from `OpenApiTestCase`. Worth doing before v8
+6. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
+7. **PR 10** — free the last two spec tests from `OpenApiTestCase`. Worth doing before v8
    rather than as part of removing classic: it turns that removal into a deletion.
-9. **PR 11** — audit the thirteen providers that construct objects. Cheap, and until it is
+8. **PR 11** — audit the thirteen providers that construct objects. Cheap, and until it is
    done any coverage figure understates reality by an unknown amount.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8).
@@ -161,7 +158,7 @@ mapping table in `reference/architecture.md`, and the classic-vs-spec behaviour 
 A single `DocsAccuracyTest` covering the verifiable rows would likely be shorter than one
 generator, and would have caught most of what this cleanup fixed by hand.
 
-### PR 4 — deduplicate `AugmenterGenerator` and `ProcessorGenerator`
+### PR 4 — deduplicate `AugmenterGenerator` and `ProcessorGenerator` — **done, #2141**
 
 408 lines across the two classes, with substantial copy-paste between them. Two fixes in
 this cleanup had to be applied *twice, identically*: the ctor-param config rule
@@ -196,6 +193,27 @@ noun + mode flag. Genuine differences worth keeping: `ProcessorGenerator` also g
 
 Note this is orthogonal to PR 1 — if config moves to a `#[Config]` attribute, the shared
 extraction shrinks but the rendering divergence remains.
+
+**Outcome.** 339 deletions for 184 insertions, in three steps: share the collection, share
+the configuration prose, render processors through the shared sections. The plumbing turned
+out to be copied in *three* generators, not two — `SpecAttributeGenerator` had it as well —
+so that page regenerating byte-identically was the evidence the lift was safe.
+
+Five defects surfaced, only one of them visible in output:
+
+- `ProcessorGenerator::resolveDefault()` calling `getDefaultValue()` unguarded (as predicted
+  above; the merged copy keeps the guard, so this entry's claim is now moot)
+- `ConfigSettingsSection` indenting only the first line of a description, which pushed
+  `expandEnums.enumNames` and its fenced YAML block out of their list item — the one
+  user-visible bug, and invisible until a multi-line description went through it
+- `getName()` called on what may be a union or intersection type, in five places
+- a loop variable shadowing the union it was iterating, so `allowsNull()` tested the last
+  member rather than the union
+- docblocks naming `AbstractAttribute` in the wrong namespace
+
+The last three came from adding `tools` to the phpstan paths, which had never been analysed.
+processors.md also gained the `Unknown keys are reported as warnings` sentence, true of it
+all along since `Utils\Pipeline` warns for both pipelines.
 
 ### PR 6 — generate code fragments from the classes docs reference
 
@@ -250,7 +268,7 @@ numbers once pcov was installed. Line coverage at that point: spec pipeline 94.2
 Worth adding `--coverage-text` to a CI workflow so the number is visible per PR rather than
 measured ad hoc.
 
-Already closed in `test/spec-coverage`: `ComponentIndex`, slot-target validation, and the
+Already closed by #2137: `ComponentIndex`, slot-target validation, and the
 attributes nothing was compiling.
 
 Still open:
@@ -346,7 +364,7 @@ There are now three overlapping ways to declare what a test expects from diagnos
 
 **Consolidate on the logger.** `Utils\CollectingLogger` both records to `entries()` *and*
 forwards to its delegate, and `CompilerInterface::validate()` returns those same entries. So
-since `fix/compiler-logger`, `Result::warnings()` and the PSR logger are two views of one
+since #2138, `Result::warnings()` and the PSR logger are two views of one
 stream, not two sources. The logger is the general capture point; `Result::warnings()` is a
 convenience over it.
 
@@ -373,7 +391,7 @@ Found the hard way: `UncoveredAttributesTest` was written with construction in t
 providers. Every case passed, and `Operation\Head`, `Options`, `Trace`, three `Flow` classes,
 `MutualTls` and `OpenIdConnect` all still reported 0%. Moving construction into the test body
 took each to 100% and `src/Spec/` from 79.3% to 99.2%, with no change to the assertions.
-Fixed in `test/spec-coverage`, and written up in `docs/dev/testing.md`.
+Fixed by #2137, and written up in `docs/dev/testing.md`.
 
 **Thirteen other providers do the same thing**, and should be checked for classes that are
 only ever built there:
@@ -560,7 +578,7 @@ is whether the source scan needs to happen at all.
 
 `Builder::doBuildSpec()` tokenizes `$sourceScanner->getFiles()` and separately collects
 `$sourceScanner->getReflectors()`. Passing only reflectors leaves the file list empty, so
-the tokenizing loop does nothing. With #2130's resolver then discovering referenced classes
+the tokenizing loop does nothing. With the resolver discovering referenced classes
 transitively, a build seeded with just the controllers produces the same document as
 scanning the tree.
 
@@ -626,9 +644,35 @@ Open before any of this can be recommended:
 - Whether `guide/` should show the reflector-seeded form at all, or whether it stays a
   documented capability of `Builder` until there is a CLI story.
 
-`reference/builder.md` on #2130 already says the controllers are generally enough, which
+`reference/builder.md` already says the controllers are generally enough, which
 these numbers support. It does not claim anything about speed, and should not until the CLI
 question is settled.
+
+### PR 18 — `AttributeGenerator` is the last generator rendering by hand
+
+#2141 moved augmenters, spec attributes and processors onto the shared `Sections`
+abstraction. `AttributeGenerator` still renders inline through `Renderer::classDescription()`
+and `Renderer::references()`, which exist only for it.
+
+Porting it would finish the job and let those two methods go, the way `processorOptions()`
+and `indentedBr()` went. Against that: it generates the classic attributes and annotations
+pages, and classic is removed in v8, so this may be work with a short life. Worth doing only
+if something else needs to touch that generator anyway.
+
+---
+
+### PR 19 — pin `phpstan/phpstan` as well
+
+#2143 pinned `rector/rector` and `friendsofphp/php-cs-fixer` to exact versions, because
+`composer.lock` is not committed and every workflow installs `dependency-versions: highest`,
+so a new release of either turns unrelated PRs red.
+
+`phpstan/phpstan` (`^2.2`) has exactly the same exposure — new releases add checks at an
+unchanged level. It has been quiet so far, and `phpstan-baseline.neon` absorbs some of it,
+but the mechanism is identical and the argument for pinning is the same.
+
+Deliberately not `phpunit/phpunit`: its `^11.5 || >=12.5.22` constraint is wide on purpose,
+since the build matrix spans PHP 8.2 to 8.6.
 
 ---
 
