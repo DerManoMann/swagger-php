@@ -1,15 +1,16 @@
-# LLM docs backlog
+# Backlog
 
-Decisions taken, questions still open, and follow-up work — for the documentation and the
-tooling around it.
+Decisions taken, questions still open, and follow-up work — across the docs, the tooling,
+the test suite and the spec pipeline.
 
-The facts this file used to collect were written up in #2136 and now live in `docs/dev/`
-(`pipeline.md`, `testing.md`, `docs-toolchain.md`, `writing-docs.md`), with terminology in
-`CONTEXT.md` and the pre-PR checklist in `CONTRIBUTING.md`. Those are the source; add to
-them, not here.
+This started as notes for the documentation restructure. The facts it collected then were
+written up in #2136 and now live in `docs/dev/` (`pipeline.md`, `testing.md`,
+`docs-toolchain.md`, `writing-docs.md`), with terminology in `CONTEXT.md` and the pre-PR
+checklist in `CONTRIBUTING.md`. Those are the source; add to them, not here.
 
 What stays here is the reasoning behind decisions — including the ones not to do something,
-which the code and the docs do not record.
+which the code and the docs do not record. Entries are numbered in the order they were
+written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
