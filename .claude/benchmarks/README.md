@@ -21,9 +21,10 @@ Delete `sp-*` there to force a rebuild.
 | `cleanupiso.php` | classic `CleanUnusedComponents` timed on its own, across sizes |
 | `tokencost.php` | what reading and tokenizing costs per file |
 
-## Needs the resolver (#2130)
+## Needs the resolver
 
-These exit with a message on a branch without `OpenApi\Resolver`.
+Merged in #2130, so these run on `master`. They exit with a message on any branch predating
+it.
 
 | Script | Measures |
 | --- | --- |
