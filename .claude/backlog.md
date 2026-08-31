@@ -715,9 +715,27 @@ and several claims have moved:
 - Its other objection, that `HybridBridge` skips annotations without reflectors, still reads
   true — `HybridBridge` bails on `!$annotation->_context->reflector instanceof \Reflector`.
 
-Worth deciding at the same time whether any of this belongs in `docs/dev/` rather than on a
-branch. The extension-point material is close to what a downstream integrator needs, and
-nothing in `docs/` currently addresses that audience.
+**An extension points page comes out of this.** Agreed as part of the work: a `docs/dev/`
+page for developers integrating swagger-php into their own tooling, written from whatever
+the PoC shows actually works rather than from the API surface alone. Nothing under `docs/`
+addresses that audience today — `reference/builder.md` documents the hooks one at a time,
+which is not the same as showing how they compose.
+
+The surface it would cover, all already public:
+
+| Hook | For |
+| --- | --- |
+| `Builder::addSource(\Reflector)` | seeding from framework routing instead of a directory scan (PR 17) |
+| `AttributeFactory::withTranslators()` | `AttributeTranslatorInterface` — turning foreign attributes into spec ones |
+| `Builder::withAugmenters()` | `PipeInterface` — enriching the specification, grouped into phases |
+| `Builder::withResolver()` | `ResolverInterface` — supplying classes the specification refers to but does not contain |
+| `Builder::withAttributeFactory()` | assembly-time control |
+| `Builder::setCompiler()` | `CompilerInterface` — version-specific output |
+| `Builder::withGenerator()` | the classic escape hatch, hybrid only |
+
+The PoC exercises the first four, which is the useful signal about what to write up first.
+Worth capturing the dead ends too — `Run.php` already notes that its `MapRequestPayload`
+handling is one of several approaches and probably not the best.
 
 ---
 
