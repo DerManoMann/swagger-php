@@ -737,6 +737,31 @@ The PoC exercises the first four, which is the useful signal about what to write
 Worth capturing the dead ends too — `Run.php` already notes that its `MapRequestPayload`
 handling is one of several approaches and probably not the best.
 
+**A fictive example under `docs/examples` is the better artefact for the docs.** Size fits:
+the unit to compare against is one processor example — `schema-query-parameter` is 114 lines
+plus a small `app/` fixture and an expected yaml — not the 8422-line `specs/` tree. A
+synthetic framework integration would shed the Symfony routing and bundle wiring the real
+PoC needs, and could plausibly land in 150-250 lines while still showing reflector sources,
+a translator and an augmenter together.
+
+The catch is that **`docs/examples/processors/` is verified by nothing**:
+
+- `UsesExamples::examplePath()` hardcodes `docs/examples/specs/`, so `ExamplesTest` never
+  sees it
+- `composer redocly` lints `docs/examples/specs/**/*.yaml` and `tests/Fixtures/Scratch/*.yaml`,
+  not the processor yamls
+- only phpstan touches it, via the `docs/examples` path
+
+Both processor examples therefore carry expected-output yaml that nothing compares against.
+That is an argument for the approach rather than against it — the same captured-not-composed
+problem as the CLI help text — but wiring `processors/` into the suite has to come with it,
+or the new example rots the same way. Companion to PR 9, which widens what Redocly checks.
+
+Suggested split: the fictive example carries the documentation and can be verified, so it is
+what the extension points page links to and what the Nelmio project reads. The fork PoC stays
+where it is as evidence the approach works against a real bundle, and is not polished into
+documentation.
+
 ---
 
 ## Not doing
