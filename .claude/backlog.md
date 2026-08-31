@@ -675,6 +675,50 @@ but the mechanism is identical and the argument for pinning is the same.
 Deliberately not `phpunit/phpunit`: its `^11.5 || >=12.5.22` constraint is wide on purpose,
 since the build matrix spans PHP 8.2 to 8.6.
 
+### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it
+
+Two halves, both parked and both worth keeping.
+
+**The design docs** are on `feat/downstream-support` (47 commits behind master, never
+merged):
+
+| File | Lines | Covers |
+| --- | --- | --- |
+| `docs/SWAGGER_PHP_NATIVE_SPEC_PLAN.md` | 830 | letting swagger-php scan, and why hybrid does not fit |
+| `docs/downstream-integration.md` | 404 | making the pipeline usable by Nelmio, API Platform, Lumen, custom frameworks |
+| `docs/SWAGGER_PHP_UPGRADE_PLAN.md` | 365 | how Nelmio integrates with classic today |
+| `docs/spec-attributes.md` | 33 | augmenter additions and shipping notes |
+
+**The proof of concept** is `DerManoMann/NelmioApiDocBundle` at `spec-poc`, locally
+`../NelmioApiDocBundleFork`. About 540 lines under `src/SpecPoC/` — three attributes, two
+augmenters, five translators, plus `Run.php` and a `poc.php` entry point. It exercises the
+extension points rather than being a real integration: attribute translators for Symfony's
+routing and `MapRequestPayload` / `MapQueryParameter`, augmenters for models, and auto
+annotation of classes and public properties via a translator. `Run.php` carries a note that
+the `MapRequestPayload` handling is deliberately one of several possible approaches. There
+are uncommitted changes in the working tree, including a `ModelAutoTranslator` →
+`SchemaAutoTranslator` rename.
+
+The plan is to review it, polish lightly — it is meant to showcase the extension points, not
+to be production code — and put it in front of the Nelmio project as an early heads-up ahead
+of v7/v8.
+
+**Re-check the docs against master before showing anyone.** They were written before #2130
+and several claims have moved:
+
+- `downstream-integration.md` opens with "they don't scan files — they discover endpoints via
+  framework routing and use reflection on known controller classes". That is now largely
+  served by reflector sources plus the resolver, and PR 17 measures what it buys.
+- `SWAGGER_PHP_NATIVE_SPEC_PLAN.md` argues against hybrid partly on "HybridBridge doesn't
+  transfer attachables". `Spec\Attachable` and an `attachables` bucket on `Specification`
+  exist now, so at minimum the wording needs revisiting even if the conclusion holds.
+- Its other objection, that `HybridBridge` skips annotations without reflectors, still reads
+  true — `HybridBridge` bails on `!$annotation->_context->reflector instanceof \Reflector`.
+
+Worth deciding at the same time whether any of this belongs in `docs/dev/` rather than on a
+branch. The extension-point material is close to what a downstream integrator needs, and
+nothing in `docs/` currently addresses that audience.
+
 ---
 
 ## Not doing
