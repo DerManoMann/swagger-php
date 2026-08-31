@@ -20,7 +20,9 @@ slot-target validation, and the attributes nothing was compiling), **#2138** (co
 diagnostics reaching the configured logger, PR 13), **#2139** (README corrections),
 **#2140** (the `ScratchTest` failure #2137 and #2138 produced only once merged, see PR 15),
 **#2141** (the doc generator merge, PR 4), **#2142** (`.dist` convention for the phpstan
-config), **#2130** (resolver step), **#2143** (rector 2.6.5, and pinned tooling).
+config), **#2130** (resolver step), **#2143** (rector 2.6.5, and pinned tooling),
+**#2144** (scratch fixtures for Head/Options/Trace and Link, PR 9),
+**#2145** (`TypedList::clear()`, PR 21).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally, so coverage numbers are real rather than inferred:
@@ -28,20 +30,18 @@ spec pipeline 94.2%, classic 92.9%, project 90.6%.
 
 Suggested order for what is left:
 
-1. **PR 9** — scratch fixtures. Cheap, and it widens what Redocly validates rather than what
-   we assert about ourselves. Probably supersedes part of #2137.
-2. **PR 1** — `#[Config]`, so `-D` output and the reference pages derive from one
+1. **PR 1** — `#[Config]`, so `-D` output and the reference pages derive from one
    declaration rather than two rules aligned by hand.
-3. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
+2. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
    already specifies the runnable half; this is implementing it.
-4. **PR 8** — the remaining test gaps. Run coverage in CI first; the survey behind it used a
+3. **PR 8** — the remaining test gaps. Run coverage in CI first; the survey behind it used a
    structural proxy and cannot see weakly-exercised code.
-5. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
+4. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
    enough on its own. Verifying is much cheaper than generating.
-6. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
-7. **PR 10** — free the last two spec tests from `OpenApiTestCase`. Worth doing before v8
+5. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
+6. **PR 10** — free the last two spec tests from `OpenApiTestCase`. Worth doing before v8
    rather than as part of removing classic: it turns that removal into a deletion.
-8. **PR 11** — audit the thirteen providers that construct objects. Cheap, and until it is
+7. **PR 11** — audit the thirteen providers that construct objects. Cheap, and until it is
    done any coverage figure understates reality by an unknown amount.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8).
@@ -288,7 +288,7 @@ Still open:
   `Assembler/OptionalPropertyAttributeTranslator`, `Utils/SourceLocation`,
   `Utils/SpecificationWalker`.
 
-### PR 9 — scratch fixtures as end-to-end coverage, and more for Redocly to check
+### PR 9 — scratch fixtures as end-to-end coverage, and more for Redocly to check — **done, #2144**
 
 `tests/Spec/UncoveredAttributesTest.php` covers the previously-unexercised attributes by
 building a `Specification` by hand and asserting compiler output. That is a unit test: it
@@ -311,6 +311,10 @@ accepts is an expectation the specification wrote.
 Candidates for new fixtures: the typed operation subclasses (`Head`, `Options`, `Trace`),
 the OAuth flows, `MutualTls` / `OpenIdConnect`, and `Link` — which has an `isRoot()`
 condition that no example currently exercises.
+
+**Outcome.** #2144 added scratch fixtures for `Head`, `Options`, `Trace` and `Link` (root).
+Auth fixtures (`MutualTls`, `OpenIdConnect`, OAuth flows) were already covered by #2137's
+`Auth` fixture. Remaining candidate: `MediaType\Xml`.
 
 ### PR 10 — extract the pipeline-agnostic half of `OpenApiTestCase` into concerns
 
@@ -430,8 +434,9 @@ found two things a unit test could not:
 - classic cannot express `mutualTLS` at all — `OAT\SecurityScheme` validates `type` against
   http / apiKey / oauth2 / openIdConnect only. Left as-is; classic is frozen.
 
-Still wanted, same treatment: `Operation\{Head,Options,Trace}`, `MediaType\Xml`, `Link`
-(its `isRoot()` condition is unexercised), and anything the next coverage run shows thin.
+**#2144** added scratch fixtures for `Operation\{Head,Options,Trace}` and `Link` (including
+its `isRoot()` condition). Still wanted: `MediaType\Xml`, and anything the next coverage run
+shows thin.
 
 Mechanics worth knowing before starting:
 
@@ -783,7 +788,7 @@ what the extension points page links to and what the Nelmio project reads. The f
 where it is as evidence the approach works against a real bundle, and is not polished into
 documentation.
 
-### PR 21 — `TypedList::clear()`
+### PR 21 — `TypedList::clear()` — **done, #2145**
 
 `TypedList` can `add()`, `insert()`, `remove()` and `get()`, but there is no way to empty it.
 Anyone wanting to start from a clean slate — no augmenters, no resolvers, no translators —
