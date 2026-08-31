@@ -1,6 +1,6 @@
 # Benchmarks
 
-Throwaway scripts behind the numbers in [PR 16 and PR 17](../../backlog.md). They are
+Throwaway scripts behind the numbers in [PR 16 and PR 17](../performance/README.md). They are
 not tests and nothing runs them automatically — they exist so the measurements can be
 re-run rather than trusted.
 

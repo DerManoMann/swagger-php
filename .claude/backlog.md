@@ -49,12 +49,18 @@ Suggested order for what is left:
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). Q5 should be
 settled before starting PR 22's Phase 4.
 
-Entries that need supporting material get a folder under `.claude/backlog/`, named for the
-topic rather than the entry number so it survives renumbering. So far:
-[`backlog/benchmarks/`](backlog/benchmarks/README.md), the scripts behind every number in
-PR 16 and PR 17 — there so the measurements can be re-run rather than trusted; and
+Entries that need supporting material, or have grown too long for the numbered list, get a
+folder under `.claude/backlog/`, named for the topic rather than the entry number so it
+survives renumbering. So far: [`backlog/benchmarks/`](backlog/benchmarks/README.md), the
+scripts behind every number in PR 16 and PR 17 — there so the measurements can be re-run
+rather than trusted; [`backlog/performance/`](backlog/performance/README.md), PR 16 and
+PR 17's own write-ups; [`backlog/testcase-concerns/`](backlog/testcase-concerns/README.md),
+PR 10's; [`backlog/nelmio-poc/`](backlog/nelmio-poc/README.md), PR 20's; and
 [`backlog/spec-3.2/`](backlog/spec-3.2/README.md), the full field-by-field audit behind
 PR 22.
+
+Merged entries move to [`backlog/archive.md`](backlog/archive.md) once done — the terse form
+stays in "Where this stands" above.
 
 ---
 
@@ -104,7 +110,8 @@ far.
 
 ## Follow-up PRs
 
-Agreed direction, deliberately **not** done in the doc-cleanup work.
+Agreed direction, deliberately **not** done in the doc-cleanup work. Merged entries move to
+[`backlog/archive.md`](backlog/archive.md); numbers are not reused.
 
 ### PR 1 — declare config with a `#[Config]` attribute
 
@@ -179,63 +186,6 @@ mapping table in `reference/architecture.md`, and the classic-vs-spec behaviour 
 A single `DocsAccuracyTest` covering the verifiable rows would likely be shorter than one
 generator, and would have caught most of what this cleanup fixed by hand.
 
-### PR 4 — deduplicate `AugmenterGenerator` and `ProcessorGenerator` — **done, #2141**
-
-408 lines across the two classes, with substantial copy-paste between them. Two fixes in
-this cleanup had to be applied *twice, identically*: the ctor-param config rule
-(`collectOptions()`) and the CLI prose block in `renderConfigSection()`. That is the tell.
-
-Duplicated near-verbatim:
-- `collectOptions()` — same setter scan, same type/description/default extraction
-- `resolveDefault()` — same ctor-parameter lookup and `gettype()` match
-- `renderConfigSection()` prose — same paragraph, differing only in "augmenter"/"processor"
-  and the `--mode spec` flag
-
-The copies have already drifted, which is the real cost:
-
-| | `AugmenterGenerator` | `ProcessorGenerator` |
-|---|---|---|
-| Rendering | `Sections` abstraction (`SectionInterface` + `ConfigSettingsSection` etc.), swappable via `setSections()` | hand-rolled inline via `renderer->processorOptions()` |
-| Output style | markdown list items | `<span style="font-family: monospace;">` HTML blocks |
-| `resolveDefault()` | guards `isDefaultValueAvailable()` | **no guard** — `getDefaultValue()` throws `ReflectionException` on a ctor param without a default (latent; every documented option happens to have one) |
-| Class docblock | strips `@implements` | does not |
-| `configPrefix` | computed in the collected data | recomputed at render time |
-| CLI example | correct | had `operatinId.hash` — a typo the other copy did not have, fixed in 4923c297 |
-
-The divergent output style is user-visible: two pages in the same reference section present
-the same kind of information in two different visual formats, for no reason other than that
-one generator was refactored onto `Sections` and the other was not.
-
-Suggested: move `collectOptions()`/`resolveDefault()` onto `DocGenerator` (where
-`configurableParameters()` already lives), port `ProcessorGenerator` onto the `Sections`
-abstraction so both render identically, and parameterise the shared CLI prose on
-noun + mode flag. Genuine differences worth keeping: `ProcessorGenerator` also globs the
-`Processors` directory to document processors that are not in the default pipeline.
-
-Note this is orthogonal to PR 1 — if config moves to a `#[Config]` attribute, the shared
-extraction shrinks but the rendering divergence remains.
-
-**Outcome.** 339 deletions for 184 insertions, in three steps: share the collection, share
-the configuration prose, render processors through the shared sections. The plumbing turned
-out to be copied in *three* generators, not two — `SpecAttributeGenerator` had it as well —
-so that page regenerating byte-identically was the evidence the lift was safe.
-
-Five defects surfaced, only one of them visible in output:
-
-- `ProcessorGenerator::resolveDefault()` calling `getDefaultValue()` unguarded (as predicted
-  above; the merged copy keeps the guard, so this entry's claim is now moot)
-- `ConfigSettingsSection` indenting only the first line of a description, which pushed
-  `expandEnums.enumNames` and its fenced YAML block out of their list item — the one
-  user-visible bug, and invisible until a multi-line description went through it
-- `getName()` called on what may be a union or intersection type, in five places
-- a loop variable shadowing the union it was iterating, so `allowsNull()` tested the last
-  member rather than the union
-- docblocks naming `AbstractAttribute` in the wrong namespace
-
-The last three came from adding `tools` to the phpstan paths, which had never been analysed.
-processors.md also gained the `Unknown keys are reported as warnings` sentence, true of it
-all along since `Utils\Pipeline` warns for both pipelines.
-
 ### PR 6 — generate code fragments from the classes docs reference
 
 Inlined source in documentation drifts, and has done so twice already:
@@ -307,103 +257,21 @@ Still open:
   `Assembler/OptionalPropertyAttributeTranslator`, `Utils/SourceLocation`,
   `Utils/SpecificationWalker`.
 
-### PR 9 — scratch fixtures as end-to-end coverage, and more for Redocly to check — **done, #2144**
-
-`tests/Spec/UncoveredAttributesTest.php` covers the previously-unexercised attributes by
-building a `Specification` by hand and asserting compiler output. That is a unit test: it
-skips assembly and augmentation entirely.
-
-Scratch fixtures would be better, and probably should replace it. A fixture under
-`tests/Fixtures/Scratch/` exercises the whole pipeline — assembler, augmenters, compiler —
-and produces a YAML file per OpenAPI version. Two things follow from that:
-
-- the attributes get *end-to-end* coverage rather than compiler-only
-- the emitted YAML lands in the set `composer redocly` already lints
-  (`tests/Fixtures/Scratch/*.yaml`, currently 123 files), so the output is checked against
-  the OpenAPI schema rather than only against our own expectations
-
-Worth going further: generate more spec output to file generally, so Redocly validates a
-wider surface, and so tests can assert against the same files rather than restating expected
-structure inline. Anything asserted inline is an expectation we wrote; anything Redocly
-accepts is an expectation the specification wrote.
-
-Candidates for new fixtures: the typed operation subclasses (`Head`, `Options`, `Trace`),
-the OAuth flows, `MutualTls` / `OpenIdConnect`, and `Link` — which has an `isRoot()`
-condition that no example currently exercises.
-
-**Outcome.** #2144 added scratch fixtures for `Head`, `Options`, `Trace` and `Link` (root).
-Auth fixtures (`MutualTls`, `OpenIdConnect`, OAuth flows) were already covered by #2137's
-`Auth` fixture. Remaining candidate: `MediaType\Xml`.
-
 ### PR 10 — extract the pipeline-agnostic half of `OpenApiTestCase` into concerns
 
-`tests/OpenApiTestCase.php` is 332 lines and 52 test classes extend it. Most of it is
-classic — `getAnalyzer()`, `initializeProcessors()`, `processorPipeline()`,
-`analysisFromFixtures()`, `allAnnotationClasses()`, `allAttributeClasses()`,
-`annotationsFromDocBlockParser()`, `getContext()`, `createOpenApiWithInfo()` — and can be
-deleted with classic in v8.
+`tests/OpenApiTestCase.php` is 332 lines and 52 test classes extend it, but most of it is
+classic and can be deleted with classic in v8. Two spec-side holdouts — `ScratchTest` and
+`BuilderTest` — still extend it only to reach five members that aren't classic at all
+(`getTrackingLogger()`, `assertOpenApiLogEntryContains()`, `assertSpecEquals()`, plus
+`getAnalyzer()`/`getTypeResolver()` for `BuilderTest`'s classic-mode cases). Extracting those
+into `tests/Concerns/` traits — reconciling overlap with `AssertsBuilderResult` and
+`AssertsSchemaStructure` along the way — turns removing `OpenApiTestCase` into a straight
+deletion instead of an untangling. Also settles which of three overlapping
+diagnostic-assertion mechanisms to standardise on: the PSR logger, since `CollectingLogger`
+already forwards to it and `Result::warnings()` is just a view over the same stream.
 
-But some of it is not classic at all, and today the only way to reach it is by extending a
-classic-flavoured base class.
-
-The spec side has already mostly escaped: all sixteen augmenter tests, plus
-`SlotMapConsistencyTest`, `AssemblerTest` and `CompilerTest`, extend plain `TestCase` and
-compose traits from `tests/Concerns/`. **Only two hold out**, and between them they need
-five members:
-
-| Test | Needs |
-|---|---|
-| `ScratchTest` | `getTrackingLogger()`, `assertOpenApiLogEntryContains()`, `assertSpecEquals()` |
-| `BuilderTest` | the same three, plus `getAnalyzer()` and `getTypeResolver()` |
-
-So the extraction is small and well-bounded:
-
-- **`TracksLogEntries`** — `getTrackingLogger()` + `assertOpenApiLogEntryContains()`, plus the
-  `setUp`/`tearDown` that manage the captured entries. Overlaps `AssertsBuilderResult`; see
-  below, the overlap now has an answer.
-- **`AssertsSpecEquals`** — `assertSpecEquals()`. Overlaps `AssertsSchemaStructure`, which
-  compares `allOf` refs and property names order-independently. Same question.
-- **`ProvidesTypeResolvers`** — `getTypeResolver()` / `getTypeResolvers()`, used as a data
-  provider by both pipelines.
-- **`UsesFixtures`** — `fixture()` / `fixtures()`. Path helpers, wanted everywhere.
-
-`getAnalyzer()` is classic and should stay behind; `BuilderTest` needs it only for the
-classic-mode cases.
-
-Do the overlap review as part of this rather than after: `tests/Concerns/` has grown to six
-traits and at least two of them cover ground `OpenApiTestCase` also covers. Extracting
-without reconciling would just move the duplication.
-
-Once the two holdouts are converted, `OpenApiTestCase` is classic-only and its removal is a
-straight deletion when classic goes, rather than an untangling.
-
-#### Which log mechanism wins
-
-There are now three overlapping ways to declare what a test expects from diagnostics:
-
-| Mechanism | Channel | Semantics |
-|---|---|---|
-| `AssertsBuilderResult::expectResultWarnings()` | `Result::warnings()` | tolerance — may appear |
-| `assertOpenApiLogEntryContains()` | PSR logger | expectation — must appear, in order |
-| `ignoreLogEntries()` | PSR logger | tolerance — may appear |
-
-**Consolidate on the logger.** `Utils\CollectingLogger` both records to `entries()` *and*
-forwards to its delegate, and `CompilerInterface::validate()` returns those same entries. So
-since #2138, `Result::warnings()` and the PSR logger are two views of one
-stream, not two sources. The logger is the general capture point; `Result::warnings()` is a
-convenience over it.
-
-The cost of keeping both is already visible: `ExamplesTest` declares the same two compiler
-warnings twice, once per mechanism, because they arrive on both channels.
-
-Prior art on a stale branch: `origin/expexts-logger-contains` has an `ExpectsLoggerContains`
-trait plus a PHPUnit event subscriber that moves assertions from `tearDown()` to
-`afterTestMethodCalled`. That timing change is the interesting part and worth keeping.
-Treat it as reference only — it predates `doBuildSpec($hybrid)` so it is based on an old
-master, and the implementation is not known to be settled.
-
-Do this before or with the extraction, not after: extracting `TracksLogEntries` while the
-overlap stands would just relocate it.
+Full plan, the member table, and the log-mechanism comparison:
+[`backlog/testcase-concerns/README.md`](backlog/testcase-concerns/README.md).
 
 ### PR 11 — audit data providers that construct objects
 
@@ -467,19 +335,6 @@ Mechanics worth knowing before starting:
   current dumper differs from what is committed, so the diff is enormous and mostly noise.
 - `$expectedLogs` is keyed `{fixture}-{version}` with no mode component, so a warning raised
   in one mode only cannot be registered without skipping the other mode's case.
-
-### PR 13 — compiler diagnostics never reach `Builder::setLogger()` — **done, #2138**
-
-`Builder::resolveCompiler()` constructs compilers with no logger, so `CollectingLogger` has
-nothing to forward to. Compiler warnings reach `Result::warnings()` but never the PSR logger
-the caller supplied. The classic path does forward — `doBuildClassic()` wraps the user's
-logger — so the two pipelines behave differently for the same `setLogger()` call.
-
-Passing the logger through is a one-line fix, and it was tried: it surfaces a pre-existing
-`Schema: const is not supported in OpenAPI 3.0, using enum fallback` warning across ten
-`ExamplesTest` and `ScratchTest` cases, each of which then needs the expectation registered.
-Worth doing, but as its own change — those ten registrations are the actual work, and they
-document warnings nobody currently sees.
 
 ### PR 14 — apply the documentation rules to docblocks
 
@@ -549,130 +404,25 @@ that the strict-FIFO tracking logger has been swallowing.
 
 ### PR 16 — the mode performance comparison nobody has run
 
-The README claimed hybrid was "faster" than classic. Nothing measured that, and a
-head-to-head on identical sources has it 1.46x *slower* — expected, since hybrid runs the
-classic scanner and then the spec pipeline on top. The claim was dropped rather than
-reversed, because one fixture shape is not grounds for asserting either direction.
+The README claimed hybrid was "faster" than classic; measured, it's 1.46x slower. The two
+existing `*PerformanceTest` classes each measure their own pipeline's cleanup-enabled
+overhead against a different baseline at a different size — neither compares modes. A proper
+side-by-side, plus whether hybrid's double `Generator` pass (PR 17 territory) explains the
+gap, is what's missing before any performance claim goes back in the docs.
 
-The two `*PerformanceTest` classes look like they compare pipelines, but do not:
-
-- `Augmenter\CleanupPerformanceTest` — 3300 schemas, built in memory, augmenters only
-- `Processors\CleanUnusedComponentsPerformanceTest` — 300 schemas, written to disk, full
-  scan and generate
-
-Each measures the overhead ratio of enabling cleanup *within its own pipeline*, against a
-different baseline at a different size. Neither compares modes, and the two numbers they
-print cannot be read against each other.
-
-Timing the two cleanup implementations in isolation, on the same wide-and-shallow fixture
-(flat schemas, two or three properties, single-level refs, 40% unused):
-
-| schemas | spec `Augmenter\Cleanup` | classic `CleanUnusedComponents` |
-| ------- | ------------------------ | ------------------------------- |
-| 200     | 10.3 us/schema           | 20.5 us/schema                  |
-| 800     | 9.9 us/schema            | 22.6 us/schema                  |
-| 3200    | 10.4 us/schema           | 23.1 us/schema                  |
-
-Both are linear — 2.0x per doubling across the range. The difference is a constant factor
-of roughly 2.2x, not a scaling one.
-
-That is the part worth following up. The recursive cleanup in classic is known
-anecdotally to have caused real problems for users, and a constant factor does not explain
-that. This fixture is wide but shallow, so it never exercises the recursive annotation
-traversal in `Concerns\AnnotationTrait` — the thing most likely to degrade badly. A fixture
-with **nesting depth** (nested `allOf`, schemas within schemas, deep `JsonContent` trees) is
-the missing measurement, and the one that would confirm or kill the hypothesis.
-
-Worth doing:
-
-- a benchmark that varies depth as well as breadth, for both implementations
-- a genuine mode comparison on identical sources, if any performance claim is to be made
-  in the docs at all
-- check whether hybrid scans twice — `doHybridAssemble()` runs a second `Generator` pass
-  over the same sources the assembler already walked, which is the first place to look for
-  the 1.46x
-- PR 16 is about making the pipeline cheaper; PR 17 is about not running it over irrelevant
-  code in the first place, which measures as the larger effect by an order of magnitude
-
-Only worth stating in the README once measured across both dimensions; until then the docs
-should stay silent on relative performance.
+Numbers and the follow-up questions: [`backlog/performance/README.md`](backlog/performance/README.md).
 
 ### PR 17 — reflector sources make scanning optional, and that is where the time is
 
-Prompted by PR 16. The interesting performance question is not classic-vs-spec cleanup, it
-is whether the source scan needs to happen at all.
+Prompted by PR 16. Seeding `Builder` with controller reflectors instead of scanning a
+directory produced byte-identical output up to 14.76x faster as unrelated application code
+grew around a fixed API surface — scanning costs what the codebase costs, reflector-driven
+resolution costs what the API surface costs. Not yet actionable: no CLI path takes a
+reflector list, and where the controller list comes from (router / DI container / route
+cache) needs stating rather than assuming.
 
-`Builder::doBuildSpec()` tokenizes `$sourceScanner->getFiles()` and separately collects
-`$sourceScanner->getReflectors()`. Passing only reflectors leaves the file list empty, so
-the tokenizing loop does nothing. With the resolver discovering referenced classes
-transitively, a build seeded with just the controllers produces the same document as
-scanning the tree.
-
-Measured on a fixed API surface (100 schemas, 10 controllers, 100 operations) with a growing
-amount of ordinary non-API application code in the same tree:
-
-| non-API files | scan directory | controller reflectors | speedup |
-| ------------- | -------------- | --------------------- | ------- |
-| 0             | 23.9 ms        | 24.1 ms               | 0.99x   |
-| 200           | 44.4 ms        | 24.0 ms               | 1.85x   |
-| 800           | 107.6 ms       | 24.6 ms               | 4.37x   |
-| 3200          | 362.2 ms       | 24.5 ms               | 14.76x  |
-
-Output was byte-identical in every row.
-
-The shape is the point. Scanning costs what the *codebase* costs; resolver-driven reflection
-costs what the *API surface* costs, and stays flat as the application grows around it.
-
-Reading and tokenizing is strictly additive per file — work the reflector path never does at
-all. Timed on its own with a fresh `TokenScanner` (it memoises per file, so a warmed scanner
-measures zero):
-
-| files | tokenize | per file |
-| ----- | -------- | -------- |
-| 111   | 12.9 ms  | 117 us   |
-| 441   | 50.1 ms  | 114 us   |
-| 2041  | 183.7 ms | 90 us    |
-
-What is *not* free is the other side. Rough phase split at 400 schemas with no non-API code,
-where the two approaches come out level overall:
-
-| mode      | scan   | tokenize + collect | resolve | augment |
-| --------- | ------ | ------------------ | ------- | ------- |
-| directory | 2.6 ms | 57.6 ms            | 1.8 ms  | 63.2 ms |
-| reflector | 0 ms   | 18.4 ms            | 48.6 ms | 63.4 ms |
-
-Both must reflect and collect the same classes; the reflector path simply does it inside
-`Resolver\Reflection` instead of the tokenize loop, and adds `findUnresolved()` on top —
-12.3 ms at 400 schemas, a fixed two full sweeps of the ref walker, the schema reflectors and
-a rebuilt `ComponentIndex`. It converges in 2 iterations, so the loop is not the problem;
-the sweeps are just not free.
-
-That is why the 0-noise row is a wash rather than a win, and it is worth confirming before
-acting on any of this — the phase attribution above is approximate, since collect cost is
-very uneven between controllers and models and autoloading lands in whichever phase touches
-a class first.
-
-The large win therefore comes specifically from never touching code that is not API, not
-from reflection being cheaper than tokenizing. On the earlier fixture where 40% of models
-were merely unreferenced the gain was only 1.24-1.37x, because those models still had to be
-reflected once discovered.
-
-Open before any of this can be recommended:
-
-- **No CLI path.** `openapi <paths>` takes directories. A reflector-seeded build is
-  programmatic-only today, so the fast path is unreachable for CLI users.
-- **Where does the controller list come from?** The benchmark assumed the application
-  already knows it, which is true given a router, a DI container or a route cache, and false
-  for someone pointing the tool at a directory. That assumption should be stated rather than
-  buried.
-- **`#[OA\Info]` needs a source too** — it is not reachable from any controller, so it has
-  to be passed in alongside them.
-- Whether `guide/` should show the reflector-seeded form at all, or whether it stays a
-  documented capability of `Builder` until there is a CLI story.
-
-`reference/builder.md` already says the controllers are generally enough, which
-these numbers support. It does not claim anything about speed, and should not until the CLI
-question is settled.
+Full measurements, phase breakdown, and the open blockers:
+[`backlog/performance/README.md`](backlog/performance/README.md).
 
 ### PR 18 — `AttributeGenerator` is the last generator rendering by hand
 
@@ -806,19 +556,6 @@ Suggested split: the fictive example carries the documentation and can be verifi
 what the extension points page links to and what the Nelmio project reads. The fork PoC stays
 where it is as evidence the approach works against a real bundle, and is not polished into
 documentation.
-
-### PR 21 — `TypedList::clear()` — **done, #2145**
-
-`TypedList` can `add()`, `insert()`, `remove()` and `get()`, but there is no way to empty it.
-Anyone wanting to start from a clean slate — no augmenters, no resolvers, no translators —
-has to remove entries one at a time by class, which means knowing the whole default set
-first.
-
-That is exactly what someone experimenting with the pipeline wants to do, and what the
-extension points page in PR 20 would otherwise have to talk them through. Small addition,
-and it makes `withAugmenters(fn ($p) => $p->clear()->add(new OnlyMine()))` expressible.
-
-`Pipeline` wraps a `TypedList`, so both benefit.
 
 ### PR 22 — OpenAPI 3.2 field coverage in `src/Spec/`
 
