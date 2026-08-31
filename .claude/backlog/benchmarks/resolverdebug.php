@@ -7,7 +7,7 @@ use OpenApi\Builder\Mode;
 use OpenApi\Tests\Fixtures\Resolver\ProductController;
 
 // Use the project's own fixture, which is known to work via ResolverTest.
-$wt = dirname(__DIR__, 2);
+$wt = dirname(__DIR__, 3);
 require_once $wt . '/tests/Fixtures/Resolver/ProductController.php';
 require_once $wt . '/tests/Fixtures/Resolver/Product.php';
 require_once $wt . '/tests/Fixtures/Resolver/Manufacturer.php';
