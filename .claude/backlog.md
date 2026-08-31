@@ -46,9 +46,10 @@ Suggested order for what is left:
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8).
 
-The scripts behind every number in PR 16 and PR 17 are in
-[`.claude/benchmarks/`](benchmarks/README.md), so the measurements can be re-run rather than
-trusted.
+Entries that need supporting material get a folder under `.claude/backlog/`, named for the
+topic rather than the entry number so it survives renumbering. So far:
+[`backlog/benchmarks/`](backlog/benchmarks/README.md), the scripts behind every number in
+PR 16 and PR 17 — there so the measurements can be re-run rather than trusted.
 
 ---
 
@@ -679,15 +680,35 @@ since the build matrix spans PHP 8.2 to 8.6.
 
 Two halves, both parked and both worth keeping.
 
-**The design docs** are on `feat/downstream-support` (47 commits behind master, never
-merged):
+**The design docs** were on `feat/downstream-support`, 1632 lines across four files. That
+branch has been dropped — almost everything it proposed has since shipped:
 
-| File | Lines | Covers |
-| --- | --- | --- |
-| `docs/SWAGGER_PHP_NATIVE_SPEC_PLAN.md` | 830 | letting swagger-php scan, and why hybrid does not fit |
-| `docs/downstream-integration.md` | 404 | making the pipeline usable by Nelmio, API Platform, Lumen, custom frameworks |
-| `docs/SWAGGER_PHP_UPGRADE_PLAN.md` | 365 | how Nelmio integrates with classic today |
-| `docs/spec-attributes.md` | 33 | augmenter additions and shipping notes |
+| Proposal | Status |
+| --- | --- |
+| widen `addSource()` to accept reflectors | shipped, `string\|\SplFileInfo\|\Reflector\|iterable` |
+| reflector parameter on `AttributeTranslatorInterface::translate()` | shipped |
+| add `Schema\Ref` | shipped, `src/Spec/Schema/Ref.php` |
+| add `Pipeline::insertAfter()` | dropped — `TypedList::insert()` takes a callable returning an index, so this is redundant |
+| document programmatic `Specification` population | becomes the extension points page below |
+| document the Attachable metadata pattern | as above |
+| document `Undefined` scope in spec attributes | as above |
+
+Its tip was `d6a0ac5d` if any of the rest is ever wanted back.
+
+What does not exist anywhere else is the set of design principles it recorded — constraints
+on how the pipeline should *not* be extended, each with a reason:
+
+- **Do not widen property types for downstream convenience.** The strong typing is the
+  point. Downstream metadata belongs in Attachables, not in `$ref: string|object`.
+- **Do not add framework-specific code.** swagger-php stays framework-agnostic; translators,
+  augmenters and attachables are the contract.
+- **Do not add event or listener patterns.** The pipeline is deterministic and debuggable.
+  Events introduce non-obvious ordering and make testing harder.
+- **Do not expose Assembler internals.** `collect()` is the contract; two-pass resolution is
+  an implementation detail.
+
+These belong in the extension points page — they answer "why can't I just…", which is the
+question an integrator actually arrives with.
 
 **The proof of concept** is `DerManoMann/NelmioApiDocBundle` at `spec-poc`, locally
 `../NelmioApiDocBundleFork`. About 540 lines under `src/SpecPoC/` — three attributes, two
@@ -761,6 +782,19 @@ Suggested split: the fictive example carries the documentation and can be verifi
 what the extension points page links to and what the Nelmio project reads. The fork PoC stays
 where it is as evidence the approach works against a real bundle, and is not polished into
 documentation.
+
+### PR 21 — `TypedList::clear()`
+
+`TypedList` can `add()`, `insert()`, `remove()` and `get()`, but there is no way to empty it.
+Anyone wanting to start from a clean slate — no augmenters, no resolvers, no translators —
+has to remove entries one at a time by class, which means knowing the whole default set
+first.
+
+That is exactly what someone experimenting with the pipeline wants to do, and what the
+extension points page in PR 20 would otherwise have to talk them through. Small addition,
+and it makes `withAugmenters(fn ($p) => $p->clear()->add(new OnlyMine()))` expressible.
+
+`Pipeline` wraps a `TypedList`, so both benefit.
 
 ---
 

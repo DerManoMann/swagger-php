@@ -11,7 +11,7 @@ use OpenApi\Resolver\Reflection;
 use OpenApi\Tests\Fixtures\Resolver\ProductController;
 use OpenApi\Utils\TypedList;
 
-$wt = dirname(__DIR__, 2);
+$wt = dirname(__DIR__, 3);
 foreach (['ProductController', 'Product', 'Manufacturer', 'Weight'] as $c) {
     require_once $wt . "/tests/Fixtures/Resolver/{$c}.php";
 }

@@ -6,7 +6,7 @@
  * They run against whatever is checked out, so a benchmark that needs the resolver needs a
  * branch that has it.
  */
-require dirname(__DIR__, 2) . '/vendor/autoload.php';
+require dirname(__DIR__, 3) . '/vendor/autoload.php';
 
 function requireResolver(): void
 {
