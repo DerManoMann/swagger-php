@@ -43,13 +43,18 @@ Suggested order for what is left:
    rather than as part of removing classic: it turns that removal into a deletion.
 7. **PR 11** — audit the thirteen providers that construct objects. Cheap, and until it is
    done any coverage figure understates reality by an unknown amount.
+8. **PR 22** — OpenAPI 3.2 field coverage in `src/Spec/`. Phases 1-3 are ready; Phase 4 is
+   blocked on Q5.
 
-Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8).
+Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). Q5 should be
+settled before starting PR 22's Phase 4.
 
 Entries that need supporting material get a folder under `.claude/backlog/`, named for the
 topic rather than the entry number so it survives renumbering. So far:
 [`backlog/benchmarks/`](backlog/benchmarks/README.md), the scripts behind every number in
-PR 16 and PR 17 — there so the measurements can be re-run rather than trusted.
+PR 16 and PR 17 — there so the measurements can be re-run rather than trusted; and
+[`backlog/spec-3.2/`](backlog/spec-3.2/README.md), the full field-by-field audit behind
+PR 22.
 
 ---
 
@@ -80,6 +85,20 @@ becomes the default.
 Written as a reference/experiment to see if the format was useful. Both files describe the
 *classic* pipeline only, so they stay as-is and serve as reference until classic is removed.
 Condensing them into LLM context is acceptable in principle, just not now.
+
+**Q5. How does a reusable, `$ref`-able `PathItem` or `MediaType` get a component identity?** —
+OPEN (2026-09-01)
+`Parameter`/`Header`/`Link` solve this with a component-key constructor field (`parameter:`,
+`header:`, `link:`) plus a conditional `isRoot()` that is true only when that key is set and
+`ref` is not. `PathItem` has neither — it is unconditionally root, and its `path` is always a
+resolved URL, never a component name, so nothing distinguishes "the shared metadata for
+`/pets/{id}`" from "a reusable path-item template to `$ref` from elsewhere". `MediaType` is
+worse: `$mediaType` is simultaneously the value (`'application/json'`) and, today, the only
+thing that could serve as a lookup key — a named `components.mediaTypes` entry needs an
+identity independent of the media-type string itself. Blocks Phase 4 of PR 22
+(`Components.pathItems` / `Components.mediaTypes`). See the "Phase 4" section of
+[`backlog/spec-3.2/README.md`](backlog/spec-3.2/README.md) for the two options sketched so
+far.
 
 ---
 
@@ -800,6 +819,28 @@ extension points page in PR 20 would otherwise have to talk them through. Small 
 and it makes `withAugmenters(fn ($p) => $p->clear()->add(new OnlyMine()))` expressible.
 
 `Pipeline` wraps a `TypedList`, so both benefit.
+
+### PR 22 — OpenAPI 3.2 field coverage in `src/Spec/`
+
+Spec attributes are meant to be version-agnostic: one DTO holds every version's fields, and
+the per-version `Compiler` (`OpenApi30Compiler` / `OpenApi31Compiler` / `OpenApi32Compiler`)
+decides what to emit — see `nullable` handling in `OpenApi30Compiler::compileSchema()` for the
+established pattern. `OpenApi32Compiler` already exists, but as a two-method subclass built
+for the one piece of 3.2 already implemented (`Tag::$parent`/`$kind`, plus a validation rule
+for dangling `parent` references). It comments "adds Tag summary/parent/kind and PathItem
+query" — the PathItem/query half was never done.
+
+A field-by-field audit against the [3.2.0 spec](https://spec.openapis.org/oas/v3.2.0.html)
+found ten more additions with no DTO field at all: `OpenApi::$self`, `Server::$name`,
+`Example::$dataValue`/`$serializedValue`, a `cookie` parameter style, a `querystring`
+parameter location, the `query` HTTP method plus `additionalOperations` for custom verbs,
+`MediaType::$itemSchema`, `Encoding::$itemEncoding`/`$prefixEncoding`, OAuth2's
+`deviceAuthorization` flow, and `Security\Scheme::$oauth2MetadataUrl`. Two of them —
+`Components.pathItems` and `Components.mediaTypes` — don't fit the existing component-key
+pattern and need Q5 settled first.
+
+Full audit (with spec citations), the phase breakdown, and Q5's two sketched options:
+[`backlog/spec-3.2/README.md`](backlog/spec-3.2/README.md).
 
 ---
 
