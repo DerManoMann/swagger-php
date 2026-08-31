@@ -579,6 +579,38 @@ pattern and need Q5 settled first.
 Full audit (with spec citations), the phase breakdown, and Q5's two sketched options:
 [`backlog/spec-3.2/README.md`](backlog/spec-3.2/README.md).
 
+### PR 23 — audit where classes ended up after the `Utils/` migration
+
+#2039 moved `TokenScanner` and others into `OpenApi\Utils`, and it has been the default
+landing spot for anything that isn't obviously `Spec\`/`Attributes\` vocabulary ever since.
+Some of what's there is genuinely general-purpose (`TypedList`, `TokenScanner`,
+`SourceLocation`), and some looks like it belongs to a subsystem that already has its own
+directory:
+
+- `AttributeFactory` — assembly-time attribute translation, driven by
+  `AttributeTranslatorInterface` implementations; `src/Assembler/` already exists for exactly
+  this (`AbstractAttributeTranslator`, `DefaultAttributeTranslator`,
+  `OptionalPropertyAttributeTranslator`)
+- `PipeInterface` — the augmenter extension-point interface `Builder::withAugmenters()`
+  accepts. `src/Contracts/` holds every other public extension-point interface
+  (`AttributeInterface`, `AttributeTranslatorInterface`, `CompilerInterface`,
+  `ResolverInterface`); `PipeInterface` reads like the odd one out
+- `SpecificationWalker` — walks a `Specification`; `src/Specification/` already exists for
+  its collaborators (`ComponentIndex`)
+- `CollectingLogger` — `src/Loggers/` already exists (`DefaultLogger`) and holds none of the
+  other logger implementations
+
+Not a decision, just a survey worth doing before the next class has to land in `Utils/` by
+default because nobody checked whether it has a better home — which is how this came up:
+picking a home for `Config` (PR 1) required reasoning it through from scratch instead of
+following a clear convention.
+
+Each move is small in isolation (rename, fix imports, likely a deprecated shim at the old
+location the way `src/Pipeline.php` and `src/SourceFinder.php` already alias into `Utils/` —
+several of these classes are used by downstream code, per the extension-points table in
+PR 20) but touches call sites across `src/` and `tools/`, so worth batching into one pass
+rather than doing it ad hoc mid unrelated PRs.
+
 ---
 
 ## Not doing
