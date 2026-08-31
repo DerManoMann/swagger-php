@@ -1,0 +1,120 @@
+# Archive
+
+Full write-ups for merged [backlog](../backlog.md) entries. The terse, one-line form of each
+stays in backlog.md's "Where this stands"; this is where the reasoning behind them lives once
+they stop being work left to do. Kept rather than deleted for the same reason the rest of the
+backlog exists — decisions and the "outcome" write-ups they produced don't survive anywhere
+else.
+
+Entries keep their original PR number; numbers are not reused.
+
+### PR 4 — deduplicate `AugmenterGenerator` and `ProcessorGenerator` — **done, #2141**
+
+408 lines across the two classes, with substantial copy-paste between them. Two fixes in
+this cleanup had to be applied *twice, identically*: the ctor-param config rule
+(`collectOptions()`) and the CLI prose block in `renderConfigSection()`. That is the tell.
+
+Duplicated near-verbatim:
+- `collectOptions()` — same setter scan, same type/description/default extraction
+- `resolveDefault()` — same ctor-parameter lookup and `gettype()` match
+- `renderConfigSection()` prose — same paragraph, differing only in "augmenter"/"processor"
+  and the `--mode spec` flag
+
+The copies have already drifted, which is the real cost:
+
+| | `AugmenterGenerator` | `ProcessorGenerator` |
+|---|---|---|
+| Rendering | `Sections` abstraction (`SectionInterface` + `ConfigSettingsSection` etc.), swappable via `setSections()` | hand-rolled inline via `renderer->processorOptions()` |
+| Output style | markdown list items | `<span style="font-family: monospace;">` HTML blocks |
+| `resolveDefault()` | guards `isDefaultValueAvailable()` | **no guard** — `getDefaultValue()` throws `ReflectionException` on a ctor param without a default (latent; every documented option happens to have one) |
+| Class docblock | strips `@implements` | does not |
+| `configPrefix` | computed in the collected data | recomputed at render time |
+| CLI example | correct | had `operatinId.hash` — a typo the other copy did not have, fixed in 4923c297 |
+
+The divergent output style is user-visible: two pages in the same reference section present
+the same kind of information in two different visual formats, for no reason other than that
+one generator was refactored onto `Sections` and the other was not.
+
+Suggested: move `collectOptions()`/`resolveDefault()` onto `DocGenerator` (where
+`configurableParameters()` already lives), port `ProcessorGenerator` onto the `Sections`
+abstraction so both render identically, and parameterise the shared CLI prose on
+noun + mode flag. Genuine differences worth keeping: `ProcessorGenerator` also globs the
+`Processors` directory to document processors that are not in the default pipeline.
+
+Note this is orthogonal to PR 1 — if config moves to a `#[Config]` attribute, the shared
+extraction shrinks but the rendering divergence remains.
+
+**Outcome.** 339 deletions for 184 insertions, in three steps: share the collection, share
+the configuration prose, render processors through the shared sections. The plumbing turned
+out to be copied in *three* generators, not two — `SpecAttributeGenerator` had it as well —
+so that page regenerating byte-identically was the evidence the lift was safe.
+
+Five defects surfaced, only one of them visible in output:
+
+- `ProcessorGenerator::resolveDefault()` calling `getDefaultValue()` unguarded (as predicted
+  above; the merged copy keeps the guard, so this entry's claim is now moot)
+- `ConfigSettingsSection` indenting only the first line of a description, which pushed
+  `expandEnums.enumNames` and its fenced YAML block out of their list item — the one
+  user-visible bug, and invisible until a multi-line description went through it
+- `getName()` called on what may be a union or intersection type, in five places
+- a loop variable shadowing the union it was iterating, so `allowsNull()` tested the last
+  member rather than the union
+- docblocks naming `AbstractAttribute` in the wrong namespace
+
+The last three came from adding `tools` to the phpstan paths, which had never been analysed.
+processors.md also gained the `Unknown keys are reported as warnings` sentence, true of it
+all along since `Utils\Pipeline` warns for both pipelines.
+
+### PR 9 — scratch fixtures as end-to-end coverage, and more for Redocly to check — **done, #2144**
+
+`tests/Spec/UncoveredAttributesTest.php` covers the previously-unexercised attributes by
+building a `Specification` by hand and asserting compiler output. That is a unit test: it
+skips assembly and augmentation entirely.
+
+Scratch fixtures would be better, and probably should replace it. A fixture under
+`tests/Fixtures/Scratch/` exercises the whole pipeline — assembler, augmenters, compiler —
+and produces a YAML file per OpenAPI version. Two things follow from that:
+
+- the attributes get *end-to-end* coverage rather than compiler-only
+- the emitted YAML lands in the set `composer redocly` already lints
+  (`tests/Fixtures/Scratch/*.yaml`, currently 123 files), so the output is checked against
+  the OpenAPI schema rather than only against our own expectations
+
+Worth going further: generate more spec output to file generally, so Redocly validates a
+wider surface, and so tests can assert against the same files rather than restating expected
+structure inline. Anything asserted inline is an expectation we wrote; anything Redocly
+accepts is an expectation the specification wrote.
+
+Candidates for new fixtures: the typed operation subclasses (`Head`, `Options`, `Trace`),
+the OAuth flows, `MutualTls` / `OpenIdConnect`, and `Link` — which has an `isRoot()`
+condition that no example currently exercises.
+
+**Outcome.** #2144 added scratch fixtures for `Head`, `Options`, `Trace` and `Link` (root).
+Auth fixtures (`MutualTls`, `OpenIdConnect`, OAuth flows) were already covered by #2137's
+`Auth` fixture. Remaining candidate: `MediaType\Xml`.
+
+### PR 13 — compiler diagnostics never reach `Builder::setLogger()` — **done, #2138**
+
+`Builder::resolveCompiler()` constructs compilers with no logger, so `CollectingLogger` has
+nothing to forward to. Compiler warnings reach `Result::warnings()` but never the PSR logger
+the caller supplied. The classic path does forward — `doBuildClassic()` wraps the user's
+logger — so the two pipelines behave differently for the same `setLogger()` call.
+
+Passing the logger through is a one-line fix, and it was tried: it surfaces a pre-existing
+`Schema: const is not supported in OpenAPI 3.0, using enum fallback` warning across ten
+`ExamplesTest` and `ScratchTest` cases, each of which then needs the expectation registered.
+Worth doing, but as its own change — those ten registrations are the actual work, and they
+document warnings nobody currently sees.
+
+### PR 21 — `TypedList::clear()` — **done, #2145**
+
+`TypedList` can `add()`, `insert()`, `remove()` and `get()`, but there is no way to empty it.
+Anyone wanting to start from a clean slate — no augmenters, no resolvers, no translators —
+has to remove entries one at a time by class, which means knowing the whole default set
+first.
+
+That is exactly what someone experimenting with the pipeline wants to do, and what the
+extension points page in PR 20 would otherwise have to talk them through. Small addition,
+and it makes `withAugmenters(fn ($p) => $p->clear()->add(new OnlyMine()))` expressible.
+
+`Pipeline` wraps a `TypedList`, so both benefit.
