@@ -46,6 +46,8 @@ Suggested order for what is left:
    blocked on Q5.
 7. **PR 15** — mode-aware `ScratchTest` log keys, now that #2148 supplies the
    expect/allow vocabulary the three tolerated diagnostics need.
+8. **PR 25** — `#[Since]`. Blocks PR 22's Phase 1b, and closes nineteen silent drops that
+   have nothing to do with 3.2.
 
 PR 10 is paused by decision, not blocked — see its entry.
 
@@ -653,6 +655,120 @@ is a short addition to CONTRIBUTING next to the PR paragraph, not a new document
 
 Came up while splitting the `Undefined::UNDEFINED` work out of `feat/spec-3.2-fields`:
 writing the message meant guessing at a convention that only exists for PR descriptions.
+
+### PR 25 — `#[Since]`: declare the version a field arrived in, where it can be used
+
+**Nothing should disappear from a document without saying so.** That is the principle; the
+compilers are about half way to it. Compiling a `Schema` with every keyword set at 3.0 and
+diffing against 3.1 shows six keywords warn and nine vanish in silence:
+
+| Warns | Silent |
+| --- | --- |
+| `prefixItems`, `unevaluatedItems`, `unevaluatedProperties`, `if`/`then`/`else`, `examples`, `const` | `contentMediaType`, `contentEncoding`, `contains`, `minContains`, `maxContains`, `patternProperties`, `propertyNames`, `dependentRequired`, `dependentSchemas` |
+
+Add `Tag::$summary`/`$parent`/`$kind`, silent in both 3.0 and 3.1 since they landed, and the
+seven fields PR 22 Phase 1a added the same way, and **nineteen fields drop silently today**.
+
+Hand-writing nineteen checks would match the precedent in
+`OpenApi30Compiler::validateSchemas()`, and scale exactly as badly as PR 15 documented:
+#2137 added a diagnostic, #2138 seeded the ignore list, both were green alone and only the
+merged state failed. The twentieth field is the one nobody remembers.
+
+**The mechanism to copy is `#[Config]` (#2146)** — a declarative attribute on a constructor
+parameter, plus a static reflection helper, driving behaviour the code does not restate.
+`#[Since('3.2.0')]` in the same shape pays off three times:
+
+1. **Diagnostics.** One check in the base compiler warns for any set property the target
+   version cannot carry. New fields get their warning by declaring themselves.
+2. **Generated docs.** `reference/spec-attributes.md` is spliced from these docblocks, so
+   the version a field arrived in can be rendered per parameter instead of being invisible.
+3. **Retiring the prose form.** Seven `@param` lines already carry a hand-written `(3.2+)`
+   and `Tag::$parent`/`$kind` carry nothing — the fact is restated, inconsistently, in the
+   one place PR 3 says restated facts go to rot.
+
+Enum cases can carry attributes too, so `ParameterStyle::Cookie`,
+`FlowType::DeviceAuthorization` and `HttpMethod::Query` are covered. That is what makes
+PR 22's Phase 1b tractable: its awkwardness was that those are *values*, not fields, with
+nowhere to hang the rule.
+
+#### Coverage is partial by design, and that is the important part
+
+A spec attribute is not a wire-format record. The DTO models the domain once — the spec
+way — and how that serializes per version is the compiler's separate question. So a set
+field has **three** possible fates, not two:
+
+| Fate | Examples | Who decides |
+| --- | --- | --- |
+| **Emitted** | most fields | the compiler's field list |
+| **Translated** | `nullable` → `type: [x, 'null']`, `const` → `enum: [c]`, `examples` → `example`, boolean vs numeric `exclusiveMinimum` | hand-written per-version code |
+| **Dropped** | the nineteen above | nothing, today |
+
+`#[Since]` only speaks to the emitted/dropped boundary. It says *"the wire format gained
+this field in version X"*, not *"you may not set this property below version X"* —
+`Schema::$nullable` is settable at every version and means something at every version; only
+its serialization moves. Marking it `#[Since]` anything would be wrong, and marking `const`
+`#[Since('3.1.0')]` would produce a "dropped" warning for a field that is in fact
+translated.
+
+So the attribute should cover **only fields that need no special handling**, and everything
+translated keeps its hand-written rule and its hand-written documentation. Partial coverage
+is the correct outcome here, not a shortfall — the alternative is forcing a declarative
+mechanism to describe translations, which is where the can of worms is.
+
+Which means the drift test below needs an explicit "handled elsewhere" list. That list is
+worth having for its own sake: **the set of translated fields is currently written down
+nowhere**, only inferable by reading three compilers side by side.
+
+**The drift test.** Populate every field on a DTO, compile at each version, assert nothing
+absent from the output passed without a diagnostic — with the translated fields exempted by
+name. Roughly twenty lines; the table above came from exactly that script, run ad hoc.
+
+#### Look for prior art first
+
+Versioned models with per-version serialization is not a new problem, and none of the leads
+below have been checked — they are where to start, not findings:
+
+- **JMS Serializer** (PHP) has `Since`/`Until` on properties with a version-aware exclusion
+  strategy. Closest thing to this proposal in the same language, and worth reading for the
+  parts that are not obvious: how the version is threaded through, whether both ends were
+  actually needed, and what it does about fields that need transforming rather than
+  including or excluding.
+- **Spectral** rulesets declare applicability per format (`oas2`, `oas3_0`, `oas3_1`), and
+  **Redocly**'s `struct` rule knows which fields each version allows — it is what rejected
+  `MediaType::$description`. Both express "which field, which version" as data rather than
+  as code, and Redocly is already in `node_modules/`, so it costs nothing to look.
+- **Protobuf**'s `reserved` and deprecation handling is the same shape one step further
+  along, and is the obvious place to check whether a "removed in" axis earns its keep.
+
+There is also a **structural alternative worth weighing before writing any attribute**: the
+OpenAPI Initiative publishes a machine-readable JSON Schema per version, and diffing two of
+them is exactly how the audit table in this entry was produced. Deriving the
+emitted-versus-dropped boundary from those schemas would need no annotation on the DTOs at
+all. Against it: they describe the wire format only, so translated fields still need
+hand-written rules either way; and they would have to be vendored and pinned, which is a
+dependency on someone else's release cadence. But it removes the burden of remembering to
+annotate, which is the whole failure mode this entry exists to prevent — so it deserves a
+fair hearing rather than being dismissed for being less idiomatic.
+
+Open before starting:
+
+- **Are ranges needed?** Only for a field *removed* from the wire format and not translated
+  in its place. There is no such case today — 3.2 drops `Link.body`, which the DTO never
+  had. Start with `#[Since]` alone and add the other end when something actually needs it.
+- **Should `Example::$dataValue` be translated rather than dropped?** Phase 1a dropped it
+  for 3.0 and 3.1 by fiat, but `value` is the older field for the same thing, so translating
+  is arguable. A question about that field, not about the mechanism — but the mechanism
+  makes the choice explicit rather than accidental.
+- **Warning volume.** Diagnostics are per-occurrence, so a 3.0 document with 200 schemas
+  using `contains` gets 200 lines. Consistent, but worth choosing rather than discovering.
+- **Fixture churn.** Nineteen new warnings move existing `$expectedLogs`. `Scratch/Spec32`
+  alone would emit fourteen, though being spec-only it dodges PR 15's mode-key problem.
+
+Reflection cost is not among the worries: the map is built once per run and cacheable per
+class, the way `Config::forConstructor()` already is.
+
+Prompted by the question of whether Phase 1b's new enum values should warn or drop silently.
+The answer is warn — and so should the eighteen fields that already do not.
 
 ### PR 23 — audit where classes ended up after the `Utils/` migration
 
