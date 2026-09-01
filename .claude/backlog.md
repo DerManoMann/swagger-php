@@ -14,7 +14,11 @@ written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
-Nothing is open. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
+Open: **#2146** (`#[Config]` attribute, PR 1, plus the PR description template),
+**#2147** (`AssertsSpecEquals` extracted and `AssertsBuilderResult` retired, part of PR 10),
+**#2148** (`ExpectsLogEntries`, the rest of PR 10's logger half).
+
+Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
 changes), **#2136** (developer docs, and the writing rules), **#2137** (`ComponentIndex`,
 slot-target validation, and the attributes nothing was compiling), **#2138** (compiler
 diagnostics reaching the configured logger, PR 13), **#2139** (README corrections),
@@ -30,21 +34,21 @@ spec pipeline 94.2%, classic 92.9%, project 90.6%.
 
 Suggested order for what is left:
 
-1. **PR 1** — `#[Config]`, so `-D` output and the reference pages derive from one
-   declaration rather than two rules aligned by hand.
-2. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
+1. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
    already specifies the runnable half; this is implementing it.
-3. **PR 8** — the remaining test gaps. Run coverage in CI first; the survey behind it used a
+2. **PR 8** — the remaining test gaps. Run coverage in CI first; the survey behind it used a
    structural proxy and cannot see weakly-exercised code.
-4. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
+3. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
    enough on its own. Verifying is much cheaper than generating.
-5. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
-6. **PR 10** — free the last two spec tests from `OpenApiTestCase`. Worth doing before v8
-   rather than as part of removing classic: it turns that removal into a deletion.
-7. **PR 11** — audit the thirteen providers that construct objects. Cheap, and until it is
+4. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
+5. **PR 11** — audit the thirteen providers that construct objects. Cheap, and until it is
    done any coverage figure understates reality by an unknown amount.
-8. **PR 22** — OpenAPI 3.2 field coverage in `src/Spec/`. Phases 1-3 are ready; Phase 4 is
+6. **PR 22** — OpenAPI 3.2 field coverage in `src/Spec/`. Phases 1-3 are ready; Phase 4 is
    blocked on Q5.
+7. **PR 15** — mode-aware `ScratchTest` log keys, now that #2148 supplies the
+   expect/allow vocabulary the three tolerated diagnostics need.
+
+PR 1 is in review (#2146). PR 10 is paused by decision, not blocked — see its entry.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). Q5 should be
 settled before starting PR 22's Phase 4.
@@ -270,7 +274,16 @@ deletion instead of an untangling. Also settles which of three overlapping
 diagnostic-assertion mechanisms to standardise on: the PSR logger, since `CollectingLogger`
 already forwards to it and `Result::warnings()` is just a view over the same stream.
 
-Full plan, the member table, and the log-mechanism comparison:
+**Partly done, and deliberately paused.** #2147 extracted `AssertsSpecEquals` and retired
+`AssertsBuilderResult`; #2148 added `ExpectsLogEntries`, which covers the logger members.
+`ScratchTest` is now two small extractions (`fixture()`, `getTypeResolvers()`) from dropping
+the base class. The decision is to stop there: the base class stays, new tests use the new
+traits, and the rest goes at v8 with classic. Migrating existing tests earns little while
+`OpenApiTestCase` still has to exist.
+
+The event-subsystem approach `origin/expexts-logger-contains` explored was investigated and
+rejected — that branch can be dropped. Full plan, the member table, the log-mechanism
+comparison, and what the PHPUnit event measurements showed:
 [`backlog/testcase-concerns/README.md`](backlog/testcase-concerns/README.md).
 
 ### PR 11 — audit data providers that construct objects
@@ -401,6 +414,12 @@ some check catches it.
 
 Worth checking at the same time whether other fixtures were written to provoke diagnostics
 that the strict-FIFO tracking logger has been swallowing.
+
+`ExpectsLogEntries` (#2148) is half of this: it supplies the `expectLogEntry()` /
+`allowLogEntry()` split that names the distinction honestly, and it drops the FIFO ordering
+so declaration order stops mattering. It does **not** change the key, so the three
+tolerances above only become assertions once the mode component lands as well — do both in
+one change.
 
 ### PR 16 — the mode performance comparison nobody has run
 
