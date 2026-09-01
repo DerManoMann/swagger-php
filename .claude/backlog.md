@@ -635,6 +635,25 @@ cheapest confirmation that the output is actually accepted — it was already ri
 Full audit (with spec citations), the phase breakdown, and Q5's two sketched options:
 [`backlog/spec-3.2/README.md`](backlog/spec-3.2/README.md).
 
+### PR 24 — nothing says what a commit message should contain
+
+`.github/PULL_REQUEST_TEMPLATE.md` and CONTRIBUTING's "Pull request titles follow
+`type(Scope): subject`" both govern pull requests. The only rule touching commits is one
+line in `AGENTS.md` — the same `type(Scope): subject` shape and the list of allowed types —
+and it says nothing about bodies.
+
+That is a gap rather than a deliberate omission, because CONTRIBUTING leans on the commit
+trail without ever describing it: "History that lives elsewhere — earlier attempts,
+abandoned branches, related work in other pull requests — belongs in the issue or commit
+trail, not here." Material is being routed somewhere the conventions never define.
+
+The PR template's own guidance transfers almost unchanged — why the change exists rather
+than how, identifiers in backticks, no code snippets, keep to the change at hand — so this
+is a short addition to CONTRIBUTING next to the PR paragraph, not a new document.
+
+Came up while splitting the `Undefined::UNDEFINED` work out of `feat/spec-3.2-fields`:
+writing the message meant guessing at a convention that only exists for PR descriptions.
+
 ### PR 23 — audit where classes ended up after the `Utils/` migration
 
 #2039 moved `TokenScanner` and others into `OpenApi\Utils`, and it has been the default
