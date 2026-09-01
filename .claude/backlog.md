@@ -14,7 +14,11 @@ written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
-Nothing is open. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
+Three open: **#2150** (`Undefined::UNDEFINED` on every `mixed` property, the narrow half of
+PR 8's null question), **#2151** (pin phpstan, PR 19), **#2152** (`$argv` guard in
+`tools/docgen.php`).
+
+Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
 changes), **#2136** (developer docs, and the writing rules), **#2137** (`ComponentIndex`,
 slot-target validation, and the attributes nothing was compiling), **#2138** (compiler
 diagnostics reaching the configured logger, PR 13), **#2139** (README corrections),
@@ -31,28 +35,47 @@ phpstan now covers `tools/` as of #2141, so the doc generators have static analy
 first time. pcov is installed locally, so coverage numbers are real rather than inferred:
 spec pipeline 94.2%, classic 92.9%, project 90.6%.
 
-Suggested order for what is left:
+### The goal, as of 2026-09-02
 
-1. **PR 3** — `composer docs:check`. The review checklist in `docs/dev/writing-docs.md`
-   already specifies the runnable half; this is implementing it.
-2. **PR 8** — the remaining test gaps. Run coverage in CI first; the survey behind it used a
-   structural proxy and cannot see weakly-exercised code.
-3. **PR 6** — generated code fragments, and only if PR 3's verification turns out not to be
-   enough on its own. Verifying is much cheaper than generating.
-4. **PR 7** — augmenter config on two pages. Small, independent, do it whenever.
-5. **PR 11** — audit the thirteen providers that construct objects. Cheap, and until it is
-   done any coverage figure understates reality by an unknown amount.
-6. **PR 22** — OpenAPI 3.2 field coverage in `src/Spec/`. Phases 1-3 are ready; Phase 4 is
-   blocked on Q5.
-7. **PR 15** — mode-aware `ScratchTest` log keys, now that #2148 supplies the
-   expect/allow vocabulary the three tolerated diagnostics need.
-8. **PR 25** — `#[Since]`. Blocks PR 22's Phase 1b, and closes nineteen silent drops that
-   have nothing to do with 3.2.
+**Make the spec pipeline as good as it can be at what it already does**, rather than
+widening what it covers. Three strands: finish the test migration as far as it will go,
+find behaviour classic tests assert and spec tests do not, and get the documentation right.
 
-PR 10 is paused by decision, not blocked — see its entry.
+This displaced the previous order, which had 3.2 field coverage in the middle of it. **PR 22
+and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading before either
+is picked up again, because it inverts their dependency.
 
-Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). Q5 should be
-settled before starting PR 22's Phase 4.
+Suggested order:
+
+1. **PR 11** — audit the thirteen providers that construct objects, and add `--coverage-text`
+   to CI (from PR 8). This is the measuring instrument: a provider-constructed class reads as
+   untested, so until it is fixed every "what is missing" call runs on numbers understated by
+   an unknown amount. Cheap, and it gates 2-5.
+2. **PR 26** — the classic-to-spec behavioural parity audit. The largest unknown, and the
+   reason this order exists.
+3. **PR 15** — mode-aware `ScratchTest` log keys. Before the new fixtures, not after: the key
+   shape is what every new fixture's `$expectedLogs` inherits.
+4. **PR 10** — finish the extraction, as far as it goes. Early, so the tests PR 26 produces
+   are written on the traits rather than on `OpenApiTestCase`.
+5. **PR 8** + **PR 12** — remediation, from what PR 26 and the corrected coverage actually
+   show.
+6. **PR 14** — docblocks in `src/Spec/`. The most user-facing documentation work here: those
+   docblocks are spliced into `reference/spec-attributes.md`, so an imprecise one ships as
+   published documentation.
+7. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
+8. **PR 3** — `composer docs:check`. After the content work under this goal, not before:
+   it locks down documentation that has just been made correct rather than guarding
+   documentation about to be rewritten.
+9. **PR 20's extension points page only** — the largest remaining documentation gap, since
+   nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
+   it is outward-facing and a separate decision.
+
+**PR 6** stays conditional on PR 3. **PR 16**, **PR 17**, **PR 18**, **PR 23** and **PR 24**
+are all orthogonal to this goal; 24 is cheap enough to fold into anything already touching
+CONTRIBUTING.
+
+Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). Q5 is parked
+with PR 22.
 
 Entries that need supporting material, or have grown too long for the numbered list, get a
 folder under `.claude/backlog/`, named for the topic rather than the entry number so it
@@ -98,7 +121,9 @@ Written as a reference/experiment to see if the format was useful. Both files de
 Condensing them into LLM context is acceptable in principle, just not now.
 
 **Q5. How does a reusable, `$ref`-able `PathItem` or `MediaType` get a component identity?** —
-OPEN (2026-09-01)
+PARKED (2026-09-02, opened 2026-09-01)
+Parked with PR 22 rather than answered — it only ever mattered as a blocker on that entry's
+Phase 4, and nothing else waits on it.
 `Parameter`/`Header`/`Link` solve this with a component-key constructor field (`parameter:`,
 `header:`, `link:`) plus a conditional `isRoot()` that is true only when that key is set and
 `ref` is not. `PathItem` has neither — it is unconditionally root, and its `path` is always a
@@ -230,14 +255,21 @@ Still open:
   unset, except where `null` is a value": a `mixed` property defaults to
   `Undefined::UNDEFINED`, because `null` is a legal value for it and so cannot also mean "not
   set". That was already what 12 of the 14 `mixed` properties in `src/Spec/` did — it just had
-  nowhere to be read. The two deviations are `Example::$value` and `Link::$requestBody`, both
-  named in the doc, and aligning them changes no output, since `filter()` drops `null` and
-  `Undefined::UNDEFINED` alike.
+  nowhere to be read. The two deviations were `Example::$value` and `Link::$requestBody`.
+
+  **Done in #2150**, and it corrected a claim this entry previously made. Aligning the two was
+  described here as changing no output "since `filter()` drops `null` and
+  `Undefined::UNDEFINED` alike". It does change output, and that is the point: `filter()`
+  strips `null`, `Undefined::UNDEFINED` **and `[]`**, so a field left inside the `filter()`
+  call cannot emit an explicit `null` or an explicit empty array — both legal values for a
+  `mixed` property. Emitting them takes a branch outside `filter()`, which is what
+  `compileSchema()` already did for `default`, `const` and `example`; #2150 made
+  `compileExample()` and `compileLink()` match. Reverting either branch fails a test in each
+  direction.
 
   What is still open is the wider invariant classic asserts — whether *nullable* properties
-  should also avoid a `null` default — and only that needs deciding before anything can be
-  asserted. The narrow rule is assertable today: every `mixed` property defaults to
-  `Undefined::UNDEFINED`, with the two deviations as the fixture to fix or to except.
+  should also avoid a `null` default. Only that needs deciding; the narrow rule is asserted
+  by `UndefinedDefaultsTest` as of #2150.
 - **No direct tests**: `Assembler/DefaultAttributeTranslator`,
   `Assembler/OptionalPropertyAttributeTranslator`, `Utils/SourceLocation`,
   `Utils/SpecificationWalker`.
@@ -255,12 +287,22 @@ deletion instead of an untangling. Also settles which of three overlapping
 diagnostic-assertion mechanisms to standardise on: the PSR logger, since `CollectingLogger`
 already forwards to it and `Result::warnings()` is just a view over the same stream.
 
-**Partly done, and deliberately paused.** #2147 extracted `AssertsSpecEquals` and retired
-`AssertsBuilderResult`; #2148 added `ExpectsLogEntries`, which covers the logger members.
-`ScratchTest` is now two small extractions (`fixture()`, `getTypeResolvers()`) from dropping
-the base class. The decision is to stop there: the base class stays, new tests use the new
-traits, and the rest goes at v8 with classic. Migrating existing tests earns little while
-`OpenApiTestCase` still has to exist.
+**Partly done. Un-paused 2026-09-02** — it is item 4 in the current order.
+
+#2147 extracted `AssertsSpecEquals` and retired `AssertsBuilderResult`; #2148 added
+`ExpectsLogEntries`, which covers the logger members. `ScratchTest` is now two small
+extractions (`fixture()`, `getTypeResolvers()`) from dropping the base class.
+
+The earlier decision was to stop there, on the grounds that migrating existing tests earns
+little while `OpenApiTestCase` still has to exist. What changed is PR 26: an audit that
+produces a batch of new spec tests wants the trait vocabulary in place first, or those tests
+get written against the base class and have to be migrated later anyway.
+
+"As far as possible" is the shape of it, and the ceiling is known. `ScratchTest` can reach
+`extends TestCase`. `BuilderTest` cannot — it needs `getAnalyzer()` and `getTypeResolver()`
+for its classic-mode cases, and `getAnalyzer()` is classic and should stay behind. Finishing
+means `ScratchTest` converted and `BuilderTest` left as the single deliberate holdout, not
+`OpenApiTestCase` deleted.
 
 The event-subsystem approach `origin/expexts-logger-contains` explored was investigated and
 rejected — that branch can be dropped. Full plan, the member table, the log-mechanism
@@ -467,6 +509,20 @@ but the mechanism is identical and the argument for pinning is the same.
 Deliberately not `phpunit/phpunit`: its `^11.5 || >=12.5.22` constraint is wide on purpose,
 since the build matrix spans PHP 8.2 to 8.6.
 
+**#2151 pins it to 2.2.12.** Two things surfaced while doing it, both worth keeping:
+
+- **`^2.2` was already fiction.** `rector/rector` 2.6.5 requires `phpstan/phpstan ^2.2.10`,
+  so since #2143 pinned rector the phpstan version has been dictated transitively by a
+  different package's pin — 2.2.9 cannot be installed at all. Pinning a tool can move a tool
+  nobody pinned.
+- **`composer analyse` was failing locally and passing in CI**, which looked like the exact
+  drift this entry predicts and was not. phpstan decides whether `$argv` is defined by reading
+  the **running** PHP's `register_argc_argv` ini setting; a local 8.5 build with it off
+  reports `Variable $argv might not be defined` in `tools/docgen.php`, CI's 8.3 with it on
+  does not. Same phpstan version, same repository, different answer. #2152 guards the variable
+  so the result no longer depends on the machine. Worth remembering before attributing the
+  next environment-dependent analysis failure to a release.
+
 ### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it
 
 Two halves, both parked and both worth keeping.
@@ -576,6 +632,37 @@ documentation.
 
 ### PR 22 — OpenAPI 3.2 field coverage in `src/Spec/`
 
+**PARKED (2026-09-02).** #2149 is a draft and stays one. Two reasons, and the second is the
+one that matters:
+
+- The branch is a half-done phase. Phase 1a landed, Phase 1b needs a mechanism that does not
+  exist, and merging the half would leave 3.2 support that is neither absent nor complete —
+  the hardest state to reason about later.
+- **Fields that need retrofitting later should not be merged now.** Every field Phase 1a adds
+  is one PR 25 would then have to go back and annotate. Adding work for a mechanism that is
+  already specified, in order to ship a partial version of the feature that mechanism exists
+  to support, is the wrong order.
+
+**This inverts the dependency between PR 22 and PR 25.** This entry previously read that
+PR 25 "blocks PR 22's Phase 1b", i.e. a follow-up that unlocks one sub-phase. It is now a
+**precondition for the whole entry**: no 3.2 field lands until the drop-diagnostic mechanism
+is in place, so new fields declare their version as they are written rather than being
+annotated retroactively. PR 25's own entry says the same thing from the other side — the
+twentieth field is the one nobody remembers.
+
+Q5 is parked with this, since Phase 4 was the only thing waiting on it.
+
+Nothing here is abandoned, and the audit below is the expensive part — it stays valid. What
+is parked is the merging, not the finding.
+
+**One piece was rescued.** The branch's first two commits were the `Undefined::UNDEFINED`
+convention, which touches no 3.2 field and never opens `OpenApi32Compiler`. Split to
+`refactor/undefined-defaults` and opened as #2150, where it belongs to PR 8. Worth checking
+for that before parking a branch: the base of a stack is often independent of what sits on
+top of it.
+
+---
+
 Spec attributes are meant to be version-agnostic: one DTO holds every version's fields, and
 the per-version `Compiler` (`OpenApi30Compiler` / `OpenApi31Compiler` / `OpenApi32Compiler`)
 decides what to emit — see `nullable` handling in `OpenApi30Compiler::compileSchema()` for the
@@ -657,6 +744,18 @@ Came up while splitting the `Undefined::UNDEFINED` work out of `feat/spec-3.2-fi
 writing the message meant guessing at a convention that only exists for PR descriptions.
 
 ### PR 25 — `#[Since]`: declare the version a field arrived in, where it can be used
+
+**Parked with PR 22 (2026-09-02), but promoted within it.** It is no longer a follow-up that
+unlocks Phase 1b — it is the precondition for any 3.2 field landing at all, because the
+decision not to merge fields needing later retrofitting means the mechanism has to exist
+before the fields do. So when 3.2 work resumes, this is where it starts.
+
+That ordering also makes the entry cheaper than it looks. The nineteen silent drops it closes
+have nothing to do with 3.2 and stand on their own; doing it first means Phase 1a's seven
+fields are written with `#[Since]` from the start rather than annotated afterwards.
+
+The work below is unchanged. Note the prior-art review and the JSON Schema alternative are
+still unstarted — those come before writing any attribute, not after.
 
 **Nothing should disappear from a document without saying so.** That is the principle; the
 compilers are about half way to it. Compiling a `Schema` with every keyword set at 3.0 and
@@ -801,6 +900,54 @@ location the way `src/Pipeline.php` and `src/SourceFinder.php` already alias int
 several of these classes are used by downstream code, per the extension-points table in
 PR 20) but touches call sites across `src/` and `tools/`, so worth batching into one pass
 rather than doing it ad hoc mid unrelated PRs.
+
+### PR 26 — what do classic tests assert that spec tests do not?
+
+Coverage answers "was this line executed". It does not answer "is this behaviour asserted
+anywhere", and the two pipelines have been built years apart by different routes, so classic
+carries edge cases nobody has deliberately re-established on the spec side. Those are
+invisible to every measurement taken so far.
+
+**File-level parity is already good and is not the question.** Every augmenter has a test,
+and near-every processor does. The gap is per-behaviour, and the entry point is the classic
+processor mapping table in `docs/reference/architecture.md` — for each classic test case, ask
+which spec test asserts the same thing.
+
+A first pass over test sizes, as a proxy only:
+
+| Classic | Spec target | |
+| --- | --- | --- |
+| `AugmentProperties` 460 + `AugmentParameters` 106 + `AugmentRequestBody` 36 + `AugmentItems` (no test) | `Types` | **602 → 88 lines** |
+| `MergeJsonContent` 114 + `MergeXmlContent` 111 | `Shortcuts` | 225 → 65 |
+| `DocBlockDescriptions` 110 + `DocBlockVarLine` 62 | `Docblocks` | 172 → 55 |
+| `ExpandClasses` 221 + `ExpandTraits`/`ExpandInterfaces` (no tests) | `Inheritance` | 221 → 217 |
+| `ExpandEnums` 183 | `Enums` + `EnumDescriptions` | 183 → 169 |
+
+`Refs` and `Cleanup` run *ahead* of their classic counterparts, so this is not a general
+deficit. **Four classic processors converge on `Types`, and it has the thinnest test of the
+set** — that is where to start reading.
+
+Line count is a proxy and proves nothing on its own; a long classic test may be repetitive
+and a short spec test may cover more per line. The audit is reading `AugmentPropertiesTest`'s
+cases and asking which have a `Types` analogue, not comparing numbers.
+
+Three outcomes per case, and the second is as valuable as the first:
+
+- **Gap** — behaviour spec should have and does not assert. Write the test; it may find a
+  bug, the way PR 12's first fixture did.
+- **Deliberate difference** — behaviour spec intentionally does not reproduce. Record it.
+  Q3 already suspects the classic-vs-spec behaviour claims in `guide/spec-attributes.md` are
+  unverified; this is where that gets settled with evidence rather than deferred again.
+- **Covered elsewhere** — asserted by `ScratchTest`, `CompilerTest` or a fixture rather than
+  by an augmenter test. No action, but worth noting so the next audit does not re-derive it.
+
+Sequencing: after PR 11, because a class that reads as untested may simply be
+provider-constructed, and chasing those wastes the audit's time. Its output feeds PR 8 and
+PR 12 — it is the thing that decides which fixtures are worth writing.
+
+Prompted by the 2026-09-02 reprioritisation. The only prior trace of it is PR 8's
+`ValidateRelationsTest` bullet, which is one instance of exactly this pattern: a classic
+invariant with no spec analogue, found by accident rather than by looking.
 
 ---
 
