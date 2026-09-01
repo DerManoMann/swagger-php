@@ -8,6 +8,51 @@ else.
 
 Entries keep their original PR number; numbers are not reused.
 
+### PR 1 — declare config with a `#[Config]` attribute — **done, #2146**
+
+The ctor-param heuristic works but the rule is implemented twice: `Pipeline::getConfig()`
+at runtime (drives `-D` and `-c`) and `DocGenerator::configurableParameters()` at build
+time (drives the reference pages). They agree only because they were aligned by hand.
+
+Proposed:
+
+```php
+public function __construct(
+    #[Config('If set to true generate ids (md5) instead of clear text operation ids.')]
+    protected bool $hash = true,
+) {
+}
+```
+
+Why an attribute rather than an `@api` docblock tag: reflectable with no docblock parsing,
+typos fail as class-not-found instead of silently, static analysis sees it, and it is
+idiomatic for a library whose premise is that attributes beat docblocks.
+
+What it buys beyond the heuristic:
+- one declaration feeding both `getConfig()` and the docs, so they cannot drift
+- the description lives on the parameter, instead of being scraped from the *setter*
+  docblock — the reason `inheritance.attributeFactory` rendered "No details available."
+- explicit opt-in: adding a ctor param no longer silently widens the public config surface
+- room for `deprecated` / `since` / allowed values without touching extraction code
+
+Scope: `src/Augmenter/` only (8 settings). Leave `src/Processors/` on the inherited
+heuristic until classic is removed. Cheaper after PR 4, which collapses the two extraction
+paths into one — having the generators consume `Pipeline::getConfig()` instead of
+re-deriving the rule belongs to that PR, not this one.
+
+**Outcome.** Built as proposed. `OpenApi\Utils\Config` sits beside `Pipeline` rather than in
+`src/Attributes/`/`Spec/`, since it describes the pipeline itself, not an OpenAPI document.
+`Pipeline::getConfig()` now discovers settings via the attribute instead of reflecting over
+every `set*()` method with a non-object value; `DocGenerator` prefers the attribute's
+description, falling back to the old heuristic for `src/Processors/`, which hasn't adopted
+`#[Config]` — `composer docs:gen` output is unchanged. A new `ConfigTest` scans
+`src/Augmenter/` asserting every `#[Config]` parameter has a matching setter; verified it
+catches real drift by renaming a setter and watching the test fail.
+
+Landed alongside, in the same PR: a `.github/PULL_REQUEST_TEMPLATE.md` (Overview + Changes,
+see `CONTRIBUTING.md`) codifying the PR-description convention this backlog itself had
+started following.
+
 ### PR 4 — deduplicate `AugmenterGenerator` and `ProcessorGenerator` — **done, #2141**
 
 408 lines across the two classes, with substantial copy-paste between them. Two fixes in
