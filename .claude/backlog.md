@@ -315,6 +315,23 @@ Mechanics worth knowing before starting:
   current dumper differs from what is committed, so the diff is enormous and mostly noise.
 - `$expectedLogs` is keyed `{fixture}-{version}` with no mode component, so a warning raised
   in one mode only cannot be registered without skipping the other mode's case.
+- **A spec-only fixture still needs a classic file.** Discovery globs `Scratch/*.php` and
+  skips `-spec` names, so `Foo-spec.php` is only found if `Foo.php` exists. With no
+  `Foo3.x.y.yaml` or `-classic.yaml`, every classic combination skips on `$spec === null`
+  and the anchor is never loaded — it exists purely so the glob finds the pair.
+  `Scratch/Spec32.php` is the first of these, and says so in a comment. Worth deciding
+  whether discovery should key off `-spec.php` directly instead, which would remove the
+  need for the anchor entirely.
+- **Document-level attributes need their own class.** `Server::merge()` targets both
+  `PathItem` and `Operation`, so a `Server` sitting alongside two `Operation\Get`
+  attributes on one class fails with `Ambiguous merge: OpenApi\Spec\Server matches
+  multiple siblings on the same target`. Put `OpenApi`/`Info`/`Server` on a class of their
+  own. The message names the cause, but only after the fixture already looks finished.
+- **The fixture is the redocly coverage.** `composer redocly` lints `Scratch/*.yaml`, so a
+  fixture is the only thing in the suite that checks emitted documents against the OpenAPI
+  schema. Two rules bite in practice: `no-invalid-media-type-examples` validates `value`
+  against the media type's schema (it does not know `dataValue`/`serializedValue`), and
+  `path-parameters-defined` wants a `Parameter\Path` for every `{brace}` in the path.
 
 ### PR 14 — apply the documentation rules to docblocks
 
@@ -561,6 +578,47 @@ parameter location, the `query` HTTP method plus `additionalOperations` for cust
 `deviceAuthorization` flow, and `Security\Scheme::$oauth2MetadataUrl`. Two of them —
 `Components.pathItems` and `Components.mediaTypes` — don't fit the existing component-key
 pattern and need Q5 settled first.
+
+**Phase 1 is half done** on `feat/spec-3.2-fields`, unmerged: `OpenApi::$self`,
+`Server::$name`, `Response::$summary`, `Example::$dataValue`/`$serializedValue` and
+`Security\Scheme::$deprecated`/`$oauth2MetadataUrl`, each a plain property on the DTO plus an
+`OpenApi32Compiler` override, with the Example Object's mutual-exclusion rules as a
+validation warning. What is left of Phase 1 needs more than a property, which is why it was
+split off: `MediaType::$itemSchema` and the `itemEncoding`/`prefixEncoding` pair are
+object-valued and so raise the slot-target question, and the `deviceAuthorization` flow and
+`cookie` style add enum values, which is a per-version validity question rather than a
+compiler emit.
+
+The compiler's class docblock is deliberately not an inventory of which fields 3.2 adds —
+having a compiler per version is what records that. The remaining work is tracked here
+instead.
+
+Phase 1a's tests started as fourteen `CompilerTest` cases pairing "3.2 emits" with "3.1
+omits", and were folded into a `Scratch/Spec32` fixture instead: one source, three expected
+documents, and the version matrix asserts the omissions for free. That cut 207 lines of test
+code to 10 and put the emitted documents under `composer redocly`, which is the only thing
+that would have caught `MediaType::$description`. Only two cases could not move — the
+`$self` key position, because `assertSpecEquals` compares maps order-independently, and the
+mutual-exclusion warnings, which need a document redocly rejects. Both stayed in
+`CompilerTest` with a docblock saying why. Prefer a fixture for the next batch of fields.
+
+Re-deriving the audit from the published JSON Schemas (diffing
+[3.1](https://spec.openapis.org/oas/3.1/schema/2022-10-07) against
+[3.2](https://spec.openapis.org/oas/3.2/schema/2025-09-17), then checking each hit against
+the prose) corrected it twice, and both are worth keeping:
+
+- **`Response::$summary` and `Security\Scheme::$deprecated` were missed.** Both are real
+  3.2 additions — §4.17.1 and §4.27.1 — and are in the branch above.
+- **`MediaType::$description` is in the 3.2 JSON Schema but not in the spec.** The Media Type
+  Object's fixed-field table (§4.14.1) does not list it. It was implemented, `redocly lint`
+  rejected it, and the prose backs redocly, so it was backed out — the schema is wrong. Worth
+  knowing before someone re-derives the same field and assumes redocly is behind.
+
+Two lessons about method, for whoever picks up Phases 2-4: the JSON Schema diff is a better
+starting point than reading the prose (it found two fields the read-through missed), and the
+prose is the tiebreak when they disagree. `redocly lint` on a compiled document is the
+cheapest confirmation that the output is actually accepted — it was already right about
+`MediaType::$description`, and it accepted every other field on the branch.
 
 Full audit (with spec citations), the phase breakdown, and Q5's two sketched options:
 [`backlog/spec-3.2/README.md`](backlog/spec-3.2/README.md).

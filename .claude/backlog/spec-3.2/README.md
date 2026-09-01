@@ -5,6 +5,13 @@ three `Compiler/OpenApi3xCompiler.php` classes were read against the
 [3.2.0 spec](https://spec.openapis.org/oas/v3.2.0.html); this is what came out missing, what
 turned out already done, and what needs a design decision before it can be done at all.
 
+**Corrected once already, by machine.** The first pass was a read-through of the prose. Diffing
+the published JSON Schemas instead — [3.1](https://spec.openapis.org/oas/3.1/schema/2022-10-07)
+against [3.2](https://spec.openapis.org/oas/3.2/schema/2025-09-17), property names per
+definition — found two fields the read-through had missed and one the schema claims but the
+prose does not. Start there next time, and use the prose as the tiebreak: where they disagree,
+the prose wins, and so does `redocly lint`, which follows it.
+
 ## Why a DTO field alone is not enough
 
 `nullable` handling in `OpenApi30Compiler::compileSchema()` is the established pattern: the
@@ -32,10 +39,21 @@ was never written.
 | `HttpMethod` (enum) | `Query = 'query'` | [Path Item Object](https://spec.openapis.org/oas/v3.2.0.html#path-item-object) | IETF draft `QUERY` method — safe, idempotent, takes a body |
 | `PathItem`, `Operation` | `$additionalOperations` | [Path Item Object](https://spec.openapis.org/oas/v3.2.0.html#path-item-object) | `Map[string, Operation]` for verbs with no fixed field (e.g. `COPY`, `LOCK`). Spec: "MUST NOT contain any entry for the methods that can be defined by other fixed fields" |
 | `MediaType` | `$itemSchema` | [Media Type Object](https://spec.openapis.org/oas/v3.2.0.html#media-type-object), §4.14.3.1 Sequential Media Types | per-item schema for streamed/sequential content (`text/event-stream`, `application/jsonl`, `application/json-seq`, `multipart/mixed`); applies to each stream item independently, unlike `schema` which applies to the whole stream as an array |
-| `Encoding` | `$itemEncoding`, `$prefixEncoding` | Encoding Object, same streaming section | per-item and per-position encoding for multipart streams, alongside the existing `encoding` map |
+| `MediaType`, `Encoding` | `$itemEncoding`, `$prefixEncoding` | Media Type Object / Encoding Object, same streaming section | per-item and per-position encoding for multipart streams, alongside the existing `encoding` map. **Both objects carry the pair** — the first pass put it on `Encoding` only. Each is mutually exclusive with that object's `encoding` map |
 | `FlowType` (enum), `Flow` | `DeviceAuthorization = 'deviceAuthorization'`, `$deviceAuthorizationUrl` | [OAuth Flows Object](https://spec.openapis.org/oas/v3.2.0.html#oauth-flows-object), [OAuth Flow Object](https://spec.openapis.org/oas/v3.2.0.html#oauth-flow-object) | new flow for limited-input devices (smart TVs, kiosks); `deviceAuthorizationUrl` sits alongside `tokenUrl` the way `authorizationUrl` does for the existing flows |
 | `Security\Scheme` | `$oauth2MetadataUrl` | [Security Scheme Object](https://spec.openapis.org/oas/v3.2.0.html#security-scheme-object) | RFC 8414 OAuth 2.0 Authorization Server Metadata discovery URL |
-| `Components` | `$mediaTypes`, `$pathItems` | [Components Object](https://spec.openapis.org/oas/v3.2.0.html#components-object) | reusable, `$ref`-able entries. Blocked — see "Phase 4" below |
+| `Security\Scheme` | `$deprecated` | [Security Scheme Object](https://spec.openapis.org/oas/v3.2.0.html#security-scheme-object) | applies to every scheme type, not just oauth2. Missed by the prose read-through |
+| `Response` | `$summary` | [Response Object](https://spec.openapis.org/oas/v3.2.0.html#response-object) | short summary alongside the existing `description`. Missed by the prose read-through |
+| `Components` | `$mediaTypes` | [Components Object](https://spec.openapis.org/oas/v3.2.0.html#components-object) | reusable, `$ref`-able entries. Blocked — see "Phase 4" below. `$pathItems` is the same problem but a **3.1** bucket, not a 3.2 one, so it has been missing for longer |
+
+## In the schema, not in the spec — do not add
+
+`MediaType::$description`. The 3.2 JSON Schema lists `description` on the Media Type Object;
+the [fixed-field table](https://spec.openapis.org/oas/v3.2.0.html#fixed-fields-15) in §4.14.1
+does not. It was implemented on `feat/spec-3.2-fields`, `redocly lint` rejected it with
+"Property `description` is not expected here", and the prose backs redocly — so it came back
+out. Redocly 2.37 accepted every other field on that branch, which is what makes this a
+schema bug rather than a tooling gap.
 
 Also noted, not part of this audit's scope (they're **3.1** gaps, not 3.2 ones) but touching
 the same mechanism:
@@ -58,14 +76,27 @@ stays on 2020-12, same as 3.1). `Tag::$parent`/`$kind` are done, per above.
 
 ## Phase breakdown
 
-**Phase 1 — plain fields, no design questions.** `OpenApi::$self`, `Server::$name`,
-`Example::$dataValue`/`$serializedValue`, `MediaType::$itemSchema`,
-`Encoding::$itemEncoding`/`$prefixEncoding`, `Security\Scheme::$oauth2MetadataUrl`,
-`Flow::$deviceAuthorizationUrl` + `FlowType::DeviceAuthorization` + a `Flow\DeviceAuthorization`
-typed subtype (mirrors `Flow\Implicit` etc.), `ParameterStyle::Cookie`. Each needs an
-`OpenApi32Compiler` override (or a base `OpenApi31Compiler` method plus an
-omit-and-warn override in `OpenApi30Compiler`, following the `prefixItems`/
-`unevaluatedProperties` pattern in `OpenApi30Compiler::validateSchemas()`).
+**Phase 1a — plain fields. Done on `feat/spec-3.2-fields`, unmerged.** `OpenApi::$self`,
+`Server::$name`, `Response::$summary`, `Example::$dataValue`/`$serializedValue`,
+`Security\Scheme::$deprecated`/`$oauth2MetadataUrl` — each a property on the DTO plus an
+`OpenApi32Compiler` override that appends it to the parent's result, so 3.0 and 3.1 drop it
+silently the way they already drop `Tag::$parent`. `deprecated` and `oauth2MetadataUrl` also
+had to reach the `Security\Scheme\*` subtypes, which are the API the docs actually push.
+Example's mutual-exclusion rules (§4.19.1) went in as a `validate()` warning, matching the
+existing License `url`/`identifier` one. `$dataValue` defaults to `Undefined::UNDEFINED`
+rather than `null` so `dataValue: null` is expressible — which makes it inconsistent with its
+neighbour `$value`, and is a case for PR 8's null-vs-`Undefined` question to settle.
+
+**Phase 1b — the rest of what looked plain, and is not.** `MediaType::$itemSchema` and the
+`itemEncoding`/`prefixEncoding` pair on both `MediaType` and `Encoding` are object-valued, so
+they need a slot to be authorable as nested attributes at all — a `Schema` nested in a
+`MediaType` merges into `schema` today, and there is nothing to target `itemSchema` with
+short of a typed subtype. They also carry the "MUST NOT be present if `encoding` is present"
+rule. `FlowType::DeviceAuthorization` + `Flow::$deviceAuthorizationUrl` + a
+`Flow\DeviceAuthorization` typed subtype (mirrors `Flow\Implicit` etc.) and
+`ParameterStyle::Cookie` add *values* to existing enums, which changes what is valid per
+version — validation work, not a compiler emit, and 3.0/3.1 should probably warn rather than
+silently drop. Follow the omit-and-warn pattern in `OpenApi30Compiler::validateSchemas()`.
 
 **Phase 2 — `querystring` parameter location.** `ParameterIn::Querystring`, a
 `Parameter\Querystring` typed subtype, and a validation rule (at most one per operation,
