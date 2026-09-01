@@ -219,11 +219,23 @@ Still open:
   bidirectional — if A names B as a parent, B must name A as nested. The spec side now
   checks that slots name real properties, but not the reverse direction: that a class
   claiming it can nest into a parent is one the parent will actually accept.
-- **The `null` vs `Undefined::UNDEFINED` convention is undecided.** Classic has
+- **The `null` vs `Undefined::UNDEFINED` convention is part decided.** Classic has
   `AnnotationPropertiesDefinedTest` asserting no property defaults to `null`. Spec is
-  deliberately mixed, and the reasoning survives only as a comment in `Augmenter/Types.php`
-  ("Can't use `??=` here — const defaults to `Undefined::UNDEFINED`, not null"). Decide what
-  the invariant is, then it can be asserted. This is a design call, not a test-writing one.
+  deliberately mixed, and the reasoning survived only as a comment in `Augmenter/Types.php`
+  ("Can't use `??=` here — const defaults to `Undefined::UNDEFINED`, not null").
+
+  The narrow half is settled and now written up in `docs/dev/pipeline.md` under "`null` means
+  unset, except where `null` is a value": a `mixed` property defaults to
+  `Undefined::UNDEFINED`, because `null` is a legal value for it and so cannot also mean "not
+  set". That was already what 12 of the 14 `mixed` properties in `src/Spec/` did — it just had
+  nowhere to be read. The two deviations are `Example::$value` and `Link::$requestBody`, both
+  named in the doc, and aligning them changes no output, since `filter()` drops `null` and
+  `Undefined::UNDEFINED` alike.
+
+  What is still open is the wider invariant classic asserts — whether *nullable* properties
+  should also avoid a `null` default — and only that needs deciding before anything can be
+  asserted. The narrow rule is assertable today: every `mixed` property defaults to
+  `Undefined::UNDEFINED`, with the two deviations as the fixture to fix or to except.
 - **No direct tests**: `Assembler/DefaultAttributeTranslator`,
   `Assembler/OptionalPropertyAttributeTranslator`, `Utils/SourceLocation`,
   `Utils/SpecificationWalker`.
