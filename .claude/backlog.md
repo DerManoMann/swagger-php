@@ -14,11 +14,7 @@ written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
-Open: **#2146** (`#[Config]` attribute, PR 1, plus the PR description template),
-**#2147** (`AssertsSpecEquals` extracted and `AssertsBuilderResult` retired, part of PR 10),
-**#2148** (`ExpectsLogEntries`, the rest of PR 10's logger half).
-
-Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
+Nothing is open. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
 changes), **#2136** (developer docs, and the writing rules), **#2137** (`ComponentIndex`,
 slot-target validation, and the attributes nothing was compiling), **#2138** (compiler
 diagnostics reaching the configured logger, PR 13), **#2139** (README corrections),
@@ -26,7 +22,10 @@ diagnostics reaching the configured logger, PR 13), **#2139** (README correction
 **#2141** (the doc generator merge, PR 4), **#2142** (`.dist` convention for the phpstan
 config), **#2130** (resolver step), **#2143** (rector 2.6.5, and pinned tooling),
 **#2144** (scratch fixtures for Head/Options/Trace and Link, PR 9),
-**#2145** (`TypedList::clear()`, PR 21).
+**#2145** (`TypedList::clear()`, PR 21), **#2146** (`#[Config]` attribute, PR 1, plus the
+PR description template), **#2147** (`AssertsSpecEquals` extracted and
+`AssertsBuilderResult` retired, part of PR 10), **#2148** (`ExpectsLogEntries`, the rest of
+PR 10's logger half).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally, so coverage numbers are real rather than inferred:
@@ -48,7 +47,7 @@ Suggested order for what is left:
 7. **PR 15** — mode-aware `ScratchTest` log keys, now that #2148 supplies the
    expect/allow vocabulary the three tolerated diagnostics need.
 
-PR 1 is in review (#2146). PR 10 is paused by decision, not blocked — see its entry.
+PR 10 is paused by decision, not blocked — see its entry.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). Q5 should be
 settled before starting PR 22's Phase 4.
@@ -116,38 +115,6 @@ far.
 
 Agreed direction, deliberately **not** done in the doc-cleanup work. Merged entries move to
 [`backlog/archive.md`](backlog/archive.md); numbers are not reused.
-
-### PR 1 — declare config with a `#[Config]` attribute
-
-The ctor-param heuristic works but the rule is implemented twice: `Pipeline::getConfig()`
-at runtime (drives `-D` and `-c`) and `DocGenerator::configurableParameters()` at build
-time (drives the reference pages). They agree only because they were aligned by hand.
-
-Proposed:
-
-```php
-public function __construct(
-    #[Config('If set to true generate ids (md5) instead of clear text operation ids.')]
-    protected bool $hash = true,
-) {
-}
-```
-
-Why an attribute rather than an `@api` docblock tag: reflectable with no docblock parsing,
-typos fail as class-not-found instead of silently, static analysis sees it, and it is
-idiomatic for a library whose premise is that attributes beat docblocks.
-
-What it buys beyond the heuristic:
-- one declaration feeding both `getConfig()` and the docs, so they cannot drift
-- the description lives on the parameter, instead of being scraped from the *setter*
-  docblock — the reason `inheritance.attributeFactory` rendered "No details available."
-- explicit opt-in: adding a ctor param no longer silently widens the public config surface
-- room for `deprecated` / `since` / allowed values without touching extraction code
-
-Scope: `src/Augmenter/` only (8 settings). Leave `src/Processors/` on the inherited
-heuristic until classic is removed. Cheaper after PR 4, which collapses the two extraction
-paths into one — having the generators consume `Pipeline::getConfig()` instead of
-re-deriving the rule belongs to that PR, not this one.
 
 ### PR 3 — keep derivable documentation in sync automatically
 
