@@ -95,8 +95,9 @@ short of a typed subtype. They also carry the "MUST NOT be present if `encoding`
 rule. `FlowType::DeviceAuthorization` + `Flow::$deviceAuthorizationUrl` + a
 `Flow\DeviceAuthorization` typed subtype (mirrors `Flow\Implicit` etc.) and
 `ParameterStyle::Cookie` add *values* to existing enums, which changes what is valid per
-version — validation work, not a compiler emit, and 3.0/3.1 should probably warn rather than
-silently drop. Follow the omit-and-warn pattern in `OpenApi30Compiler::validateSchemas()`.
+version — validation work, not a compiler emit. **Do PR 25 first**: the awkward half of
+Phase 1b is that enum values have nowhere to hang a version rule, and `#[Since]` on an enum
+case solves it. Phase 1b is three attributes once that exists.
 
 **Phase 2 — `querystring` parameter location.** `ParameterIn::Querystring`, a
 `Parameter\Querystring` typed subtype, and a validation rule (at most one per operation,
