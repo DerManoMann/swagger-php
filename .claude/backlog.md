@@ -14,11 +14,7 @@ written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
-Three open: **#2150** (`Undefined::UNDEFINED` on every `mixed` property, the narrow half of
-PR 8's null question), **#2151** (pin phpstan, PR 19), **#2152** (`$argv` guard in
-`tools/docgen.php`).
-
-Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
+Nothing is open. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
 changes), **#2136** (developer docs, and the writing rules), **#2137** (`ComponentIndex`,
 slot-target validation, and the attributes nothing was compiling), **#2138** (compiler
 diagnostics reaching the configured logger, PR 13), **#2139** (README corrections),
@@ -29,7 +25,9 @@ config), **#2130** (resolver step), **#2143** (rector 2.6.5, and pinned tooling)
 **#2145** (`TypedList::clear()`, PR 21), **#2146** (`#[Config]` attribute, PR 1, plus the
 PR description template), **#2147** (`AssertsSpecEquals` extracted and
 `AssertsBuilderResult` retired, part of PR 10), **#2148** (`ExpectsLogEntries`, the rest of
-PR 10's logger half).
+PR 10's logger half), **#2151** (phpstan pinned, PR 19) and **#2152** (`$argv` guard, out of
+PR 19), **#2150** (`Undefined::UNDEFINED` on every `mixed` property, the narrow half of
+PR 8's null question).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally, so coverage numbers are real rather than inferred:
@@ -493,35 +491,6 @@ Porting it would finish the job and let those two methods go, the way `processor
 and `indentedBr()` went. Against that: it generates the classic attributes and annotations
 pages, and classic is removed in v8, so this may be work with a short life. Worth doing only
 if something else needs to touch that generator anyway.
-
----
-
-### PR 19 — pin `phpstan/phpstan` as well
-
-#2143 pinned `rector/rector` and `friendsofphp/php-cs-fixer` to exact versions, because
-`composer.lock` is not committed and every workflow installs `dependency-versions: highest`,
-so a new release of either turns unrelated PRs red.
-
-`phpstan/phpstan` (`^2.2`) has exactly the same exposure — new releases add checks at an
-unchanged level. It has been quiet so far, and `phpstan-baseline.neon` absorbs some of it,
-but the mechanism is identical and the argument for pinning is the same.
-
-Deliberately not `phpunit/phpunit`: its `^11.5 || >=12.5.22` constraint is wide on purpose,
-since the build matrix spans PHP 8.2 to 8.6.
-
-**#2151 pins it to 2.2.12.** Two things surfaced while doing it, both worth keeping:
-
-- **`^2.2` was already fiction.** `rector/rector` 2.6.5 requires `phpstan/phpstan ^2.2.10`,
-  so since #2143 pinned rector the phpstan version has been dictated transitively by a
-  different package's pin — 2.2.9 cannot be installed at all. Pinning a tool can move a tool
-  nobody pinned.
-- **`composer analyse` was failing locally and passing in CI**, which looked like the exact
-  drift this entry predicts and was not. phpstan decides whether `$argv` is defined by reading
-  the **running** PHP's `register_argc_argv` ini setting; a local 8.5 build with it off
-  reports `Variable $argv might not be defined` in `tools/docgen.php`, CI's 8.3 with it on
-  does not. Same phpstan version, same repository, different answer. #2152 guards the variable
-  so the result no longer depends on the machine. Worth remembering before attributing the
-  next environment-dependent analysis failure to a release.
 
 ### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it
 
