@@ -47,8 +47,8 @@ is picked up again, because it inverts their dependency.
 Suggested order:
 
 1. **PR 26** — features and quirks classic handles that spec does not. The largest unknown,
-   and the reason this order exists. **Slice 1 (`tests/Annotations/`) is done** and found three
-   live validation gaps; the remaining slices are listed in the entry.
+   and the reason this order exists. **Slices 1 and 2 are done** — three live validation gaps,
+   no JSON-pointer resolution, and no deserialization. Only `tests/Processors/` is left.
 2. **PR 15** — mode-aware `ScratchTest` log keys. Before the new fixtures, not after: the key
    shape is what every new fixture's `$expectedLogs` inherits.
 3. **PR 10** — finish the extraction, as far as it goes. Early, so the tests PR 26 produces
@@ -1012,6 +1012,55 @@ Already present in spec, no action: License `url`/`identifier` exclusion
 Not a gap but a visible behaviour difference: `OperationIds::$hash` defaults to **true**, so
 spec emits md5 operationIds where classic emits readable ones.
 
+#### Slice 2 — `AnalysisTest`, `ContextTest`, `SerializerTest`, `RefTest`, `tests/Utils/`, done 2026-09-02
+
+**The big one: spec cannot resolve an arbitrary JSON pointer.**
+
+`Annotations\OpenApi::ref()` resolves any `#/...` pointer against the annotation tree, and
+`RefTest` exercises four shapes of it: `#/info`;
+`#/paths/~1api~1~0~1endpoint/post/responses/default` — a path ref with **both** escapes;
+`#/components/schemas/String/x-custom-key` — a ref *into a vendor extension value*; and
+`#/components/schemas/String/x-custom-key/properties/value` — the same, one level deeper.
+
+Spec's `ComponentIndex::find()` handles `#/components/{bucket}/{name}` and nothing else. It
+splits on the first slash and treats the whole remainder as the component name, so a deeper
+pointer looks up a component literally named `Foo/properties/bar`, finds nothing, and
+**returns null with no diagnostic**. `#/paths/...` refs cannot be expressed or resolved at
+all, and there is no unescaping of `~0`/`~1` anywhere in the spec pipeline.
+
+This upgrades slice 1's ref-encoding finding from latent to real: `~0`/`~1` is not a
+hypothetical, classic exercises it for path refs today. Both halves are the same missing
+capability.
+
+Related asymmetry, benign but worth knowing: `Augmenter\Refs` line 144 *emits*
+`#/components/schemas/{name}/allOf/{index}/{path}` — a deep pointer the spec pipeline cannot
+itself resolve. Emitting is fine, the consumer resolves it; the two directions simply are not
+symmetric.
+
+**No deserialization in spec.** `Serializer::deserialize()` and `deserializeFile()` return
+`Annotations\AbstractAnnotation`, so document → objects exists only for classic.
+`SerializerTest` covers a full Petstore round trip and `allOf` property deserialization.
+Note `Serializer` has **zero consumers inside `src/`** — it is public API only, which cuts
+both ways: nothing internal breaks without it, and downstream code may depend on it with no
+spec-mode successor. A scope decision rather than a bug, but it should be a decision.
+
+Parity confirmed, no action:
+
+- **Class hierarchy.** `AnalysisTest` covers `getSubclasses`, `getAllAncestorClasses`,
+  `getDirectAncestorClass`, `getInterfacesOfClass`, `getTraitsOfClass`.
+  `Augmenter\Inheritance\Schemas` walks parents, traits and interfaces in one place — the
+  work classic splits across `ExpandClasses`, `ExpandTraits` and `ExpandInterfaces`.
+- **Docblock name resolution.** `ContextTest::testFullyQualifiedName` asserts classic resolves
+  relative names, `use` statements and aliases. Verified empirically that spec does too:
+  `@var Aliased`, `@var Models\Pet`, `@var \FqnSpec\Models\Pet` and `@var Aliased[]` all
+  resolve to the right `$ref`. Reflection gives spec this for free where classic needed
+  `Context::fullyQualifiedName()`.
+
+**`tests/Utils/` is not a parity question.** Its eight subjects are shared or spec-side
+(`AttributeFactory` and `Config` are used only by spec; `TypedList`, `TypeMapper`,
+`SourceFinder`, `SourceScanner`, `Pipeline` are pipeline-agnostic; only `TokenScanner` has
+classic callers). Nothing to compare — worth recording so the next pass skips it.
+
 #### Method notes
 
 Three false alarms, all hit in one sitting, all of which look like feature gaps:
@@ -1031,9 +1080,10 @@ not referenced by an operation produces an empty document and looks like a colle
 
 #### Remaining slices
 
-`AnalysisTest`, `ContextTest`, `SerializerTest`, `RefTest`, `tests/Utils/`, and the
-`tests/Processors/` behaviours. `tests/Annotations/AttributesSyncTest` is classic-internal
-(annotations ↔ attributes) and has no spec meaning.
+Only `tests/Processors/` is left — the per-processor behaviour tests, read against their
+mapped augmenters. `tests/Annotations/AttributesSyncTest` is classic-internal
+(annotations ↔ attributes) and has no spec meaning; `tests/Utils/` was checked and does not
+apply (slice 2).
 
 Output goes to spec-side assertions in the existing per-augmenter tests and to compiler
 `validate()` rules — **not** to new `Scratch` fixtures. That directory is 210 flat files
