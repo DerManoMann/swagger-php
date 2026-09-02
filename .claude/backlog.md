@@ -470,16 +470,12 @@ numbers; detail in exactly one place; no volatile values; no open-ended enumerat
 describe the thing you are writing in. Rules that do not: site-absolute links, the
 generated-page conventions.
 
-Two things to do while there:
+**The scoping half is done in #2153**, which settled the second question the way this entry
+predicted: one document. `writing-docs.md` now names docblocks, pull request descriptions and
+commit messages as surfaces its rules cover, and lists the three page-only sections.
 
-- Generalise the checklist wording from "page" to "page or file". The self-description item
-  says *page*, which is why the fixture docblock slipped past a checklist run.
-- Decide whether `writing-docs.md` covers both, or whether docblock guidance belongs beside
-  the code. One document is probably right — the rules are identical and duplicating them
-  would break the rule they state.
-
-Worth pairing with a sweep: `src/Spec/` docblocks are the ones users read, since they become
-the Spec Attributes reference.
+What is left is the sweep itself — and `src/Spec/` is where to spend it, since those docblocks
+become the Spec Attributes reference and so ship to users.
 
 ### PR 15 — make `ScratchTest` log expectations mode-aware
 
@@ -1139,36 +1135,6 @@ said diagnostics is where gaps live — meant writing `#[OA\MediaType\Json]` in 
 position for the first time, and it threw. The classic test that led there turned out to be
 about something else entirely.
 
-#### Orphan handling is inconsistent between class and method level
-
-Found while landing #2153, and **not** caused by it — `MediaType`, which has always declared
-correct targets, behaves identically.
-
-A non-root attribute that cannot merge into a sibling is handled two different ways:
-
-| Level | Behaviour |
-| --- | --- |
-| class | `Assembler::resolveReflector()` throws `Non-root attribute … remains after resolution` |
-| method | dropped silently, no warning, no error |
-
-The method path is `AttributeFactory::fromReflector()`, whose orphan check reads
-`if (!$attribute->isRoot() && !in_array($attribute, $outer, true))`. The `$outer` exemption
-means anything written on the method itself is excused, so
-`#[OA\Response]` + `#[OA\MediaType]` as siblings on one method yields a response with no
-content and no diagnostic. Reproduced with both `MediaType` and `MediaType\Json`.
-
-This is the audit's theme again — PR 25's principle, "nothing should disappear from a document
-without saying so", applies just as well to assembly as to compilation.
-
-Not fixed with #2153 deliberately: closing the exemption turns currently-silent drops into
-errors, and there may be fixtures relying on the silence. That is a decision to take
-knowingly, with a suite run to size it, rather than a side effect of a target-flags fix.
-
-Worth settling at the same time whether sibling merge from attribute position is meant to work
-for these nested types at all. Every fixture builds them as constructor arguments
-(`content: new OA\MediaType\Json(...)`), so the merge path may simply be untested rather than
-broken — `merge()` on `MediaType` and `Header` both name `Response`, which says it is intended.
-
 #### Method notes
 
 Three false alarms, all hit in one sitting, all of which look like feature gaps:
@@ -1207,7 +1173,7 @@ Findings to act on, in the order they are worth doing:
 2. **The spec `ValidateRelations` analogue** (PR 8). #2153 covers the narrow version — every
    attribute declares a target, and a subclass keeps one of its parent's. The full
    bidirectional check is still open.
-2b. **Method-level orphans are dropped in silence** — found while landing #2153, see below.
+2b. **Sibling merge depends on declaration order** — found while landing #2153, now **PR 27**.
 3. **Three input-validation gaps** (slice 1): duplicate explicit `operationId`, invalid
    response code, invalid schema `type`. All three currently emit documents that fail OpenAPI
    validation while the pipeline reports success.
@@ -1226,6 +1192,60 @@ and `mostSpecific()` loses three of its five rungs. Restructure it then, when th
 pipeline and the right shape is obvious; adding to it now organises around a convention that
 is about to evaporate. This also caveats PR 12, whose premise is "write more scratch
 fixtures".
+
+---
+
+### PR 27 — sibling merge depends on declaration order, and loses attributes silently
+
+**An earlier draft of this entry called bubbling the bug. It is not** — `pipeline.md` states
+it plainly: "If a level has no containers at all, unmatched attributes pass through to the
+level above." The `!in_array($attribute, $outer, true)` exemption in
+`AttributeFactory::fromReflector()` is what implements that, and it is deliberate: it lets an
+inner attribute reach an outer level, which is what translators rely on to inject attributes
+upward. Recorded because the misreading is easy and cost a round trip.
+
+What is real: **sibling merge consumes attributes in declaration order**, so whether one
+merges depends on where it sits in the list. Same three attributes, same file, only the order
+changed:
+
+```php
+#[OA\Operation\Get(path: '/t')]
+#[OA\Response(response: 200, description: 'OK')]
+#[OA\MediaType(mediaType: 'application/json', schema: new OA\Schema(ref: T::class))]
+// → response has no content, no warning
+
+#[OA\MediaType(mediaType: 'application/json', schema: new OA\Schema(ref: T::class))]
+#[OA\Response(response: 200, description: 'OK')]
+#[OA\Operation\Get(path: '/t')]
+// → content present
+```
+
+`MediaType::merge()` names `Response::class => 'content[]'` in both cases. Container-first
+order lets `Response` merge into `Operation` before `MediaType` has its turn, leaving nothing
+for it to merge into; it then bubbles, finds no container at class level either, and is
+discarded without a diagnostic. Inner-first order works because each attribute still has its
+target when its turn comes.
+
+So the working rule is **declare inner attributes before their containers**, and nothing says
+so — `pipeline.md` describes sibling merge without mentioning that order matters. That is the
+cheapest fix and probably the first one: document it.
+
+Beyond that, three options, in increasing cost:
+
+- **Diagnose it.** An attribute that merges into nothing and bubbles to a level with no
+  container is currently silent. PR 25's principle — nothing disappears without saying so —
+  applies to assembly as much as to compilation.
+- **Make merge order-independent**, by resolving inner-to-outer rather than in declaration
+  order. Correct, and the largest change.
+- **Leave it**, and rely on the documented ordering rule.
+
+Why it has stayed hidden: every fixture builds these nested types as constructor arguments
+(`content: new OA\MediaType\Json(...)`), which sidesteps sibling merge entirely. The
+attribute-position path is barely exercised — which is also why #2153's ten classes could be
+unusable as attributes without a single test failing.
+
+Sizing any fix starts the same way: make the silent case warn, run the suite, and see how many
+fixtures were relying on the silence.
 
 ---
 
