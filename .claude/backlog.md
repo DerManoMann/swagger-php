@@ -27,7 +27,8 @@ PR description template), **#2147** (`AssertsSpecEquals` extracted and
 `AssertsBuilderResult` retired, part of PR 10), **#2148** (`ExpectsLogEntries`, the rest of
 PR 10's logger half), **#2151** (phpstan pinned, PR 19) and **#2152** (`$argv` guard, out of
 PR 19), **#2150** (`Undefined::UNDEFINED` on every `mixed` property, the narrow half of
-PR 8's null question).
+PR 8's null question), **#2153** (attribute targets plus `AttributeTargetsTest`, PR 26's first
+finding, and the writing-rules scope, PR 14's first half).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
