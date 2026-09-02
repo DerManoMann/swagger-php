@@ -986,13 +986,14 @@ OpenAPI validation while the pipeline reports success:
 | Invalid response code — `Default`, `5xX`, `6XX` | warns (`Annotations/Operation.php:219`) | silent, emits `"Default"` as the response key |
 | Invalid schema `type` — `strig` | warns | silent, emits `type: strig` |
 
-Latent, not live:
+Live, but only via an explicit component key — **superseded by slice 2, read that instead**:
 
 - **JSON-pointer ref encoding.** `Annotations\Components::refEncode()`/`refDecode()` escape
-  `~` → `~0` and `/` → `~1`; spec has no equivalent anywhere. Unreachable in normal use
-  because spec component names are class-derived, so they contain neither character. Reachable
-  via an explicit `schema: 'foo/bar'`, and load-bearing the moment `#/paths/...` refs or
-  `components.mediaTypes`/`pathItems` land — which ties it to **Q5** and PR 22 Phase 4.
+  `~` → `~0` and `/` → `~1`; spec has no equivalent anywhere. Filed here as latent, on the
+  reasoning that spec component names are class-derived and so contain neither character.
+  Slice 2 then verified it with an explicit `schema: 'Odd/Name~With'`, which spec emits
+  unescaped and malformed with no warning. Load-bearing the moment `#/paths/...` refs or
+  `components.mediaTypes`/`pathItems` land — **Q5** and PR 22 Phase 4.
 
 Generated operationIds are **not** at risk: `OperationIds::generateId()` returns
 `METHOD::path::Class::method`, unique by construction. Only explicitly set ones collide.
