@@ -46,10 +46,9 @@ is picked up again, because it inverts their dependency.
 
 Suggested order:
 
-1. **PR 26** — features and quirks classic handles that spec does not. The largest unknown,
-   and the reason this order exists. **Slices 1 and 2 are done** — four real gaps (three
-   validation, one ref escaping), two deliberate differences, and three classic-only
-   behaviours correctly dropped. Only `tests/Processors/` is left.
+1. **PR 26** — features and quirks classic handles that spec does not. **The audit is
+   complete**; what is left is acting on it. Five findings: ten spec attributes that can target
+   nothing, three input-validation gaps, and missing ref escaping. Its entry ranks them.
 2. **PR 15** — mode-aware `ScratchTest` log keys. Before the new fixtures, not after: the key
    shape is what every new fixture's `$expectedLogs` inherits.
 3. **PR 10** — finish the extraction, as far as it goes. Early, so the tests PR 26 produces
@@ -1071,6 +1070,74 @@ Parity confirmed, no action:
 `SourceFinder`, `SourceScanner`, `Pipeline` are pipeline-agnostic; only `TokenScanner` has
 classic callers). Nothing to compare — worth recording so the next pass skips it.
 
+#### Slice 3 — `tests/Processors/` (19 files), done 2026-09-02
+
+**Ten spec attribute classes can target nothing.** They declare
+`#[\Attribute(\Attribute::IS_REPEATABLE)]` with **no `TARGET_*` flag**. `IS_REPEATABLE` is
+128 and `TARGET_ALL` is 127, so `flags = 128` sets zero target bits and PHP itself rejects the
+attribute in every position:
+
+```
+#[OA\Header(header: 'X-Rate')] class H {}
+→ Attribute "OpenApi\Spec\Header" cannot target class (allowed targets: )
+```
+
+Affected: `Header`, `Example`, `ServerVariable`, `Flow`, `Flow\{Implicit,AuthorizationCode,
+Password,ClientCredentials}`, `MediaType\Json`, `MediaType\Xml`.
+
+They work fine as **constructor arguments**, which is how every fixture uses them
+(`content: new OA\MediaType\Json(...)`), so nothing fails today. What is impossible is
+attribute position — the primary way users are told to write spec attributes.
+
+Four things make this a defect rather than a design choice:
+
+- **It is inconsistent inside one family.** `MediaType` is `flags=133`
+  (`TARGET_CLASS|TARGET_METHOD|IS_REPEATABLE`); its own subclasses `Json` and `Xml` narrow to
+  nothing. `Schema\Items`, the third shortcut handled by the same `Shortcuts` augmenter,
+  declares four targets correctly.
+- **It contradicts the documented model.** `docs/dev/pipeline.md` lists `Header`, `Example` and
+  `MediaType` under "never root — these must nest inside a parent **or sit in a `Components`
+  container**". Sitting in a `Components` container means attribute position.
+- **It explains a known symptom.** `Spec/MediaType/Xml` sits at 0% line coverage (PR 11's
+  table, and PR 12 names it as a wanted fixture). It is uncovered because it cannot be used as
+  an attribute and no fixture instantiates it either.
+- **It is the same family as #2137**, "the attributes nothing was compiling", so this class of
+  mistake has already happened once and was fixed case by case.
+
+**This is exactly what PR 8's open `ValidateRelationsTest` item would catch.** Classic asserts
+its nesting map is bidirectional; the spec analogue would assert that every class declaring
+`#[\Attribute]` can actually be targeted where its `contained()` slots say it belongs. An
+invariant test finds all ten at once; reading tests one at a time found them by accident.
+Argues for spending the remediation budget on invariants rather than cases.
+
+Filtered out as classic mechanics — the pipeline's internal tree-merging, which spec does
+differently by construction: `CleanUnmerged` (spec uses Assembler orphan validation, #2137),
+`MergeIntoComponents` and `MergeIntoOpenApi` (Assembler/Compiler), `AugmentSchemas`,
+`AugmentRequestBody` and `AugmentRefs` (`Names`/`Types`/`Refs` — and `RefsTest` at 122 lines
+already exceeds `AugmentRefsTest` at 41), `CleanUnusedComponentsPerformance`
+(`CleanupPerformanceTest` exists).
+
+Parity confirmed, no action. The config surface lines up almost exactly —
+`$whitelist`/`$withDescription` (`Tags`), `$enumNames` (`Enums`), `$hash` (`OperationIds`),
+`$enabled` (`Cleanup`), `$tags`/`$paths` (`PathFilter`) — plus:
+
+- **tag whitelist `'*'` wildcard** — implemented, `Tags.php:101`
+- **`@param` descriptions onto operation parameters** — `Docblocks` reads them
+- **enum class-strings and `UnitEnum` instances in an enum array** — handled by `Enums`
+- **path merging**, two operations on one path — `compilePaths()` does `$paths[$path] ??= []`
+- **allOf composition on inheritance** — `Inheritance\Schemas::addAllOfRef()`
+
+One config difference, not a defect: classic's
+`AugmentParameters::$augmentOperationParameters` toggles reading operation-docblock `@param`
+descriptions. Spec does it unconditionally, with no off switch. Fewer knobs, and nothing has
+asked for the toggle.
+
+How the bug was found, which is worth repeating: probing classic's
+`MergeJsonContentTest::testNoParent` — a *diagnostics* test, chosen because slice 1's theme
+said diagnostics is where gaps live — meant writing `#[OA\MediaType\Json]` in attribute
+position for the first time, and it threw. The classic test that led there turned out to be
+about something else entirely.
+
 #### Method notes
 
 Three false alarms, all hit in one sitting, all of which look like feature gaps:
@@ -1097,12 +1164,26 @@ itself evidence that spec needs it.
 Also: `Augmenter\Cleanup` drops unreferenced components, so a probe fixture whose schema is
 not referenced by an operation produces an empty document and looks like a collection failure.
 
-#### Remaining slices
+#### Where this leaves it
 
-Only `tests/Processors/` is left — the per-processor behaviour tests, read against their
-mapped augmenters. `tests/Annotations/AttributesSyncTest` is classic-internal
-(annotations ↔ attributes) and has no spec meaning; `tests/Utils/` was checked and does not
-apply (slice 2).
+**None — the audit is complete.** All three slices are done.
+
+Findings to act on, in the order they are worth doing:
+
+1. **Ten attributes with no `TARGET_*` flag** (slice 3). A one-line fix per class, but decide
+   the intended targets per class from its `contained()` slots rather than pasting
+   `TARGET_ALL`. Land it with the invariant test below, or the eleventh will happen.
+2. **The spec `ValidateRelations` analogue** (PR 8, and slice 3's argument for it). One
+   invariant catches all ten and prevents recurrence.
+3. **Three input-validation gaps** (slice 1): duplicate explicit `operationId`, invalid
+   response code, invalid schema `type`. All three currently emit documents that fail OpenAPI
+   validation while the pipeline reports success.
+4. **Ref escaping** (slice 2). Needed on its own merits and a prerequisite for Q5 /
+   PR 22 Phase 4.
+
+Also settled along the way: **Q3** is answerable from the five `-spec.yaml` overrides, and
+`Serializer` / arbitrary pointer resolution / `x-`-extension ref traversal are classic-only
+and correctly absent.
 
 Output goes to spec-side assertions in the existing per-augmenter tests and to compiler
 `validate()` rules — **not** to new `Scratch` fixtures. That directory is 210 flat files
