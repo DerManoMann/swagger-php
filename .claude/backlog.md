@@ -47,8 +47,9 @@ is picked up again, because it inverts their dependency.
 Suggested order:
 
 1. **PR 26** — features and quirks classic handles that spec does not. The largest unknown,
-   and the reason this order exists. **Slices 1 and 2 are done** — three live validation gaps,
-   no JSON-pointer resolution, and no deserialization. Only `tests/Processors/` is left.
+   and the reason this order exists. **Slices 1 and 2 are done** — four real gaps (three
+   validation, one ref escaping), two deliberate differences, and three classic-only
+   behaviours correctly dropped. Only `tests/Processors/` is left.
 2. **PR 15** — mode-aware `ScratchTest` log keys. Before the new fixtures, not after: the key
    shape is what every new fixture's `$expectedLogs` inherits.
 3. **PR 10** — finish the extraction, as far as it goes. Early, so the tests PR 26 produces
@@ -1014,35 +1015,44 @@ spec emits md5 operationIds where classic emits readable ones.
 
 #### Slice 2 — `AnalysisTest`, `ContextTest`, `SerializerTest`, `RefTest`, `tests/Utils/`, done 2026-09-02
 
-**The big one: spec cannot resolve an arbitrary JSON pointer.**
+**Ref escaping is missing, and it outlives classic.** Classic's `Components::ref()` escapes
+component names by default (`refEncode`: `~` → `~0`, `/` → `~1`); spec's `ComponentIndex`
+builds `#/components/{bucket}/{name}` by concatenation with no escaping. Verified — a schema
+declared `#[OA\Schema(schema: 'Odd/Name~With')]` emits:
 
-`Annotations\OpenApi::ref()` resolves any `#/...` pointer against the annotation tree, and
-`RefTest` exercises four shapes of it: `#/info`;
-`#/paths/~1api~1~0~1endpoint/post/responses/default` — a path ref with **both** escapes;
-`#/components/schemas/String/x-custom-key` — a ref *into a vendor extension value*; and
-`#/components/schemas/String/x-custom-key/properties/value` — the same, one level deeper.
+```
+$ref: "#/components/schemas/Odd/Name~With"     # spec, malformed, no warning
+$ref: "#/components/schemas/Odd~1Name~0With"   # classic, correct
+```
 
-Spec's `ComponentIndex::find()` handles `#/components/{bucket}/{name}` and nothing else. It
-splits on the first slash and treats the whole remainder as the component name, so a deeper
-pointer looks up a component literally named `Foo/properties/bar`, finds nothing, and
-**returns null with no diagnostic**. `#/paths/...` refs cannot be expressed or resolved at
-all, and there is no unescaping of `~0`/`~1` anywhere in the spec pipeline.
+A consumer resolving spec's version looks for `components → schemas → Odd → Name~With` and
+finds nothing. `Augmenter\Cleanup` builds the same unescaped string for its used-ref lookup,
+so the two agree with each other and neither notices. This is **the one ref finding that
+survives v8**, and it is the machinery `components.pathItems`/`mediaTypes` will need — see
+**Q5**.
 
-This upgrades slice 1's ref-encoding finding from latent to real: `~0`/`~1` is not a
-hypothetical, classic exercises it for path refs today. Both halves are the same missing
-capability.
+**Pointer resolution is classic-only and goes away.** `Annotations\OpenApi::ref()` resolves
+arbitrary `#/...` pointers — `RefTest` covers `#/info`,
+`#/paths/~1api~1~0~1endpoint/post/responses/default`, and refs *into* `x-` vendor extension
+values to arbitrary depth. Spec's `ComponentIndex::find()` handles
+`#/components/{bucket}/{name}` only, splitting on the first slash and treating the remainder
+as the name, so a deeper pointer silently returns null. That looked like a gap until the
+consumers were checked: the resolver's only internal callers are
+`Annotations\AbstractAnnotation::validate()` and `Processors\AugmentMediaType`, both classic
+and both removed in v8, and spec already re-implements what it needs in `Augmenter\Refs` and
+`ComponentIndex`. **Not a gap** — but the narrowness should be a deliberate choice rather than
+an accident, since nothing warns when a deep pointer fails to resolve.
 
-Related asymmetry, benign but worth knowing: `Augmenter\Refs` line 144 *emits*
+**Deserialization is classic-only and goes away.** `Serializer::deserialize()` and
+`deserializeFile()` return `Annotations\AbstractAnnotation`; `SerializerTest` covers a
+Petstore round trip and `allOf` deserialization. Decided 2026-09-02: `Serializer` is classic
+code, deprecated in v7 and removed with the rest in v8. No spec successor is planned, and
+document → objects is not a direction the spec pipeline takes. **Not a gap.**
+
+Related asymmetry, benign: `Augmenter\Refs` line 144 emits
 `#/components/schemas/{name}/allOf/{index}/{path}` — a deep pointer the spec pipeline cannot
-itself resolve. Emitting is fine, the consumer resolves it; the two directions simply are not
+itself resolve. Emitting is fine, the consumer resolves it; the directions simply are not
 symmetric.
-
-**No deserialization in spec.** `Serializer::deserialize()` and `deserializeFile()` return
-`Annotations\AbstractAnnotation`, so document → objects exists only for classic.
-`SerializerTest` covers a full Petstore round trip and `allOf` property deserialization.
-Note `Serializer` has **zero consumers inside `src/`** — it is public API only, which cuts
-both ways: nothing internal breaks without it, and downstream code may depend on it with no
-spec-mode successor. A scope decision rather than a bug, but it should be a decision.
 
 Parity confirmed, no action:
 
@@ -1074,6 +1084,15 @@ Three false alarms, all hit in one sitting, all of which look like feature gaps:
    `nullable: true` vs `type: [string, "null"]` reads as divergence.
 
 **Compare serialized output at a pinned version.** Anything else manufactures phantom gaps.
+
+**Then filter for what outlives classic.** Slice 2 produced three findings that looked like
+gaps and were not: deserialization, arbitrary pointer resolution, and `x-`-extension ref
+traversal are all classic-only, going away in v7/v8. The test to apply before filing anything
+is *"who consumes this, and do they survive v8?"* — the pointer resolver's only callers are
+`AbstractAnnotation::validate()` and `AugmentMediaType`, both classic. What survived that
+filter in slice 2 was one thing, ref escaping, and it is the one worth acting on. Classic's
+test suite describes the *classic* pipeline, so a behaviour being tested there is not by
+itself evidence that spec needs it.
 
 Also: `Augmenter\Cleanup` drops unreferenced components, so a probe fixture whose schema is
 not referenced by an operation produces an empty document and looks like a collection failure.
