@@ -1139,6 +1139,36 @@ said diagnostics is where gaps live — meant writing `#[OA\MediaType\Json]` in 
 position for the first time, and it threw. The classic test that led there turned out to be
 about something else entirely.
 
+#### Orphan handling is inconsistent between class and method level
+
+Found while landing #2153, and **not** caused by it — `MediaType`, which has always declared
+correct targets, behaves identically.
+
+A non-root attribute that cannot merge into a sibling is handled two different ways:
+
+| Level | Behaviour |
+| --- | --- |
+| class | `Assembler::resolveReflector()` throws `Non-root attribute … remains after resolution` |
+| method | dropped silently, no warning, no error |
+
+The method path is `AttributeFactory::fromReflector()`, whose orphan check reads
+`if (!$attribute->isRoot() && !in_array($attribute, $outer, true))`. The `$outer` exemption
+means anything written on the method itself is excused, so
+`#[OA\Response]` + `#[OA\MediaType]` as siblings on one method yields a response with no
+content and no diagnostic. Reproduced with both `MediaType` and `MediaType\Json`.
+
+This is the audit's theme again — PR 25's principle, "nothing should disappear from a document
+without saying so", applies just as well to assembly as to compilation.
+
+Not fixed with #2153 deliberately: closing the exemption turns currently-silent drops into
+errors, and there may be fixtures relying on the silence. That is a decision to take
+knowingly, with a suite run to size it, rather than a side effect of a target-flags fix.
+
+Worth settling at the same time whether sibling merge from attribute position is meant to work
+for these nested types at all. Every fixture builds them as constructor arguments
+(`content: new OA\MediaType\Json(...)`), so the merge path may simply be untested rather than
+broken — `merge()` on `MediaType` and `Header` both name `Response`, which says it is intended.
+
 #### Method notes
 
 Three false alarms, all hit in one sitting, all of which look like feature gaps:
@@ -1171,11 +1201,13 @@ not referenced by an operation produces an empty document and looks like a colle
 
 Findings to act on, in the order they are worth doing:
 
-1. **Ten attributes with no `TARGET_*` flag** (slice 3). A one-line fix per class, but decide
-   the intended targets per class from its `contained()` slots rather than pasting
-   `TARGET_ALL`. Land it with the invariant test below, or the eleventh will happen.
-2. **The spec `ValidateRelations` analogue** (PR 8, and slice 3's argument for it). One
-   invariant catches all ten and prevents recurrence.
+1. ~~**Ten attributes with no `TARGET_*` flag**~~ — **done, #2153**, with `AttributeTargetsTest`
+   as the invariant that prevents the eleventh. Targets were taken per class from the
+   containers it nests into rather than pasted as `TARGET_ALL`.
+2. **The spec `ValidateRelations` analogue** (PR 8). #2153 covers the narrow version — every
+   attribute declares a target, and a subclass keeps one of its parent's. The full
+   bidirectional check is still open.
+2b. **Method-level orphans are dropped in silence** — found while landing #2153, see below.
 3. **Three input-validation gaps** (slice 1): duplicate explicit `operationId`, invalid
    response code, invalid schema `type`. All three currently emit documents that fail OpenAPI
    validation while the pipeline reports success.
