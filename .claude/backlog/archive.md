@@ -163,3 +163,30 @@ extension points page in PR 20 would otherwise have to talk them through. Small 
 and it makes `withAugmenters(fn ($p) => $p->clear()->add(new OnlyMine()))` expressible.
 
 `Pipeline` wraps a `TypedList`, so both benefit.
+
+### PR 19 — pin `phpstan/phpstan` as well — **done, #2151**
+
+#2143 pinned `rector/rector` and `friendsofphp/php-cs-fixer` to exact versions, because
+`composer.lock` is not committed and every workflow installs `dependency-versions: highest`,
+so a new release of either turns unrelated PRs red.
+
+`phpstan/phpstan` (`^2.2`) has exactly the same exposure — new releases add checks at an
+unchanged level. It has been quiet so far, and `phpstan-baseline.neon` absorbs some of it,
+but the mechanism is identical and the argument for pinning is the same.
+
+Deliberately not `phpunit/phpunit`: its `^11.5 || >=12.5.22` constraint is wide on purpose,
+since the build matrix spans PHP 8.2 to 8.6.
+
+**#2151 pins it to 2.2.12.** Two things surfaced while doing it, both worth keeping:
+
+- **`^2.2` was already fiction.** `rector/rector` 2.6.5 requires `phpstan/phpstan ^2.2.10`,
+  so since #2143 pinned rector the phpstan version has been dictated transitively by a
+  different package's pin — 2.2.9 cannot be installed at all. Pinning a tool can move a tool
+  nobody pinned.
+- **`composer analyse` was failing locally and passing in CI**, which looked like the exact
+  drift this entry predicts and was not. phpstan decides whether `$argv` is defined by reading
+  the **running** PHP's `register_argc_argv` ini setting; a local 8.5 build with it off
+  reports `Variable $argv might not be defined` in `tools/docgen.php`, CI's 8.3 with it on
+  does not. Same phpstan version, same repository, different answer. #2152 guards the variable
+  so the result no longer depends on the machine. Worth remembering before attributing the
+  next environment-dependent analysis failure to a release.
