@@ -46,9 +46,9 @@ is picked up again, because it inverts their dependency.
 
 Suggested order:
 
-1. **PR 26** — the classic-to-spec behavioural parity audit. The largest unknown, and the
-   reason this order exists. It was to have waited on PR 11; PR 11 closed with nothing to fix,
-   so the coverage numbers can be trusted as they stand and this starts now.
+1. **PR 26** — features and quirks classic handles that spec does not. The largest unknown,
+   and the reason this order exists. **Slice 1 (`tests/Annotations/`) is done** and found three
+   live validation gaps; the remaining slices are listed in the entry.
 2. **PR 15** — mode-aware `ScratchTest` log keys. Before the new fixtures, not after: the key
    shape is what every new fixture's `$expectedLogs` inherits.
 3. **PR 10** — finish the extraction, as far as it goes. Early, so the tests PR 26 produces
@@ -110,9 +110,17 @@ public API by convention; factories and resolvers are collaborators. Implemented
 
 Interim solution — see follow-up PR 1.
 
-**Q3. Are the classic-vs-spec output differences real?** — DEFERRED (2026-08-28)
+**Q3. Are the classic-vs-spec output differences real?** — DEFERRED (2026-08-28), now
+answerable
 Leave the hedged claims for now; spec mode is still optional/beta. Revisit before spec
 becomes the default.
+
+The evidence turns out to exist already and to be cheap to read: `ScratchTest` compares all
+three modes against one shared expected document unless a `-spec.yaml` override exists, so
+the five overrides in `tests/Fixtures/Scratch/` **are** the list of real divergences —
+`Auth`, `DuplicateRef`, `MergeTraitsExtended`, `NullRef` (3.1/3.2 only) and
+`MultiTypeProperty` (type-info resolver only). The other 34 families assert byte-identical
+output. Reading those five diffs settles this without a survey; see PR 26.
 
 **Q4. How much of `docs/adr/` is actually an ADR?** — DEFERRED (2026-08-28)
 Written as a reference/experiment to see if the format was useful. Both files describe the
@@ -923,53 +931,118 @@ several of these classes are used by downstream code, per the extension-points t
 PR 20) but touches call sites across `src/` and `tools/`, so worth batching into one pass
 rather than doing it ad hoc mid unrelated PRs.
 
-### PR 26 — what do classic tests assert that spec tests do not?
+### PR 26 — features and quirks classic handles that spec does not
 
-Coverage answers "was this line executed". It does not answer "is this behaviour asserted
-anywhere", and the two pipelines have been built years apart by different routes, so classic
-carries edge cases nobody has deliberately re-established on the spec side. Those are
-invisible to every measurement taken so far.
+**Not a coverage exercise.** Line coverage is 92.2% and fine (PR 11). Nor is it about test
+counts. Classic's unit tests are the closest thing this project has to a written
+specification of edge-case behaviour — each one exists because somebody hit something. The
+question is which of those behaviours spec **does not have, or handles differently**, and for
+each difference whether it is deliberate.
 
-**File-level parity is already good and is not the question.** Every augmenter has a test,
-and near-every processor does. The gap is per-behaviour, and the entry point is the classic
-processor mapping table in `docs/reference/architecture.md` — for each classic test case, ask
-which spec test asserts the same thing.
+Two framings were tried and discarded first, both worth knowing so they are not retried:
 
-A first pass over test sizes, as a proxy only:
+- **Document-level parity is already covered, continuously.** `ScratchTest::mostSpecific()`
+  falls back to a shared `{name}{version}.yaml` used by classic, hybrid *and* spec, so a
+  fixture with no `-spec.yaml` override **asserts all three modes emit the same document**.
+  34 of 39 families do exactly that. The five that diverge — `Auth`, `DuplicateRef`,
+  `MergeTraitsExtended`, `NullRef` (3.1/3.2), `MultiTypeProperty` (type-info resolver) — are
+  the catalogue of known divergence, in file form. Reading those five answers **Q3** with
+  evidence that already exists on disk, and is the cheapest thing on this list.
+- **Test-size comparison is noise.** An early pass compared classic and spec test line counts
+  per augmenter (`Types` looked worst at 602 → 88). Then a full 24-scenario diff of
+  `AugmentPropertiesTest`'s inference matrix through both pipelines came out **identical at
+  3.0 and 3.1**. Feature parity there is complete; only the assertions are thin. Size proves
+  nothing.
 
-| Classic | Spec target | |
+So the target is the **unit tests that assert DTO state directly**, not fixtures. That is
+where the asymmetry lives: `tests/Annotations/` has 13 files of per-DTO behaviour tests,
+`tests/Spec/` has 2 — and both of those are structural invariants
+(`SlotMapConsistencyTest`, `UndefinedDefaultsTest`). Spec has **no per-DTO unit tests at all**.
+
+#### The theme, which predicts the findings better than reading tests one at a time
+
+Classic has 25 diagnostic sites, spec 18 — but of different kinds. Spec's are almost entirely
+version capability (`not supported in OpenAPI 3.0`, `mutualTLS`, `webhooks`). Classic's also
+include input validation: enum values, uniqueness, malformed codes.
+
+> **Spec validates what the target version can carry. Classic also validates whether the user
+> wrote something valid.**
+
+Every gap below follows from that one sentence. Use it as the search heuristic for the
+remaining slices.
+
+Why none of this showed up sooner: `composer redocly` would reject all three live gaps, but
+only inside a fixture — and nobody writes a fixture containing a typo. Document-level parity
+testing structurally cannot find an input-validation gap.
+
+#### Slice 1 — `tests/Annotations/` (13 files), done 2026-09-02
+
+Live gaps, each reproduced with a real `Builder` run. All three emit a document that fails
+OpenAPI validation while the pipeline reports success:
+
+| Quirk | Classic | Spec |
 | --- | --- | --- |
-| `AugmentProperties` 460 + `AugmentParameters` 106 + `AugmentRequestBody` 36 + `AugmentItems` (no test) | `Types` | **602 → 88 lines** |
-| `MergeJsonContent` 114 + `MergeXmlContent` 111 | `Shortcuts` | 225 → 65 |
-| `DocBlockDescriptions` 110 + `DocBlockVarLine` 62 | `Docblocks` | 172 → 55 |
-| `ExpandClasses` 221 + `ExpandTraits`/`ExpandInterfaces` (no tests) | `Inheritance` | 221 → 217 |
-| `ExpandEnums` 183 | `Enums` + `EnumDescriptions` | 183 → 169 |
+| Duplicate explicit `operationId` | warns, `validate()` false (`Annotations/Operation.php:231`) | silent, `isValid()` true, both emitted as `getItem` |
+| Invalid response code — `Default`, `5xX`, `6XX` | warns (`Annotations/Operation.php:219`) | silent, emits `"Default"` as the response key |
+| Invalid schema `type` — `strig` | warns | silent, emits `type: strig` |
 
-`Refs` and `Cleanup` run *ahead* of their classic counterparts, so this is not a general
-deficit. **Four classic processors converge on `Types`, and it has the thinnest test of the
-set** — that is where to start reading.
+Latent, not live:
 
-Line count is a proxy and proves nothing on its own; a long classic test may be repetitive
-and a short spec test may cover more per line. The audit is reading `AugmentPropertiesTest`'s
-cases and asking which have a `Types` analogue, not comparing numbers.
+- **JSON-pointer ref encoding.** `Annotations\Components::refEncode()`/`refDecode()` escape
+  `~` → `~0` and `/` → `~1`; spec has no equivalent anywhere. Unreachable in normal use
+  because spec component names are class-derived, so they contain neither character. Reachable
+  via an explicit `schema: 'foo/bar'`, and load-bearing the moment `#/paths/...` refs or
+  `components.mediaTypes`/`pathItems` land — which ties it to **Q5** and PR 22 Phase 4.
 
-Three outcomes per case, and the second is as valuable as the first:
+Generated operationIds are **not** at risk: `OperationIds::generateId()` returns
+`METHOD::path::Class::method`, unique by construction. Only explicitly set ones collide.
 
-- **Gap** — behaviour spec should have and does not assert. Write the test; it may find a
-  bug, the way PR 12's first fixture did.
-- **Deliberate difference** — behaviour spec intentionally does not reproduce. Record it.
-  Q3 already suspects the classic-vs-spec behaviour claims in `guide/spec-attributes.md` are
-  unverified; this is where that gets settled with evidence rather than deferred again.
-- **Covered elsewhere** — asserted by `ScratchTest`, `CompilerTest` or a fixture rather than
-  by an augmenter test. No action, but worth noting so the next audit does not re-derive it.
+Deliberate differences — spec makes the invalid state unrepresentable rather than warning
+about it. **Record these; do not "restore parity" by adding checks that cannot fire:**
 
-Sequencing: after PR 11, because a class that reads as untested may simply be
-provider-constructed, and chasing those wastes the audit's time. Its output feeds PR 8 and
-PR 12 — it is the thing that decides which fixtures are worth writing.
+| Classic warns | Spec |
+| --- | --- |
+| `in="dunno"` | impossible — `Parameter\{Path,Query,Header,Cookie}` are separate classes |
+| `example` and `examples` are mutually exclusive | impossible — no spec DTO carries both fields |
 
-Prompted by the 2026-09-02 reprioritisation. The only prior trace of it is PR 8's
-`ValidateRelationsTest` bullet, which is one instance of exactly this pattern: a classic
-invariant with no spec analogue, found by accident rather than by looking.
+Already present in spec, no action: License `url`/`identifier` exclusion
+(`OpenApi31Compiler.php:64`), version validation (stronger than classic — per-compiler
+`VERSIONS` plus `supports()`), required `info`/`info.title`, orphan validation (#2137).
+
+Not a gap but a visible behaviour difference: `OperationIds::$hash` defaults to **true**, so
+spec emits md5 operationIds where classic emits readable ones.
+
+#### Method notes
+
+Three false alarms, all hit in one sitting, all of which look like feature gaps:
+
+1. **`#[OA\Property(type: 'integer')]` does not exist in spec** — the twin fixture would not
+   instantiate. It is the documented design difference: `Property` does not extend `Schema`,
+   so the type goes on a stacked `#[OA\Schema]`.
+2. **Comparing `Result::toArray()` invents differences** — `[]` vs `{}` for empty schemas,
+   which vanish at the serialized level where both emit `{ }`.
+3. **Comparing at default versions invents more** — classic defaults to 3.0, spec to 3.1, so
+   `nullable: true` vs `type: [string, "null"]` reads as divergence.
+
+**Compare serialized output at a pinned version.** Anything else manufactures phantom gaps.
+
+Also: `Augmenter\Cleanup` drops unreferenced components, so a probe fixture whose schema is
+not referenced by an operation produces an empty document and looks like a collection failure.
+
+#### Remaining slices
+
+`AnalysisTest`, `ContextTest`, `SerializerTest`, `RefTest`, `tests/Utils/`, and the
+`tests/Processors/` behaviours. `tests/Annotations/AttributesSyncTest` is classic-internal
+(annotations ↔ attributes) and has no spec meaning.
+
+Output goes to spec-side assertions in the existing per-augmenter tests and to compiler
+`validate()` rules — **not** to new `Scratch` fixtures. That directory is 210 flat files
+across 39 families whose entire `-spec`/anchor naming scheme is dual-pipeline scaffolding:
+at v8 the 39 classic anchors go, the 5 `-spec.yaml` overrides become the only expectation,
+and `mostSpecific()` loses three of its five rungs. Restructure it then, when there is one
+pipeline and the right shape is obvious; adding to it now organises around a convention that
+is about to evaporate. This also caveats PR 12, whose premise is "write more scratch
+fixtures".
 
 ---
 
