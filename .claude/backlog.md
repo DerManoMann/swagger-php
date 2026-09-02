@@ -30,8 +30,9 @@ PR 19), **#2150** (`Undefined::UNDEFINED` on every `mixed` property, the narrow 
 PR 8's null question).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
-first time. pcov is installed locally, so coverage numbers are real rather than inferred:
-spec pipeline 94.2%, classic 92.9%, project 90.6%.
+first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
+real rather than inferred; the current baseline and what it does and does not mean are in
+PR 11, in one place rather than restated here.
 
 ### The goal, as of 2026-09-02
 
@@ -45,28 +46,28 @@ is picked up again, because it inverts their dependency.
 
 Suggested order:
 
-1. **PR 11** — audit the thirteen providers that construct objects, and add `--coverage-text`
-   to CI (from PR 8). This is the measuring instrument: a provider-constructed class reads as
-   untested, so until it is fixed every "what is missing" call runs on numbers understated by
-   an unknown amount. Cheap, and it gates 2-5.
-2. **PR 26** — the classic-to-spec behavioural parity audit. The largest unknown, and the
-   reason this order exists.
-3. **PR 15** — mode-aware `ScratchTest` log keys. Before the new fixtures, not after: the key
+1. **PR 26** — the classic-to-spec behavioural parity audit. The largest unknown, and the
+   reason this order exists. It was to have waited on PR 11; PR 11 closed with nothing to fix,
+   so the coverage numbers can be trusted as they stand and this starts now.
+2. **PR 15** — mode-aware `ScratchTest` log keys. Before the new fixtures, not after: the key
    shape is what every new fixture's `$expectedLogs` inherits.
-4. **PR 10** — finish the extraction, as far as it goes. Early, so the tests PR 26 produces
+3. **PR 10** — finish the extraction, as far as it goes. Early, so the tests PR 26 produces
    are written on the traits rather than on `OpenApiTestCase`.
-5. **PR 8** + **PR 12** — remediation, from what PR 26 and the corrected coverage actually
-   show.
-6. **PR 14** — docblocks in `src/Spec/`. The most user-facing documentation work here: those
+4. **PR 8** + **PR 12** — remediation, from what PR 26 and the coverage baseline in PR 11
+   actually show.
+5. **PR 14** — docblocks in `src/Spec/`. The most user-facing documentation work here: those
    docblocks are spliced into `reference/spec-attributes.md`, so an imprecise one ships as
    published documentation.
-7. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
-8. **PR 3** — `composer docs:check`. After the content work under this goal, not before:
+6. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
+7. **PR 3** — `composer docs:check`. After the content work under this goal, not before:
    it locks down documentation that has just been made correct rather than guarding
    documentation about to be rewritten.
-9. **PR 20's extension points page only** — the largest remaining documentation gap, since
+8. **PR 20's extension points page only** — the largest remaining documentation gap, since
    nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
    it is outward-facing and a separate decision.
+
+**PR 11 is closed** — measured 2026-09-02, no change needed, and its entry now carries the
+coverage baseline the rest of this list should work from.
 
 **PR 6** stays conditional on PR 3. **PR 16**, **PR 17**, **PR 18**, **PR 23** and **PR 24**
 are all orthogonal to this goal; 24 is cheap enough to fold into anything already touching
@@ -232,8 +233,9 @@ numbers once pcov was installed. Line coverage at that point: spec pipeline 94.2
 92.9%, project 90.6%. Weakest areas were `src/Specification` (84.8%) and `src/Augmenter/`
 (91.1%); `src/Spec/` reached 99.2% after the fix below.
 
-Worth adding `--coverage-text` to a CI workflow so the number is visible per PR rather than
-measured ad hoc.
+~~Worth adding `--coverage-text` to a CI workflow so the number is visible per PR rather than
+measured ad hoc.~~ Already there — `build.yml` sets `coverage: pcov` and runs
+`composer test -- --coverage-text` (found while closing PR 11, which carries the numbers).
 
 Already closed by #2137: `ComponentIndex`, slot-target validation, and the
 attributes nothing was compiling.
@@ -340,6 +342,57 @@ which is which.
 Note the first scan for this reported no matches at all, from a broken detector. Any re-run
 should be sanity-checked against a provider known to construct objects — `nullableProvider`
 is a good canary.
+
+**Done 2026-09-02 — no change needed.** Measured rather than reasoned, and the premise does
+not hold: nothing in `src/` loses coverage attribution to a data provider. The whole entry
+closes without a PR.
+
+- **Fifteen providers construct objects**, not thirteen. The list above is right as far as it
+  goes and misses `ResolverTest::fullBuildProvider` and `OpenApiTestCase::getTypeResolvers`.
+- **No class is left uncovered by it.** Every class at 0% line coverage is explained by
+  something else (below), and the two candidates a static scan flagged as provider-only —
+  `Processors\OperationId` and `Type\LegacyTypeResolver` — have constructor execution counts
+  of 414 and 257. Both are built indirectly by the code under test, through `Generator`'s
+  default processor pipeline, which a `new X(` scan cannot see. That is the flaw in the
+  static heuristic, and the reason the conclusion here rests on the coverage run rather than
+  on the scan.
+- **`--coverage-text` in CI was already done.** `build.yml` sets `coverage: pcov` and runs
+  `composer test -- --coverage-text`, with `phpunit.xml.dist` scoping `<source>` to `src`. The
+  number has been visible per PR all along; PR 8's suggestion to add it is stale.
+
+Why #2137 was different: `UncoveredAttributesTest` existed *only* to construct those DTOs, so
+the provider was genuinely the sole construction site. That is a property of a test written to
+touch otherwise-unreached classes, not of data providers generally.
+
+The canary earned its place again, and the detector broke a second time with a new cause: the
+scan ran against a `git archive` export, and `.gitattributes` marks `tests/` `export-ignore`,
+so it read a tree with no tests in it and reported zero matches — the same output as the first
+broken detector, for an unrelated reason. Keep the canary; do not trust the detector.
+
+**Baseline at 2026-09-02**, after #2150-#2152, project-wide: lines 92.20% (5926/6427),
+methods 76.17%, classes 61.98%.
+
+**What the run did find**, none of it about providers:
+
+| At 0% | Statements | Why |
+| --- | --- | --- |
+| `Console/GenerateCommand` | 52 | `CommandlineTest` shells out via `exec()`, so seven real tests run it in a subprocess and none of it is attributed |
+| `Spec/MediaType/Xml` | 9 | genuinely unexercised — PR 12 already names it |
+| `Attributes/ServerVariable` | 9 | classic |
+| `Annotations/MediaType` | 6 | classic |
+| `Console/GenerateInput`, `Console/GenerateFormat`, `Builder/Mode` | 5, 3, 3 | small value types |
+| `Annotations/Attachable` | 1 | classic |
+
+Under 70%: `Processors/Concerns/RefTrait` 33.3%, `Annotations/PathItem` 44.4%,
+`Loggers/DefaultLogger` 50%, `Annotations/Parameter` 62.5%, `Utils/SourceLocation` 66.7%
+(46/69) — the last already named in PR 8 as having no direct test.
+
+**`Console/GenerateCommand` is the same symptom one level up**, and is now the largest
+misleading number in the report: 52 statements reading as untested while seven tests exercise
+them. Anyone reading the coverage report will see it as the biggest gap in `src/` and it is
+not one. Making it visible means either running the CLI in-process or accepting the number and
+writing it down — worth deciding, since the alternative is someone redundantly testing a
+covered command. This is the honest version of what PR 11 was looking for.
 
 ### PR 12 — scratch fixtures for the remaining uncovered DTOs
 
