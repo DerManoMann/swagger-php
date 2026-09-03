@@ -1,5 +1,29 @@
 
 
+### PR 3 — keep derivable documentation in sync automatically — **done, #2158**
+
+`DocsAccuracyTest` verifies five hand-written documentation claims against the codebase by
+reflection and command output. `composer docs:check` runs it.
+
+| Documented fact | Where | Verified against |
+|---|---|---|
+| `openapi -h` output | `guide/generating-openapi-documents.md` | actual CLI output |
+| root / conditionally-root / never-root lists | `dev/pipeline.md` | `isRoot()` implementations |
+| compiler ↔ version table | `reference/architecture.md` | `CompilerInterface` implementations |
+| `Result` method listing | `reference/builder.md` | `Result` public methods |
+| no `requestBody` on Get/Head/Options/Trace | `guide/spec-attributes.md` | constructor parameters |
+
+The `-D` default config candidate had no block in the docs to verify — skipped. The
+classic-processor → spec-augmenter mapping table and classic-vs-spec behaviour claims remain
+human-review only (see Q3).
+
+Already covered by other mechanisms and not duplicated: augmenter phase/order list
+(`reference/augmenters.md` is generated), doc snippets (`DocSnippetsTest`), example specs
+(`ExamplesTest`), generated reference pages (`composer docs:gen`).
+
+PR 6 (generate code fragments) stays conditional on this — `DocsAccuracyTest` is the
+verify-first approach PR 6's own entry suggested weighing before generating.
+
 ### PR 14 — apply the documentation rules to docblocks — **done, #2153 and #2156**
 
 `docs/dev/writing-docs.md` was written for markdown pages, but most of what it says is about
