@@ -30,8 +30,9 @@ PR 19), **#2150** (`Undefined::UNDEFINED` on every `mixed` property, the narrow 
 PR 8's null question), **#2153** (attribute targets plus `AttributeTargetsTest`, PR 26's first
 finding, and the writing-rules scope, PR 14's first half).
 
-Open: **#2154** (input validation plus the `SpecificationWalker` fix, PR 26), **#2155** (ref
-escaping, PR 26), **#2156** (`Server`/`ServerVariable` summaries, PR 14).
+Since then: **#2154** (input validation plus the `SpecificationWalker` fix, PR 26),
+**#2155** (ref escaping, PR 26), **#2156** (`Server`/`ServerVariable` summaries, PR 14),
+**#2157** (`OpenApiTestCase` migrated to extracted traits, PR 10 finished).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
@@ -52,15 +53,13 @@ Suggested order:
 
 1. **PR 15** — mode-aware `ScratchTest` log keys. Before the new fixtures, not after: the key
    shape is what every new fixture's `$expectedLogs` inherits.
-2. **PR 10** — finish the extraction, as far as it goes. Early, so the tests it enables are
-   written on the traits rather than on `OpenApiTestCase`.
-3. **PR 8** + **PR 12** — remediation, from what PR 26 found and the coverage baseline it
+2. **PR 8** + **PR 12** — remediation, from what PR 26 found and the coverage baseline it
    recorded, both in [`backlog/archive.md`](backlog/archive.md).
-4. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
-5. **PR 3** — `composer docs:check`. After the content work under this goal, not before:
+3. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
+4. **PR 3** — `composer docs:check`. After the content work under this goal, not before:
    it locks down documentation that has just been made correct rather than guarding
    documentation about to be rewritten.
-6. **PR 20's extension points page only** — the largest remaining documentation gap, since
+5. **PR 20's extension points page only** — the largest remaining documentation gap, since
    nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
    it is outward-facing and a separate decision.
 
@@ -335,40 +334,9 @@ Still open:
   `Assembler/OptionalPropertyAttributeTranslator`, `Utils/SourceLocation`,
   `Utils/SpecificationWalker`.
 
-### PR 10 — extract the pipeline-agnostic half of `OpenApiTestCase` into concerns
+### PR 10 — extract the pipeline-agnostic half of `OpenApiTestCase` into concerns — **done, #2147 + #2148 + #2157**
 
-`tests/OpenApiTestCase.php` is 332 lines and 52 test classes extend it, but most of it is
-classic and can be deleted with classic in v8. Two spec-side holdouts — `ScratchTest` and
-`BuilderTest` — still extend it only to reach five members that aren't classic at all
-(`getTrackingLogger()`, `assertOpenApiLogEntryContains()`, `assertSpecEquals()`, plus
-`getAnalyzer()`/`getTypeResolver()` for `BuilderTest`'s classic-mode cases). Extracting those
-into `tests/Concerns/` traits — reconciling overlap with `AssertsBuilderResult` and
-`AssertsSchemaStructure` along the way — turns removing `OpenApiTestCase` into a straight
-deletion instead of an untangling. Also settles which of three overlapping
-diagnostic-assertion mechanisms to standardise on: the PSR logger, since `CollectingLogger`
-already forwards to it and `Result::warnings()` is just a view over the same stream.
-
-**Partly done. Un-paused 2026-09-02** — it is item 4 in the current order.
-
-#2147 extracted `AssertsSpecEquals` and retired `AssertsBuilderResult`; #2148 added
-`ExpectsLogEntries`, which covers the logger members. `ScratchTest` is now two small
-extractions (`fixture()`, `getTypeResolvers()`) from dropping the base class.
-
-The earlier decision was to stop there, on the grounds that migrating existing tests earns
-little while `OpenApiTestCase` still has to exist. What changed is PR 26: an audit that
-produces a batch of new spec tests wants the trait vocabulary in place first, or those tests
-get written against the base class and have to be migrated later anyway.
-
-"As far as possible" is the shape of it, and the ceiling is known. `ScratchTest` can reach
-`extends TestCase`. `BuilderTest` cannot — it needs `getAnalyzer()` and `getTypeResolver()`
-for its classic-mode cases, and `getAnalyzer()` is classic and should stay behind. Finishing
-means `ScratchTest` converted and `BuilderTest` left as the single deliberate holdout, not
-`OpenApiTestCase` deleted.
-
-The event-subsystem approach `origin/expexts-logger-contains` explored was investigated and
-rejected — that branch can be dropped. Full plan, the member table, the log-mechanism
-comparison, and what the PHPUnit event measurements showed:
-[`backlog/testcase-concerns/README.md`](backlog/testcase-concerns/README.md).
+Moved to [`backlog/archive.md`](backlog/archive.md).
 
 ### PR 12 — scratch fixtures for the remaining uncovered DTOs
 
