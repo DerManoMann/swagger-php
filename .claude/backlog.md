@@ -1095,6 +1095,14 @@ and both removed in v8, and spec already re-implements what it needs in `Augment
 `ComponentIndex`. **Not a gap** — but the narrowness should be a deliberate choice rather than
 an accident, since nothing warns when a deep pointer fails to resolve.
 
+Taking the whole remainder as the name has a second consequence, found while landing #2155:
+`find()` accepts a component name **either escaped or raw** — both
+`#/components/schemas/Odd~1Name~0With` and `#/components/schemas/Odd/Name~With` resolve, since
+the unescaped slash just ends up inside the name it splits out. Lenient rather than designed.
+Pinned by a test in `ComponentIndexTest` so that tightening it is a deliberate change, and
+worth settling in the same pass as the deep-pointer question: both come down to how strictly
+this parses.
+
 **Deserialization is classic-only and goes away.** `Serializer::deserialize()` and
 `deserializeFile()` return `Annotations\AbstractAnnotation`; `SerializerTest` covers a
 Petstore round trip and `allOf` deserialization. Decided 2026-09-02: `Serializer` is classic
