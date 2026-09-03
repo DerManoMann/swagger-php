@@ -1150,6 +1150,14 @@ Three false alarms, all hit in one sitting, all of which look like feature gaps:
 
 **Compare serialized output at a pinned version.** Anything else manufactures phantom gaps.
 
+**Expect each finding to lead somewhere else.** Two of the four gaps turned into different
+bugs once probed. Chasing the missing `operationId` check found `SpecificationWalker::visit()`
+starting a fresh `SplObjectStorage` per bucket, so **every** `visit()` caller could see an
+attribute twice — including the request-body diagnostic that has been there all along. Chasing
+the same check found PR 28. Both were invisible for the same reason as #2153's ten classes: no
+fixture exercised the path. That is now three defects behind one blind spot, which says more
+about where to spend test effort than any coverage number has.
+
 **Then filter for what outlives classic.** Slice 2 produced three findings that looked like
 gaps and were not: deserialization, arbitrary pointer resolution, and `x-`-extension ref
 traversal are all classic-only, going away in v7/v8. The test to apply before filing anything
@@ -1175,9 +1183,9 @@ Findings to act on, in the order they are worth doing:
    attribute declares a target, and a subclass keeps one of its parent's. The full
    bidirectional check is still open.
 2b. **Sibling merge depends on declaration order** — found while landing #2153, now **PR 27**.
-3. **Three input-validation gaps** (slice 1): duplicate explicit `operationId`, invalid
-   response code, invalid schema `type`. All three currently emit documents that fail OpenAPI
-   validation while the pipeline reports success.
+3. ~~**Three input-validation gaps**~~ — **#2154**, open: duplicate explicit `operationId`,
+   invalid response code, invalid schema `type`. Carries the `SpecificationWalker` fix, and
+   produced PR 28.
 4. **Ref escaping** (slice 2). Needed on its own merits and a prerequisite for Q5 /
    PR 22 Phase 4.
 
@@ -1193,6 +1201,31 @@ and `mostSpecific()` loses three of its five rungs. Restructure it then, when th
 pipeline and the right shape is obvious; adding to it now organises around a convention that
 is about to evaporate. This also caveats PR 12, whose premise is "write more scratch
 fixtures".
+
+---
+
+### PR 28 — `HybridBridge` converts a webhook's operation twice
+
+`collect()` dispatches each classic annotation through a `match`, and most branches guard with
+`!$annotation->_context->is('nested')`. The `Annotations\Operation` branch does not. A classic
+`Webhook` holding a `Post` therefore yields two spec operations: one from
+`convertWebhook()`, and one from the flat operation branch picking the nested `Post` up again.
+
+Benign today. The second copy has neither `path` nor `webhook`, so `compilePaths()` and
+`compileWebhooks()` both skip it and the emitted document is correct — which is why it has
+never shown. It surfaced only because #2154's `operationId` uniqueness check counted both
+copies and reported a duplicate that does not exist in the source.
+
+#2154 works around it by skipping operations that reach no document, which is independently
+correct: uniqueness is a property of the document. The duplication itself is untouched.
+
+The fix looks like one guard, matching the neighbouring branches — the `PathItem` branch
+already carries `&& !($annotation instanceof Annotations\Webhook)` for the same
+double-handling, so the shape is established. What needs checking first is whether a nested
+operation inside a plain `PathItem` relies on the unguarded branch, since `convertPathItem()`
+may or may not carry its operations across.
+
+Classic-only by construction, so it disappears at v8 — worth weighing against fixing it.
 
 ---
 
