@@ -32,7 +32,8 @@ finding, and the writing-rules scope, PR 14's first half).
 
 Since then: **#2154** (input validation plus the `SpecificationWalker` fix, PR 26),
 **#2155** (ref escaping, PR 26), **#2156** (`Server`/`ServerVariable` summaries, PR 14),
-**#2157** (`OpenApiTestCase` migrated to extracted traits, PR 10 finished).
+**#2157** (`OpenApiTestCase` migrated to extracted traits, PR 10 finished),
+**#2158** (`DocsAccuracyTest` and `composer docs:check`, PR 3).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
@@ -56,10 +57,7 @@ Suggested order:
 2. **PR 8** + **PR 12** — remediation, from what PR 26 found and the coverage baseline it
    recorded, both in [`backlog/archive.md`](backlog/archive.md).
 3. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
-4. **PR 3** — `composer docs:check`. After the content work under this goal, not before:
-   it locks down documentation that has just been made correct rather than guarding
-   documentation about to be rewritten.
-5. **PR 20's extension points page only** — the largest remaining documentation gap, since
+4. **PR 20's extension points page only** — the largest remaining documentation gap, since
    nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
    it is outward-facing and a separate decision.
 
@@ -201,46 +199,9 @@ of this a user sees today.
 Agreed direction, deliberately **not** done in the doc-cleanup work. Merged entries move to
 [`backlog/archive.md`](backlog/archive.md); numbers are not reused.
 
-### PR 3 — keep derivable documentation in sync automatically
+### PR 3 — keep derivable documentation in sync automatically — **done, #2158**
 
-The audit's worst finding was a `openapi -h` block in
-`guide/generating-openapi-documents.md` that had been *written* rather than captured: wrong
-format, wrong `--mode` description, a `--version` default that does not exist, four options
-missing. Nothing would ever have caught it.
-
-The runnable half of this is now specified: `docs/dev/writing-docs.md` lists the mechanical
-checks under "Reviewing documentation changes", each tied to a defect it has actually
-caught. This PR is implementing those as `composer docs:check`, not deciding what to check.
-
-Per item the choice is **generate** or merely **verify**. Verification is usually the better
-trade: the prose stays human-written and readable, but drift fails the build. Generating
-prose tends to produce the flat, listy tone this cleanup was removing in the first place.
-
-Already covered, no action needed:
-- the augmenter phase/order list — removed from `reference/architecture.md`, which now links
-  to the generated `reference/augmenters.md`
-- `docs/snippets/*.php` → `*-3.1.0.yaml` — `DocSnippetsTest`, across all modes and
-  implementations
-- `docs/examples/specs/*` → `*-3.x.y.yaml` — `ExamplesTest`
-- the generated reference pages — `composer docs:gen`
-
-Candidates, roughly in order of how badly they rot:
-
-| Restated fact | Where | Suggested |
-|---|---|---|
-| `openapi -h` output | `guide/generating-openapi-documents.md` | generate or snapshot-test |
-| `-D` default config output | same | snapshot-test |
-| root / conditionally-root / never-root lists | `docs/dev/pipeline.md` | verify against `isRoot()` |
-| compiler ↔ version table | `reference/architecture.md` | verify against `CompilerInterface::version()`/`supports()` |
-| `Result` method listing | `reference/builder.md` | verify against reflection |
-| inline signature claims, e.g. "`Operation\Get::__construct()` has no `$requestBody`" | `guide/spec-attributes.md` | verify by reflection |
-
-Not derivable, needs human review on a schedule: the classic-processor → spec-augmenter
-mapping table in `reference/architecture.md`, and the classic-vs-spec behaviour claims in
-`guide/spec-attributes.md` (see Q3).
-
-A single `DocsAccuracyTest` covering the verifiable rows would likely be shorter than one
-generator, and would have caught most of what this cleanup fixed by hand.
+Moved to [`backlog/archive.md`](backlog/archive.md).
 
 ### PR 6 — generate code fragments from the classes docs reference
 
