@@ -74,8 +74,8 @@ coverage baseline the rest of this list should work from.
 are all orthogonal to this goal; 24 is cheap enough to fold into anything already touching
 CONTRIBUTING.
 
-Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). Q5 is parked
-with PR 22.
+Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). **Q5 is live
+again** — it governs `Response` in shipped code, not just PR 22's Phase 4.
 
 Entries that need supporting material, or have grown too long for the numbered list, get a
 folder under `.claude/backlog/`, named for the topic rather than the entry number so it
@@ -129,9 +129,11 @@ Written as a reference/experiment to see if the format was useful. Both files de
 Condensing them into LLM context is acceptable in principle, just not now.
 
 **Q5. How does a reusable, `$ref`-able `PathItem` or `MediaType` get a component identity?** —
-PARKED (2026-09-02, opened 2026-09-01)
-Parked with PR 22 rather than answered — it only ever mattered as a blocker on that entry's
-Phase 4, and nothing else waits on it.
+REOPENED (2026-09-03; opened 2026-09-01, parked 2026-09-02)
+Parked with PR 22 on the grounds that only that entry's Phase 4 waited on it. That turned out
+to be wrong: the same question governs `Response` in shipped code and the four component-key
+types' `isRoot()` implementations — see below. It is now a live design question independent of
+3.2.
 `Parameter`/`Header`/`Link` solve this with a component-key constructor field (`parameter:`,
 `header:`, `link:`) plus a conditional `isRoot()` that is true only when that key is set and
 `ref` is not. `PathItem` has neither — it is unconditionally root, and its `path` is always a
@@ -143,6 +145,59 @@ identity independent of the media-type string itself. Blocks Phase 4 of PR 22
 (`Components.pathItems` / `Components.mediaTypes`). See the "Phase 4" section of
 [`backlog/spec-3.2/README.md`](backlog/spec-3.2/README.md) for the two options sketched so
 far.
+
+**No longer hypothetical, and no longer only about 3.2 (2026-09-03).** The shape Q5 describes
+already ships in `Response`, and the four component-key types disagree with each other about
+what it means. Found while adding response-key validation in #2154, which had to key off
+position because the object could not be asked.
+
+`Response::$response` is overloaded exactly the way `MediaType::$mediaType` is: it is the HTTP
+status code when the response is nested in an operation, and the component name when the
+response sits in the `responses` bucket. `isRoot()` cannot separate them — it only checks the
+key is set. Two consequences, both verified:
+
+- **A status-code response that fails to nest becomes a component named after the code.**
+  Disable `Augmenter\Cleanup` and `components.responses.200` appears. **Classic does exactly
+  the same** — `MergeIntoComponents` merges any non-nested annotation whose `$_parents`
+  include `Components`. So the overload is inherited, and it originates in the document shape:
+  the Response Object has no name of its own, its identity is always the key of the map holding
+  it.
+- **What spec changed is the discriminator, not the overload.** Classic recorded position as a
+  fact and checked it (`_context->is('nested')`); spec infers rootness from field presence.
+  That is the regression, and it is what a fix should restore.
+
+Declaring both the key and `ref` then behaves four different ways:
+
+| Declared on a class with key **and** `ref` | Result |
+| --- | --- |
+| `RequestBody(request: 'x', ref: …)` | `components.requestBodies.x = {$ref: …}`, accepted |
+| `Response(response: 'x', ref: …)` | throws `Non-root attribute … remains after resolution` |
+| `Parameter(parameter: 'x', ref: …)` | throws |
+| `Link(link: 'x', ref: …)` | throws |
+
+`RequestBody::isRoot()` is the only one without the `ref === null` clause, and
+`docs/dev/pipeline.md` records that as a fact without a reason. It is tempting to call it the
+odd one out and add the clause — but that is probably backwards:
+
+- **`Response` needs the clause**, because key + `ref` is the *ordinary* pattern there:
+  `responses: {200: {$ref: …}}` is `response: 200, ref: …`, which must nest rather than become
+  a component. The clause is load-bearing precisely because the key doubles as a value.
+- **`RequestBody` is right to omit it.** `$request` is documented as a component key and can
+  never be a positional value, so key + `ref` can only mean "a component that aliases another",
+  which is legal OpenAPI and what the code emits.
+- **`Parameter` and `Link` have dedicated keys too** (`parameter`, `link`, distinct from
+  `name` / `operationId`), so by that reasoning they should permit the alias as `RequestBody`
+  does. They throw.
+
+So three of the four are defensible alone and no two share a rule. The rule that would explain
+all of them is **"does this key double as a value?"** — which is Q5's question, arriving in a
+fourth place. Answering it settles, uniformly: whether key + `ref` is an alias or a
+contradiction, what `PathItem` and `MediaType` need in order to be `$ref`-able, and whether
+`Response` should ever have carried one field for two jobs.
+
+Cheap and independent of the answer: **warn when a root `Response`'s key looks like a status
+code.** A reusable response named `200` is a failed merge every time, and it is the only part
+of this a user sees today.
 
 ---
 
