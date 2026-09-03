@@ -30,6 +30,9 @@ PR 19), **#2150** (`Undefined::UNDEFINED` on every `mixed` property, the narrow 
 PR 8's null question), **#2153** (attribute targets plus `AttributeTargetsTest`, PR 26's first
 finding, and the writing-rules scope, PR 14's first half).
 
+Open: **#2154** (input validation plus the `SpecificationWalker` fix, PR 26), **#2155** (ref
+escaping, PR 26), **#2156** (`Server`/`ServerVariable` summaries, PR 14).
+
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
 real rather than inferred; the current baseline and what it does and does not mean are in
@@ -53,14 +56,11 @@ Suggested order:
    written on the traits rather than on `OpenApiTestCase`.
 3. **PR 8** + **PR 12** — remediation, from what PR 26 found and the coverage baseline it
    recorded, both in [`backlog/archive.md`](backlog/archive.md).
-4. **PR 14** — docblocks in `src/Spec/`. The most user-facing documentation work here: those
-   docblocks are spliced into `reference/spec-attributes.md`, so an imprecise one ships as
-   published documentation.
-5. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
-6. **PR 3** — `composer docs:check`. After the content work under this goal, not before:
+4. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
+5. **PR 3** — `composer docs:check`. After the content work under this goal, not before:
    it locks down documentation that has just been made correct rather than guarding
    documentation about to be rewritten.
-7. **PR 20's extension points page only** — the largest remaining documentation gap, since
+6. **PR 20's extension points page only** — the largest remaining documentation gap, since
    nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
    it is outward-facing and a separate decision.
 
@@ -415,35 +415,6 @@ Mechanics worth knowing before starting:
   schema. Two rules bite in practice: `no-invalid-media-type-examples` validates `value`
   against the media type's schema (it does not know `dataValue`/`serializedValue`), and
   `path-parameters-defined` wants a `Parameter\Path` for every `{brace}` in the path.
-
-### PR 14 — apply the documentation rules to docblocks
-
-`docs/dev/writing-docs.md` was written for markdown pages, but most of what it says is about
-precision and economy, and those apply to docblocks unchanged. Docblocks in `src/Spec/`,
-`src/Augmenter/`, `src/Processors/` and `src/Annotations/` are additionally *spliced into the
-generated reference pages*, so an imprecise one ships to users as published documentation.
-
-Every defect the rules exist to catch has already turned up in a docblock during this work:
-
-- **Stale references** — `AttributeFactory` cited `ExpandHierarchy`, a class that no longer
-  exists, and `contains()` for a method actually named `contained()`
-- **Inverted precision** — `AttributeInterface::contained()` described the slot as living on
-  the declaring attribute; it lives on the parent
-- **Self-description** — a fixture docblock explained that it "doubles as a worked example …
-  the translation people usually have to guess at"
-- **Filler** — "Convenience empty/noop base imlementation", typo included
-
-Rules that transfer directly: do not claim what you have not verified; do not cite line
-numbers; detail in exactly one place; no volatile values; no open-ended enumerations; do not
-describe the thing you are writing in. Rules that do not: site-absolute links, the
-generated-page conventions.
-
-**The scoping half is done in #2153**, which settled the second question the way this entry
-predicted: one document. `writing-docs.md` now names docblocks, pull request descriptions and
-commit messages as surfaces its rules cover, and lists the three page-only sections.
-
-What is left is the sweep itself — and `src/Spec/` is where to spend it, since those docblocks
-become the Spec Attributes reference and so ship to users.
 
 ### PR 15 — make `ScratchTest` log expectations mode-aware
 
