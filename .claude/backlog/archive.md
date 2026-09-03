@@ -54,3 +54,40 @@ The checks above are cheap to re-run and came back clean, so a future sweep of `
 needs a reason beyond routine. `src/Augmenter/`, `src/Processors/` and `src/Annotations/` were
 **not** swept — the entry named them, and only `src/Spec/` reaches users through a generated
 page, so the others were left.
+
+### PR 10 — extract the pipeline-agnostic half of `OpenApiTestCase` into concerns — **done, #2147 + #2148 + #2157**
+
+`tests/OpenApiTestCase.php` was 332 lines with 52 test classes extending it, but most of it
+was classic. The goal: extract the pipeline-agnostic members into `tests/Concerns/` traits so
+removing `OpenApiTestCase` becomes a straight deletion when classic goes, and so new spec
+tests use the traits directly rather than inheriting classic plumbing.
+
+Also settled which of three overlapping diagnostic-assertion mechanisms to standardise on:
+the PSR logger via `ExpectsLogEntries`, since `CollectingLogger` forwards to it and
+`Result::warnings()` is just a view over the same stream.
+
+Delivered across three PRs:
+
+- **#2147** — extracted `AssertsSpecEquals`, retired `AssertsBuilderResult`
+- **#2148** — added `ExpectsLogEntries` trait (order-independent, `#[Before]`/`#[After]`
+  hooks, no `setUp`/`tearDown` coupling)
+- **#2157** — extracted `UsesFixtures`, composed all three traits into `OpenApiTestCase`,
+  migrated all 15 test files from the old logger API (`assertOpenApiLogEntryContains`,
+  `ignoreLogEntries`, `getTrackingLogger`) to `ExpectsLogEntries` (`expectLogEntry`,
+  `allowLogEntry`, `trackingLogger`), removed dead `initializeProcessors()`, moved
+  `SourceScannerTest` off the base class to plain `TestCase`
+
+What remains on `OpenApiTestCase` is classic-only: `getContext`, `getAnalyzer`,
+`processorPipeline`, `analysisFromFixtures`, `annotationsFromDocBlockParser`,
+`createOpenApiWithInfo`, `allAnnotationClasses`, `allAttributeClasses`, `getTypeResolver`,
+`getTypeResolvers`. All deletable with classic in v8.
+
+One subtlety worth recording: PHP attributes are not inherited by overrides. The old logger
+silently dropped "Analysing source:" and "JetBrains" debug messages; `ExpectsLogEntries`
+records everything. The fix is a separate `#[Before]` method (`allowClassicDebugNoise`) on
+`OpenApiTestCase` rather than overriding the trait's `resetLogEntryExpectations` — overriding
+loses the `#[Before]` attribute and PHPUnit stops calling it.
+
+The event-subsystem approach on `origin/expexts-logger-contains` was investigated and
+rejected. Full plan and measurements:
+[`backlog/testcase-concerns/README.md`](testcase-concerns/README.md).
