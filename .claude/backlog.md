@@ -499,10 +499,41 @@ The surface it would cover, all already public:
 | `Builder::withAttributeFactory()` | assembly-time control |
 | `Builder::setCompiler()` | `CompilerInterface` — version-specific output |
 | `Builder::withGenerator()` | the classic escape hatch, hybrid only |
+| subclassing an `OpenApi\Spec` attribute | a constructor that derives the attribute's own arguments, typically by reflecting over a target class |
 
 The PoC exercises the first four, which is the useful signal about what to write up first.
 Worth capturing the dead ends too — `Run.php` already notes that its `MapRequestPayload`
 handling is one of several approaches and probably not the best.
+
+**Subclassing a spec attribute is a working extension point that nothing tests.** Found
+while doing PR 15, which removed the `echo` that had been announcing the two `Scratch`
+fixtures with no `-spec.php` counterpart. They turn out to mean opposite things:
+
+- `ThirdPartyAnnotation` is **permanently classic-only**. The scenario is a Doctrine
+  `@Annotation` class sharing a docblock with `@OA\Schema`; spec assembly never runs the
+  annotation parser at all — `Assembler` goes straight to `AttributeFactory`, and docblocks
+  are read only for `@var`/`@param` types. There is no spec analogue to write. Its other
+  content, `Child extends SomeParent` with a schema on both, is already covered by
+  `Docblocks-spec.php`.
+- `ComplexCustomAttributes` is **a real gap, and belongs here rather than with the fixtures**.
+  It is about user attributes extending `OAT\Schema`/`Property`/`Response` with constructors
+  that reflect over a target class — an integrator question, not a classic-syntax one. Spec
+  attributes are not `final`, and the pattern works: a subclassed `Spec\Schema` on a class
+  and a subclassed `Spec\Response` on a method both resolve, emitting the derived `required`
+  list and the `$ref`-ed response. Verified by hand, covered by nothing.
+
+Do not transliterate the classic fixture when writing the spec one. It reads like a pasted
+bug report — commented-out experiments, `list(): string` with no return — and its `Item`
+subclass, `ref` alongside `title`/`description`, is the `$ref`-with-siblings case
+`CompilerTest::test30RefStripsDescription` and `test31RefAllowsSiblings` already pin. What is
+worth keeping is the shape: constructors deriving `required` from public properties, and
+`#/components/schemas/{ShortName}` refs built from a `class-string`.
+
+With the `echo` gone both fixtures now skip spec mode silently, which reads as an oversight
+in the one case and nothing at all in the other. A suite-wide invariant over
+`Scratch/*.php` — every fixture has a `-spec.php` or an allowlist entry carrying its reason
+— would record the distinction. Deliberately not done in PR 15: the allowlist only earns its
+keep once the `ComplexCustomAttributes` half is actually written.
 
 **A fictive example under `docs/examples` is the better artefact for the docs.** Size fits:
 the unit to compare against is one processor example — `schema-query-parameter` is 114 lines
