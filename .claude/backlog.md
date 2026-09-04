@@ -45,6 +45,8 @@ PR 11 in [`backlog/archive.md`](backlog/archive.md), in one place rather than re
 **Make the spec pipeline as good as it can be at what it already does**, rather than
 widening what it covers. Three strands: finish the test migration as far as it will go,
 find behaviour classic tests assert and spec tests do not, and get the documentation right.
+The first strand finished with #2157 (PR 10); what is left of the other two is the order
+below.
 
 This displaced the previous order, which had 3.2 field coverage in the middle of it. **PR 22
 and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading before either
@@ -61,7 +63,9 @@ Suggested order:
    nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
    it is outward-facing and a separate decision.
 
-**PR 6** stays conditional on PR 3. **PR 16**, **PR 17**, **PR 18**, **PR 23** and **PR 24**
+**PR 6** was conditional on PR 3, which #2158 finished — its verify-first half now has a
+home in `DocsAccuracyTest`, so what remains is the per-fragment verify-or-generate choice
+in its entry. **PR 16**, **PR 17**, **PR 18**, **PR 23** and **PR 24**
 are all orthogonal to this goal; 24 is cheap enough to fold into anything already touching
 CONTRIBUTING.
 
@@ -227,11 +231,12 @@ test-executed file, or not inlining at all.
 
 **Consider verifying before generating.** A check that every PHP fence naming a project
 symbol matches the real signature would have caught both defects above, costs far less than
-a generator, and folds into PR 3 rather than adding a fourth thing under `tools/`. Generate
-only where the fragment is worth *showing* in full; verify everywhere else.
+a generator, and now has a home: `DocsAccuracyTest` (#2158), whose read-only-operations
+check already verifies one inline signature claim by reflection — the pattern to extend.
+Generate only where the fragment is worth *showing* in full; verify everywhere else.
 
-Sequencing: after PR 4. Adding a third generator while two are still near-duplicates would
-put the same code in three places.
+Sequencing: unblocked. The two gates were PR 4 (generators merged, #2141) and PR 3 (the
+verify home, #2158); both are done. What remains is the per-fragment choice above.
 
 ### PR 7 — augmenter configuration is documented on two pages
 
