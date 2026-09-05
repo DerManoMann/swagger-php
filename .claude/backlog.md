@@ -966,6 +966,39 @@ Two things a change has to keep:
 - It clears `example`, `examples` and `encoding` on the schema after lifting them to the
   media type. Skipping that emits them in both places.
 
+### PR 31 — nothing notices when a tool exclusion stops excluding anything
+
+`.php-cs-fixer.dist.php` and `rector.php` between them carried seven exclusions that did
+nothing: two paths for files that no longer exist (`src/Analysers/TypeResolverTrait.php`,
+`tests/Analysers/TokenScannerTest.php`), five rule skips whose rules had stopped firing on
+the file named, and one cs-fixer entry suppressing formatting on a whole file to protect
+something that was never at risk — its comment said "FQDN in data provider", but the keys
+are strings and cs-fixer does not rewrite strings.
+
+Half-life is short: the `IfToNullCoalescingAssignRector` skip was added seven days before it
+was found dead, in #2135 — a commit whose subject is "follow rector rule changes".
+
+Both failure modes are silent. A skip for a deleted path is inert, and a skip for a rule that
+no longer matches is inert; in both cases `composer lint` stays green and the entry looks
+load-bearing.
+
+Two checks would catch it, and both are cheap:
+
+- **every path in an exclusion exists.** Pure file-system check, no tool run.
+- **every rule skip still fires.** Remove one path list at a time, run `rector --dry-run`, and
+  assert the named file is reported. That is how these were found. Whole-rule skips with no
+  path — style preferences like `NewlineAfterStatementRector` — cannot be tested this way and
+  would have to be exempt.
+
+The second needs one rector run per skip, so it belongs in a `composer` script run
+deliberately rather than in `lint`. `DocsAccuracyTest` is the precedent for the shape: a test
+that checks configuration against reality rather than trusting it.
+
+Worth knowing before starting: a file listed under two rules cannot be judged from a single
+bulk run — `ComposerAutoloaderScannerTest` is skipped by both
+`StringClassNameToClassConstantRector` and `ArrayToFirstClassCallableRector`, and only a
+per-rule test showed the second is still needed.
+
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
 Moved to [`backlog/archive.md`](backlog/archive.md).
