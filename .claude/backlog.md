@@ -270,10 +270,20 @@ attributes nothing was compiling.
 
 Still open:
 
-- **`ValidateRelationsTest` has no full spec analogue.** Classic asserts its nesting map is
-  bidirectional — if A names B as a parent, B must name A as nested. The spec side now
-  checks that slots name real properties, but not the reverse direction: that a class
-  claiming it can nest into a parent is one the parent will actually accept.
+- **`ValidateRelationsTest` splits in two, and only half transfers.** Classic asserts three
+  things; the bidirectional half — `$_parents` ↔ `$_nested` — has **no spec analogue at
+  all**. Spec declares nesting once, on the child, as target + slot, so the two halves
+  cannot disagree. Nothing to test.
+
+  What does transfer is classic's third assertion, that a property's type agrees with the
+  nesting map. Ported as `SlotMapConsistencyTest::testSlotsAcceptTheDeclaringClass()`, and it
+  found a real defect on the first run: `Schema::contained()` named `Schema::$properties`, a
+  `list<Property>`. Reachable through a bare `#[OA\Schema]` on a method — nothing wraps it
+  into a `Property` there — and it crashed `Augmenter\Inheritance\Schemas` with a
+  `TypeError`. Removing the declaration alone turned the crash into a silent wrong document,
+  because `Augmenter\Names` then named the orphan after its *declaring* class and it
+  replaced the real schema. Fixed together, with `Names` restricted to class reflectors and
+  missing-name diagnostics matching classic's "missing key-field".
 - **The `null` vs `Undefined::UNDEFINED` convention is part decided.** Classic has
   `AnnotationPropertiesDefinedTest` asserting no property defaults to `null`. Spec is
   deliberately mixed, and the reasoning survived only as a comment in `Augmenter/Types.php`
@@ -298,9 +308,13 @@ Still open:
   What is still open is the wider invariant classic asserts — whether *nullable* properties
   should also avoid a `null` default. Only that needs deciding; the narrow rule is asserted
   by `UndefinedDefaultsTest` as of #2150.
-- **No direct tests**: `Assembler/DefaultAttributeTranslator`,
+- ~~**No direct tests**: `Assembler/DefaultAttributeTranslator`,
   `Assembler/OptionalPropertyAttributeTranslator`, `Utils/SourceLocation`,
-  `Utils/SpecificationWalker`.
+  `Utils/SpecificationWalker`.~~ `SpecificationWalker` gained `SpecificationWalkerTest` with
+  #2154. **The other three are deliberately left to the integration tests** (2026-09-05): both
+  translators run on every spec build and report 100% line coverage through it, and all three
+  are small enough that a unit test would restate the implementation rather than pin
+  behaviour. Revisit only if one grows a branch the fixtures do not reach.
 
 ### PR 10 — extract the pipeline-agnostic half of `OpenApiTestCase` into concerns — **done, #2147 + #2148 + #2157**
 
@@ -321,8 +335,15 @@ found two things a unit test could not:
   http / apiKey / oauth2 / openIdConnect only. Left as-is; classic is frozen.
 
 **#2144** added scratch fixtures for `Operation\{Head,Options,Trace}` and `Link` (including
-its `isRoot()` condition). Still wanted: `MediaType\Xml`, and anything the next coverage run
-shows thin.
+its `isRoot()` condition). `MediaType\Xml` is covered by `XmlContentEquiv{,-spec}.php`,
+which pins the shortcut, the verbose `MediaType` form and the array form against each other
+in both modes; `MethodProperty{,-spec}.php` covers a getter as a schema property.
+
+Still wanted: whatever the next coverage run shows thin. As of 2026-09-05 that is
+`src/Specification` (84.3%, `ComponentIndex` 84.3%) and `src/Augmenter` (91.1%, weakest
+`PathItems` 83.6%, `Types` 84.9%, `EnumDescriptions` 84.4%, `OperationIds` 82.6%);
+`Builder/Result` is 70.3%. `src/Console` reads 0% only because `CommandlineTest` drives the
+CLI through `exec()`, so the subprocess is never measured — nothing to fix there.
 
 Mechanics worth knowing before starting:
 
@@ -332,8 +353,10 @@ Mechanics worth knowing before starting:
 - Regenerate by uncommenting `file_put_contents` in `ScratchTest::testScratch()`. Always
   pair it with `--filter <Fixture>`: an unfiltered run rewrites **every** fixture, and the
   current dumper differs from what is committed, so the diff is enormous and mostly noise.
-- `$expectedLogs` is keyed `{fixture}-{version}` with no mode component, so a warning raised
-  in one mode only cannot be registered without skipping the other mode's case.
+- `$expectedLogs` is keyed `{fixture}-{version}`, applying to every mode, or
+  `{fixture}-{version}-{mode}` for a diagnostic only one mode raises; both keys contribute
+  when both are present (#2160). `ExpectsLogEntries` is strict, so an undeclared entry fails
+  rather than passing unnoticed.
 - **A spec-only fixture still needs a classic file.** Discovery globs `Scratch/*.php` and
   skips `-spec` names, so `Foo-spec.php` is only found if `Foo.php` exists. With no
   `Foo3.x.y.yaml` or `-classic.yaml`, every classic combination skips on `$spec === null`
