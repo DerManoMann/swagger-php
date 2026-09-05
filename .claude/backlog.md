@@ -345,6 +345,22 @@ Still wanted: whatever the next coverage run shows thin. As of 2026-09-05 that i
 `Builder/Result` is 70.3%. `src/Console` reads 0% only because `CommandlineTest` drives the
 CLI through `exec()`, so the subprocess is never measured — nothing to fix there.
 
+**Prefer the bare-bones form.** A fixture that spells out what the pipeline would infer
+cannot detect the inference breaking — it pins the literal instead. Two habits to undo:
+
+- **Explicit values that are inferred.** `type: 'array'` alongside `items` is the common one;
+  dropping it gives byte-identical output, so the fixture asserts strictly more without it.
+  An explicit `#[OA\Property]` where the Schema shortcut would supply one is the same defect.
+  Not every explicit value is redundant — `property:` on a method is required, since a method
+  supplies no name.
+- **Inline constructor nesting where siblings would do.** `responses: [new OA\Response(...)]`
+  never exercises sibling merge; stacking the attributes does, and since #2159 the stacked
+  form resolves inner-to-outer whichever way it is declared. `Response`, `RequestBody` and
+  `Encoding` were converted for that reason; `XmlContentEquiv` and `MethodProperty` were
+  written the inline way and are worth converting.
+
+Worth a sweep of the existing fixtures rather than only the new ones, as its own change.
+
 Mechanics worth knowing before starting:
 
 - Discovery globs `Scratch/*.php` and skips `-spec` names, so a **classic `.php` file is
