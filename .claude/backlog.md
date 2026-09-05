@@ -938,6 +938,34 @@ by-product.
 The rest is classic and dies with v8, which is what makes a global bump a much smaller job
 then than now.
 
+### PR 30 — hybrid runs two classic processors for a mapping the bridge already knows
+
+`Builder::doHybridAssemble()` builds a `Generator` whose entire processor pipeline is
+`MergeJsonContent` and `MergeXmlContent`. Those two rewrite a `JsonContent` or `XmlContent`
+nested in a `Response`, `RequestBody` or `Parameter` into
+`content['application/json'|'application/xml'] = MediaType(schema: ...)`, lift `example`,
+`examples` and `encoding` off the schema, and drop the original annotation. `HybridBridge`
+then reads `content` — its own docblock states the dependency: "Expects only
+MergeJsonContent/MergeXmlContent to have run".
+
+The media type is fixed per annotation class, so nothing is being discovered. The bridge
+could synthesize the `Spec\MediaType` directly in `convertResponse()`, `convertRequestBody()`
+and `convertParameter()`, and hybrid's `Generator` call would reduce to scan and analyse with
+no processor pipeline at all.
+
+Why it is worth doing rather than tidy: **v7 makes hybrid the default mode** (see
+[ROADMAP](../ROADMAP.md)), so this overhead moves onto the path most projects take, and PR 16
+already measured hybrid at 1.46x slower than classic. This is one identified piece of that,
+with fixed rules and no intermediate state.
+
+Two things a change has to keep:
+
+- `MergeJsonContent` warns when the content sits somewhere it cannot nest ("Unexpected
+  ... must be nested"). Moving the mapping without the diagnostic makes that case silent —
+  the failure mode PR 15 and #2162 both turned out to be.
+- It clears `example`, `examples` and `encoding` on the schema after lifting them to the
+  media type. Skipping that emits them in both places.
+
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
 Moved to [`backlog/archive.md`](backlog/archive.md).
