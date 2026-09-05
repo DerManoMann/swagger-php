@@ -362,7 +362,23 @@ cannot detect the inference breaking — it pins the literal instead. Two habits
   `Encoding` were converted for that reason; `XmlContentEquiv` and `MethodProperty` were
   written the inline way and are worth converting.
 
-Worth a sweep of the existing fixtures rather than only the new ones, as its own change.
+**Stacking is limited to one container per target.** An attribute can only be lifted out of
+its parent if that leaves exactly one candidate to merge into. Found the hard way while
+sweeping; each of these fails loudly rather than silently, which is #2159 working:
+
+- two operations on one class or method — a stacked `OA\Response` matches both and raises
+  `Ambiguous merge` (`MultiplePathsForEndpoint`)
+- a request body already stacked — the `OA\MediaType` then has both a `Response` and a
+  `RequestBody` to merge into (`Encoding`, `RequestBody`)
+- stacked `OA\Link` attributes meant as *component* links — a sibling `OA\Response` captures
+  them into the response instead (`Link`, and `examples/specs/using-links`)
+
+Classic accepts the stacked form too, so the `_at` snippet variants convert alongside the
+`_spec` ones; the `_an` variants cannot, docblocks having only the nested form.
+
+Swept in #2163: 27 fixtures, 17 spec-mode examples, 6 cookbook snippets, with no generated
+document changing anywhere. `petstore`'s `PetController` still inlines `parameters` and
+`security` — its operations were single-line walls, and only responses were lifted.
 
 Mechanics worth knowing before starting:
 
