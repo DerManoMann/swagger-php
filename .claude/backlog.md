@@ -355,7 +355,10 @@ cannot detect the inference breaking — it pins the literal instead. Two habits
   supplies no name.
 - **Inline constructor nesting where siblings would do.** `responses: [new OA\Response(...)]`
   never exercises sibling merge; stacking the attributes does, and since #2159 the stacked
-  form resolves inner-to-outer whichever way it is declared. `Response`, `RequestBody` and
+  form resolves inner-to-outer whichever way it is declared. It is also the better form to
+  write by hand — no nesting, no `new` — so a fixture written that way doubles as the style
+  worth copying, which matters because fixtures are what people read. `Response`,
+  `RequestBody` and
   `Encoding` were converted for that reason; `XmlContentEquiv` and `MethodProperty` were
   written the inline way and are worth converting.
 
