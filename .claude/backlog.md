@@ -63,8 +63,6 @@ Suggested order:
 2. **PR 20's extension points page only** — the largest remaining documentation gap, since
    nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
    it is outward-facing and a separate decision.
-3. **PR 8's last item** — whether a *nullable* property should also avoid a `null` default.
-   A decision, not code; everything else in that entry is closed.
 
 **PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
 shows thin, and the entry carries the numbers and the mechanics.
@@ -257,71 +255,9 @@ to write an augmenter. Delete "Configuring augmenters" from `architecture.md`.
 
 Predates all of this work; noticed while re-homing the resolver docs.
 
-### PR 8 — remaining spec test gaps
+### PR 8 — remaining spec test gaps — **done, #2137 + #2150 + #2162 + the null rule**
 
-From a coverage survey on 2026-08-29, initially with a structural proxy and then with real
-numbers once pcov was installed. Line coverage at that point: spec pipeline 94.2%, classic
-92.9%, project 90.6%. Weakest areas were `src/Specification` (84.8%) and `src/Augmenter/`
-(91.1%); `src/Spec/` reached 99.2% after the fix below.
-
-~~Worth adding `--coverage-text` to a CI workflow so the number is visible per PR rather than
-measured ad hoc.~~ Already there — `build.yml` sets `coverage: pcov` and runs
-`composer test -- --coverage-text` (found while closing PR 11, archived, which carries the
-numbers).
-
-Already closed by #2137: `ComponentIndex`, slot-target validation, and the
-attributes nothing was compiling.
-
-**One item is left** — the nullable-default question in the second bullet. The first and
-third are closed, kept for the reasoning.
-
-Still open:
-
-- **`ValidateRelationsTest` splits in two, and only half transfers.** Classic asserts three
-  things; the bidirectional half — `$_parents` ↔ `$_nested` — has **no spec analogue at
-  all**. Spec declares nesting once, on the child, as target + slot, so the two halves
-  cannot disagree. Nothing to test.
-
-  What does transfer is classic's third assertion, that a property's type agrees with the
-  nesting map. Ported as `SlotMapConsistencyTest::testSlotsAcceptTheDeclaringClass()`, and it
-  found a real defect on the first run: `Schema::contained()` named `Schema::$properties`, a
-  `list<Property>`. Reachable through a bare `#[OA\Schema]` on a method — nothing wraps it
-  into a `Property` there — and it crashed `Augmenter\Inheritance\Schemas` with a
-  `TypeError`. Removing the declaration alone turned the crash into a silent wrong document,
-  because `Augmenter\Names` then named the orphan after its *declaring* class and it
-  replaced the real schema. Fixed together, with `Names` restricted to class reflectors and
-  missing-name diagnostics matching classic's "missing key-field".
-- **The `null` vs `Undefined::UNDEFINED` convention is part decided.** Classic has
-  `AnnotationPropertiesDefinedTest` asserting no property defaults to `null`. Spec is
-  deliberately mixed, and the reasoning survived only as a comment in `Augmenter/Types.php`
-  ("Can't use `??=` here — const defaults to `Undefined::UNDEFINED`, not null").
-
-  The narrow half is settled and now written up in `docs/dev/pipeline.md` under "`null` means
-  unset, except where `null` is a value": a `mixed` property defaults to
-  `Undefined::UNDEFINED`, because `null` is a legal value for it and so cannot also mean "not
-  set". That was already what 12 of the 14 `mixed` properties in `src/Spec/` did — it just had
-  nowhere to be read. The two deviations were `Example::$value` and `Link::$requestBody`.
-
-  **Done in #2150**, and it corrected a claim this entry previously made. Aligning the two was
-  described here as changing no output "since `filter()` drops `null` and
-  `Undefined::UNDEFINED` alike". It does change output, and that is the point: `filter()`
-  strips `null`, `Undefined::UNDEFINED` **and `[]`**, so a field left inside the `filter()`
-  call cannot emit an explicit `null` or an explicit empty array — both legal values for a
-  `mixed` property. Emitting them takes a branch outside `filter()`, which is what
-  `compileSchema()` already did for `default`, `const` and `example`; #2150 made
-  `compileExample()` and `compileLink()` match. Reverting either branch fails a test in each
-  direction.
-
-  What is still open is the wider invariant classic asserts — whether *nullable* properties
-  should also avoid a `null` default. Only that needs deciding; the narrow rule is asserted
-  by `UndefinedDefaultsTest` as of #2150.
-- ~~**No direct tests**: `Assembler/DefaultAttributeTranslator`,
-  `Assembler/OptionalPropertyAttributeTranslator`, `Utils/SourceLocation`,
-  `Utils/SpecificationWalker`.~~ `SpecificationWalker` gained `SpecificationWalkerTest` with
-  #2154. **The other three are deliberately left to the integration tests** (2026-09-05): both
-  translators run on every spec build and report 100% line coverage through it, and all three
-  are small enough that a unit test would restate the implementation rather than pin
-  behaviour. Revisit only if one grows a branch the fixtures do not reach.
+Moved to [`backlog/archive.md`](backlog/archive.md).
 
 ### PR 10 — extract the pipeline-agnostic half of `OpenApiTestCase` into concerns — **done, #2147 + #2148 + #2157**
 

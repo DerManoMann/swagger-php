@@ -1,3 +1,38 @@
+### PR 8 — remaining spec test gaps — **done, #2137 + #2150 + #2162 + the null rule**
+
+Closed in four parts. #2137 took `ComponentIndex`, slot-target validation and the attributes
+nothing was compiling. #2150 settled the narrow half of the null question — a `mixed` property
+defaults to `Undefined::UNDEFINED`, because `null` is a legal value there and so cannot also
+mean "not set" — and `UndefinedDefaultsTest` pins it. #2162 ported the half of classic's
+`ValidateRelationsTest` that transfers; the bidirectional half has no spec analogue, since
+spec declares nesting once and the two halves cannot disagree.
+
+**The last item turned out not to be a decision.** It was framed as "should a *nullable*
+property also avoid a `null` default", by analogy with classic's
+`AnnotationPropertiesDefinedTest`. Measured, that would have meant changing 574 constructor
+parameters against 26 already using the sentinel — and the wrong 574, because the real rule is
+narrower and the code already followed it:
+
+> A field an augmenter can infer defaults to `Undefined::UNDEFINED`, so that an explicit
+> `null` can suppress the inference. Everything else keeps `null`.
+
+`Undefined::isDefault()` is true only for the sentinel, never for `null`, so
+`if (!Undefined::isDefault($schema->description)) return;` means `description: null` is an
+explicit "no description" and the docblock is left alone. That is classic's "the annotation
+always wins", preserved. The 26 exceptions are exactly `summary` and `description` on the
+operations, parameters and schemas — the fields `Docblocks` and `EnumDescriptions` fill.
+
+Worth keeping: the capability was real but neither documented nor tested, and the failure mode
+is silent in both directions. Guard a field that still defaults to `null` and the guard is true
+for every attribute, so the inference never runs; widen `isDefault()` to accept `null` and
+suppression stops working. `DocblocksTest` now pins both halves and `dev/pipeline.md` states
+the rule.
+
+Deliberately not done: direct tests for `DefaultAttributeTranslator`,
+`OptionalPropertyAttributeTranslator` and `SourceLocation`. Both translators run on every spec
+build and report 100% line coverage through it, and all three are small enough that a unit test
+would restate the implementation rather than pin behaviour.
+
 ### PR 15 — make `ScratchTest` log expectations mode-aware — **done, #2160**
 
 Keys gained an optional `-{mode}` suffix; `{fixture}-{version}` still applies to every mode,
