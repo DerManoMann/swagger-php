@@ -36,7 +36,9 @@ Since then: **#2154** (input validation plus the `SpecificationWalker` fix, PR 2
 **#2158** (`DocsAccuracyTest` and `composer docs:check`, PR 3),
 **#2159** (inner-to-outer sibling merge, PR 27), **#2160** (mode-aware `ScratchTest` log
 keys plus the duplicate 3.0 diagnostic it exposed, PR 15), **#2161** (level 6 type
-annotations for the spec namespaces, PR 29).
+annotations for the spec namespaces, PR 29), **#2162** (the method-level `Schema` crash and
+the slot-type invariant that found it, PR 8), **#2163** (the significance-clause rule, and
+the writing rules stated to cover commits), **#2164** (the stacked-attribute sweep, PR 12).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
@@ -57,13 +59,15 @@ is picked up again, because it inverts their dependency.
 
 Suggested order:
 
-1. **PR 8** + **PR 12** — remediation, from what PR 26 found and the coverage baseline it
-   recorded, both in [`backlog/archive.md`](backlog/archive.md). PR 15 cleared the way: the
-   log-key shape every new fixture's expectations inherit is settled.
-2. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
-3. **PR 20's extension points page only** — the largest remaining documentation gap, since
+1. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
+2. **PR 20's extension points page only** — the largest remaining documentation gap, since
    nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
    it is outward-facing and a separate decision.
+3. **PR 8's last item** — whether a *nullable* property should also avoid a `null` default.
+   A decision, not code; everything else in that entry is closed.
+
+**PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
+shows thin, and the entry carries the numbers and the mechanics.
 
 **PR 6** was conditional on PR 3, which #2158 finished — its verify-first half now has a
 home in `DocsAccuracyTest`, so what remains is the per-fragment verify-or-generate choice
@@ -267,6 +271,9 @@ numbers).
 
 Already closed by #2137: `ComponentIndex`, slot-target validation, and the
 attributes nothing was compiling.
+
+**One item is left** — the nullable-default question in the second bullet. The first and
+third are closed, kept for the reasoning.
 
 Still open:
 
