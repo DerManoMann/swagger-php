@@ -33,7 +33,10 @@ finding, and the writing-rules scope, PR 14's first half).
 Since then: **#2154** (input validation plus the `SpecificationWalker` fix, PR 26),
 **#2155** (ref escaping, PR 26), **#2156** (`Server`/`ServerVariable` summaries, PR 14),
 **#2157** (`OpenApiTestCase` migrated to extracted traits, PR 10 finished),
-**#2158** (`DocsAccuracyTest` and `composer docs:check`, PR 3).
+**#2158** (`DocsAccuracyTest` and `composer docs:check`, PR 3),
+**#2159** (inner-to-outer sibling merge, PR 27), **#2160** (mode-aware `ScratchTest` log
+keys plus the duplicate 3.0 diagnostic it exposed, PR 15), **#2161** (level 6 type
+annotations for the spec namespaces, PR 29).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
@@ -54,18 +57,17 @@ is picked up again, because it inverts their dependency.
 
 Suggested order:
 
-1. **PR 15** — mode-aware `ScratchTest` log keys. Before the new fixtures, not after: the key
-   shape is what every new fixture's `$expectedLogs` inherits.
-2. **PR 8** + **PR 12** — remediation, from what PR 26 found and the coverage baseline it
-   recorded, both in [`backlog/archive.md`](backlog/archive.md).
-3. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
-4. **PR 20's extension points page only** — the largest remaining documentation gap, since
+1. **PR 8** + **PR 12** — remediation, from what PR 26 found and the coverage baseline it
+   recorded, both in [`backlog/archive.md`](backlog/archive.md). PR 15 cleared the way: the
+   log-key shape every new fixture's expectations inherit is settled.
+2. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
+3. **PR 20's extension points page only** — the largest remaining documentation gap, since
    nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
    it is outward-facing and a separate decision.
 
 **PR 6** was conditional on PR 3, which #2158 finished — its verify-first half now has a
 home in `DocsAccuracyTest`, so what remains is the per-fragment verify-or-generate choice
-in its entry. **PR 16**, **PR 17**, **PR 18**, **PR 23** and **PR 24**
+in its entry. **PR 16**, **PR 17**, **PR 18**, **PR 23**, **PR 24** and **PR 29**
 are all orthogonal to this goal; 24 is cheap enough to fold into anything already touching
 CONTRIBUTING.
 
@@ -350,44 +352,9 @@ Mechanics worth knowing before starting:
   against the media type's schema (it does not know `dataValue`/`serializedValue`), and
   `path-parameters-defined` wants a `Parameter\Path` for every `{brace}` in the path.
 
-### PR 15 — make `ScratchTest` log expectations mode-aware
+### PR 15 — make `ScratchTest` log expectations mode-aware — **done, #2160**
 
-`$expectedLogs` is keyed `{fixture}-{version}`. Diagnostics raised in one mode only cannot be
-*expected*, because the key applies to both and the unmatched expectation fails the other
-mode's case. They can only be tolerated, which asserts nothing.
-
-Three are tolerated today as a result:
-
-- `Schema: const is not supported in OpenAPI 3.0, using enum fallback` — Docblocks-3.0.0
-- `Tag "invalidparent" references non-existent parent "nah"` — Tags-3.2.0
-- `mutualTLS security schemes are not supported in OpenAPI 3.0` — Auth-3.0.0
-
-The `Tags` one is the reason to bother. That fixture contains a tag named `invalidparent`
-pointing at a parent named `nah`; it exists to provoke that warning, and the warning has
-never been observable, so nothing has been checking it fires. Tolerating it keeps the suite
-green while still asserting nothing.
-
-Adding a mode component to the key — `{fixture}-{version}-{mode}`, falling back to the
-current form — would let all three become expectations. Small change, and it converts three
-silent tolerances into three real assertions.
-
-The third arrived as a semantic merge conflict (#2140), which is worth recording as a
-pattern rather than a one-off. #2137 added the mutualTLS warning while compiler diagnostics
-still went nowhere, so it had nothing to declare. #2138 routed those diagnostics to the
-configured logger and seeded `$ignoredLogs` with the two entries *it* surfaced. Both were
-green alone; only the merged state failed, and only on `master` after the fact. Any PR that
-adds a compiler diagnostic now has to know about a list a different PR introduced —
-a coupling that mode-aware keys would not remove, but that reviewers should expect until
-some check catches it.
-
-Worth checking at the same time whether other fixtures were written to provoke diagnostics
-that the strict-FIFO tracking logger has been swallowing.
-
-`ExpectsLogEntries` (#2148) is half of this: it supplies the `expectLogEntry()` /
-`allowLogEntry()` split that names the distinction honestly, and it drops the FIFO ordering
-so declaration order stops mattering. It does **not** change the key, so the three
-tolerances above only become assertions once the mode component lands as well — do both in
-one change.
+Moved to [`backlog/archive.md`](backlog/archive.md).
 
 ### PR 16 — the mode performance comparison nobody has run
 
@@ -856,57 +823,59 @@ Classic-only by construction, so it disappears at v8 — worth weighing against 
 
 ---
 
-### PR 27 — sibling merge depends on declaration order, and loses attributes silently
+### PR 29 — phpstan level 6, and what the spec namespaces already cost
 
-**An earlier draft of this entry called bubbling the bug. It is not** — `pipeline.md` states
-it plainly: "If a level has no containers at all, unmatched attributes pass through to the
-level above." The `!in_array($attribute, $outer, true)` exemption in
-`AttributeFactory::fromReflector()` is what implements that, and it is deliberate: it lets an
-inner attribute reach an outer level, which is what translators rely on to inject attributes
-upward. Recorded because the misreading is easy and cost a round trip.
+#2161 annotated the 58 missing-type gaps in `OpenApi\Spec`, `Compiler`, `Augmenter`,
+`Assembler` and `Contracts`, so those namespaces report nothing at level 6. **The analysed
+level is still 5, and nothing enforces the new state** — phpstan has no per-path level
+setting, so this is the code side of a bump, not the bump.
 
-What is real: **sibling merge consumes attributes in declaration order**, so whether one
-merges depends on where it sits in the list. Same three attributes, same file, only the order
-changed:
+Measured at the time, level 6 over `src`, `tests`, `tools` and `docs/examples`:
 
-```php
-#[OA\Operation\Get(path: '/t')]
-#[OA\Response(response: 200, description: 'OK')]
-#[OA\MediaType(mediaType: 'application/json', schema: new OA\Schema(ref: T::class))]
-// → response has no content, no warning
+| | count |
+|---|---|
+| `missingType.iterableValue` | 340 |
+| `missingType.return` | 132 |
+| `missingType.generics` | 66 |
+| `missingType.property` | 43 |
+| `missingType.parameter` | 38 |
+| `argument.templateType` | 4 |
+| **total** | **623** |
 
-#[OA\MediaType(mediaType: 'application/json', schema: new OA\Schema(ref: T::class))]
-#[OA\Response(response: 200, description: 'OK')]
-#[OA\Operation\Get(path: '/t')]
-// → content present
-```
+By area: `docs/examples` 193, `tests` 117, classic (`src/Attributes` + `src/Annotations`) 89,
+`tools` 32, the spec namespaces 58 (now zero), everything else in `src/` the rest.
 
-`MediaType::merge()` names `Response::class => 'content[]'` in both cases. Container-first
-order lets `Response` merge into `Operation` before `MediaType` has its turn, leaving nothing
-for it to merge into; it then bubbles, finds no container at class level either, and is
-discarded without a diagnostic. Inner-first order works because each attribute still has its
-target when its turn comes.
+Two findings worth not rediscovering:
 
-So the working rule is **declare inner attributes before their containers**, and nothing says
-so — `pipeline.md` describes sibling merge without mentioning that order matters. That is the
-cheapest fix and probably the first one: document it.
+- **It is not a return-type problem.** Rector's `typeDeclarations` set is already enabled and
+  `composer lint` is clean, so native return types are done; 125 of the 132 that remain are in
+  `docs/examples`. The real gap is array value types and `Reflection*` generics.
+- **Tooling does not get you there.** Rector 2.6.5 ships an `@experimental`
+  `typeDeclarationDocblocks` set — 15 rules aimed squarely at `iterableValue`. Applied across
+  the tree it took 623 → 570, and the spec scope 79 → 72. It also emits FQCNs that cs-fixer
+  then rewrites, and prefers `array<int, string>` where `list<string>` is right, so its output
+  needs reviewing rather than trusting. Not worth wiring in for 8.5%.
 
-Beyond that, three options, in increasing cost:
+**Enforcement was attempted and dropped.** A `composer analyse:spec` script running
+`phpstan analyse --level=6` over the spec paths works, but only after scoping the three
+`ignoreErrors` in `phpstan.neon.dist` by path *and* adding `reportUnmatched: false` to each —
+phpstan reports a path-scoped ignore as unmatched when its path is not in the analysed set,
+which fails the run. Losing obsolete-ignore detection on the main run is a worse trade than
+the guard is worth. Revisit if phpstan gains per-path levels, or once the tree is close
+enough to raise the level globally.
 
-- **Diagnose it.** An attribute that merges into nothing and bubbles to a level with no
-  container is currently silent. PR 25's principle — nothing disappears without saying so —
-  applies to assembly as much as to compilation.
-- **Make merge order-independent**, by resolving inner-to-outer rather than in declaration
-  order. Correct, and the largest change.
-- **Leave it**, and rely on the documented ordering rule.
+**`docs/examples` is the next chunk and is not a typing cleanup.** Most of its 193 are
+`missingType.property` and `missingType.return` on example DTOs, and property types feed the
+type resolver — adding them changes the generated schemas and the committed YAML fixtures.
+Worth doing, as its own PR where the fixture diff is the thing being reviewed, not as a
+by-product.
 
-Why it has stayed hidden: every fixture builds these nested types as constructor arguments
-(`content: new OA\MediaType\Json(...)`), which sidesteps sibling merge entirely. The
-attribute-position path is barely exercised — which is also why #2153's ten classes could be
-unusable as attributes without a single test failing.
+The rest is classic and dies with v8, which is what makes a global bump a much smaller job
+then than now.
 
-Sizing any fix starts the same way: make the silent case warn, run the suite, and see how many
-fixtures were relying on the silence.
+### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
+
+Moved to [`backlog/archive.md`](backlog/archive.md).
 
 ---
 

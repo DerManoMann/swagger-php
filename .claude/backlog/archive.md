@@ -1,3 +1,46 @@
+### PR 15 — make `ScratchTest` log expectations mode-aware — **done, #2160**
+
+Keys gained an optional `-{mode}` suffix; `{fixture}-{version}` still applies to every mode,
+and both contribute when both are present. The three tolerated diagnostics — mutualTLS on
+3.0, `const` on 3.0, and the orphaned tag parent — became expectations, and `$ignoredLogs`
+went with them.
+
+Promoting the `const` one failed immediately: `OpenApi30Compiler::validate()` called
+`validateSchemas()` directly as well as through `parent::validate()`, so every 3.0 schema
+diagnostic was reported twice. `CompilerTest::testValidation` asserts with `assertContains`,
+which duplicates pass, so nothing was watching. The entry's premise proving itself —
+tolerating a diagnostic asserts nothing, including that it fires once.
+
+The entry's second question, whether other fixtures provoke diagnostics the logger had been
+swallowing, is answered: since #2148 made `ExpectsLogEntries` strict an undeclared entry
+already fails, so nothing is being swallowed. The debug `echo` naming fixtures without a
+`-spec.php` counterpart went at the same time; what the two remaining ones mean is recorded
+in PR 20.
+
+### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
+
+Resolved with the largest of the three options the entry listed: `resolveNesting()` now defers
+an attribute while another pending sibling names its type as a merge target, so chains resolve
+inner-to-outer whichever way they are declared. The documented ordering rule the entry
+proposed as the cheap first fix was not needed as a result.
+
+Mutual merge targets cannot be ordered that way and fall back to declaration order rather than
+deadlocking; a fixture with two mutually-targeting attachables pins that fallback. The flat
+form stays limited to unambiguous stacks — a `MediaType` next to both a `Response` and a
+`RequestBody` fails with a deterministic `Ambiguous merge` error instead of depending on
+order.
+
+Worth keeping from the original entry, because the misreading is easy and cost a round trip:
+**bubbling is not a bug.** `pipeline.md` states it plainly — "If a level has no containers at
+all, unmatched attributes pass through to the level above" — and the
+`!in_array($attribute, $outer, true)` exemption in `AttributeFactory::fromReflector()` is what
+implements it. Translators rely on it to inject attributes upward.
+
+Why it stayed hidden also held up: every fixture built these nested types as constructor
+arguments, sidestepping sibling merge entirely. The `Response`, `RequestBody` and `Encoding`
+scratch fixtures now declare part of their trees as stacked siblings, one container-first, so
+the path is covered rather than avoided.
+
 
 
 ### PR 3 — keep derivable documentation in sync automatically — **done, #2158**
