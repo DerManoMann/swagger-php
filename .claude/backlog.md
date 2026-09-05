@@ -376,7 +376,7 @@ sweeping; each of these fails loudly rather than silently, which is #2159 workin
 Classic accepts the stacked form too, so the `_at` snippet variants convert alongside the
 `_spec` ones; the `_an` variants cannot, docblocks having only the nested form.
 
-Swept in #2163: 27 fixtures, 17 spec-mode examples, 6 cookbook snippets, with no generated
+Swept across 27 fixtures, 17 spec-mode examples and 6 cookbook snippets, with no generated
 document changing anywhere. `petstore`'s `PetController` still inlines `parameters` and
 `security` — its operations were single-line walls, and only responses were lifted.
 
