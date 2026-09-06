@@ -997,6 +997,41 @@ PHP, so a platform pin must not stop 8.6 picking packages that need 8.6. `config
 constrains resolution rather than reporting the runtime, so the interaction with
 `--ignore-platform-req` and with the `highest` job needs confirming rather than assuming.
 
+### PR 35 — `ScratchTest` never runs hybrid, and 14 fixtures disagree when it does
+
+`ScratchTest`'s mode axis is `CLASSIC` and `SPEC`. Hybrid is exercised only by `ExamplesTest`,
+`DocSnippetsTest` and `CommandlineTest`, none of which compare it against the classic document
+it is supposed to reproduce. That is how the nested-operation bug in PR 28 survived: hybrid
+emitted `/nested: []` where classic emitted the operation, and nothing looked.
+
+Adding `Builder\Mode::HYBRID` to the axis needs no fixture work — the source selection only
+swaps in `-spec.php` for `SPEC`, so hybrid reads the classic file as it should. Measured on
+2026-09-06, that gives **463 cases and 38 failures across 14 fixtures**, roughly one per
+version:
+
+| Failures | Fixture |
+| --- | --- |
+| 6 | `RequestBody` |
+| 3 | `UsingRefs`, `ThirdPartyAnnotation`, `Security`, `NestedSchema`, `NestedAdditionalProperties`, `MergeTraitsExtended`, `Encoding`, `DuplicateRef` |
+| 2 | `NullRef`, `MultiTypeProperty`, `Examples` |
+| 1 | `Tags`, `Docblocks` |
+
+So **24 fixtures already match** and would be pinned the moment the mode is added.
+
+**Do not paper the other 14 over with `-hybrid.yaml` overrides.** The lookup supports them, so
+it is the tempting move, and it would enshrine whatever the bridge currently drops. The one
+sampled — `Tags` — fails on a missing `summary`, which is the same species as PR 28: a field
+the bridge does not carry across. Each of the 14 is a finding until shown otherwise.
+
+Sequencing that avoids a 14-way stall: add the mode with the 24 passing fixtures, and exclude
+the 14 by name with a comment pointing here, so the exclusion list shrinks as each is fixed
+and the suite stays green throughout. That is the same shape as the allowlist PR 12 describes
+for fixtures with no `-spec.php`.
+
+Worth knowing before starting: a reflector source yields nothing in classic or hybrid, since
+both scan files — `addSource(new \ReflectionClass(...))` silently produces an empty document
+rather than failing. It cost a false-passing test while writing PR 28's coverage.
+
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
 Moved to [`backlog/archive.md`](backlog/archive.md).
