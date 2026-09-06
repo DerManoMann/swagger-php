@@ -927,6 +927,43 @@ bulk run — `ComposerAutoloaderScannerTest` is skipped by both
 `StringClassNameToClassConstantRector` and `ArrayToFirstClassCallableRector`, and only a
 per-rule test showed the second is still needed.
 
+### PR 32 — nothing lists the extension points that ship
+
+`guide/extension-points.md` (#2168) names `DefaultAttributeTranslator`,
+`OptionalPropertyAttributeTranslator` and `Resolver\Reflection` in passing, because they are
+the worked examples of their own mechanisms. Nothing enumerates them. A reader who wants to
+know what already runs before writing their own has to read `src/`.
+
+`reference/augmenters.md` is the shape to copy: generated from `src/Augmenter/` docblocks by
+`AugmenterGenerator`, so it lists every augmenter with its phase and its `#[Config]`
+parameters and cannot rot. The same treatment applied to the other extension points would
+give one page with a section each:
+
+| Section | Source | Reported |
+| --- | --- | --- |
+| Translators | `src/Assembler/*AttributeTranslator.php` | order, what each reads and adds |
+| Resolvers | `src/Resolver/` | order, what each resolves, what it returns `false` for |
+| Compilers | `src/Compiler/` | the version each supports — `DocsAccuracyTest` already checks a hand-written table of this in `reference/architecture.md` |
+| Augmenters | `src/Augmenter/` | already generated; link rather than duplicate |
+
+Worth settling first:
+
+- **Whether it is one page or sections on the existing ones.** Augmenters already have a
+  generated page. A single "what ships" page duplicates it unless it links instead, and
+  `DocGenerator::configurableParameters()` already knows how to describe constructor config.
+- **What the discovery rule is.** Augmenters are found by namespace. Translators and
+  resolvers are found the same way today, but "everything in `src/Resolver/`" is an open set
+  in the sense the writing rules care about — a generator makes that safe, a hand-written
+  list does not.
+- **`reference/architecture.md`'s compiler table.** It is hand-written and verified by
+  `DocsAccuracyTest::testCompilerTableMatchesDocs()`. Generating it instead would remove the
+  test, which is a trade rather than a win — the test also checks `getVersion()` agrees.
+
+`tools/src/Docs/Sections/` is the shared abstraction #2141 moved the augmenter, spec
+attribute and processor generators onto; a new generator joins that rather than rendering by
+hand. See [PR 18](#pr-18--attributegenerator-is-the-last-generator-rendering-by-hand) for the
+one that has not moved yet.
+
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
 Moved to [`backlog/archive.md`](backlog/archive.md).
