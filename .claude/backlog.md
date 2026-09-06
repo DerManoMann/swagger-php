@@ -931,6 +931,60 @@ per-rule test showed the second is still needed.
 
 Moved to [`backlog/archive.md`](backlog/archive.md).
 
+### PR 33 — declared dependency floors nothing verifies
+
+Found while wondering whether any `composer.json` floor had quietly become unreachable. The
+check is cheap: resolve with `--prefer-lowest` and compare what composer picks against each
+declared floor. Anything resolving *above* its lowest branch means that branch is unused.
+
+Run on PHP 8.2, every floor is reachable — `psr/log` 1.1.0, `symfony/finder` 5.4.45,
+`symfony/yaml` 5.4.52, `symfony/deprecation-contracts` 2.5.0, `phpunit` 11.5.50 all land in
+their lowest branch — with one exception, and it depends on context:
+
+| Context | `nikic/php-parser` resolves to |
+| --- | --- |
+| with `require-dev` | 5.7.0 — the `^4.19` branch is unreachable |
+| `require` only, platform pinned to 8.2 | 4.19.0 — the floor is real |
+
+What holds it up is entirely the dev coverage stack: `phpunit/php-code-coverage` requires
+`^5.7.0`, `sebastian/complexity` and `sebastian/lines-of-code` require `^5.0`.
+
+**So `^4.19` is declared support CI has never exercised**, and cannot, in any matrix cell. A
+consumer really does get 4.19.0, so dropping the branch is a genuine decision rather than a
+formality — but the thing being decided is support that was never tested. `TokenScanner` also
+calls `createForNewestSupportedVersion()`, which 4.x only gained in 4.18, and 4.x parses no
+further than PHP 8.3 syntax, which is what [PR 31's sibling note](#pr-31--nothing-notices-when-a-tool-exclusion-stops-excluding-anything)
+and the v7 ROADMAP entry already record.
+
+Two ways to close it, and they are not exclusive:
+
+- **Raise the floor to `^5.0`.** Already noted for v7 in [ROADMAP](../ROADMAP.md). This is the
+  honest option: it aligns the declaration with what is verified.
+- **Keep `^4.19` and test it.** Needs a CI cell that installs `require` only, or a dev set
+  that does not drag in `^5`. The first is easy — a job that runs `composer update --no-dev
+  --prefer-lowest` and then something that exercises `TokenScanner` without phpunit. That is
+  awkward enough that it argues for the first option.
+
+The same `--prefer-lowest` comparison is worth re-running whenever a floor is raised; it costs
+one resolve and needs no judgement.
+
+### PR 34 — `--prefer-lowest` means something different in every CI cell
+
+`composer.json` sets no `config.platform.php`, so composer resolves against whatever PHP is
+running. The `lowest` half of the build matrix runs on 8.2 through 8.6, which means five cells
+each resolve a different dependency set, and none of them is pinned to the declared minimum of
+`>=8.2`.
+
+Setting `config.platform.php` to `8.2.0` makes the lowest set reproducible — the same one
+locally, in every cell, and for anyone reading the lock. It is what made the PR 33 comparison
+answerable at all; without it the scratch resolution followed the host PHP rather than the
+floor.
+
+Worth checking before doing it: the `highest` cells should keep resolving against the real
+PHP, so a platform pin must not stop 8.6 picking packages that need 8.6. `config.platform`
+constrains resolution rather than reporting the runtime, so the interaction with
+`--ignore-platform-req` and with the `highest` job needs confirming rather than assuming.
+
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
 Moved to [`backlog/archive.md`](backlog/archive.md).
