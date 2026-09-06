@@ -40,7 +40,8 @@ annotations for the spec namespaces, PR 29), **#2162** (the method-level `Schema
 the slot-type invariant that found it, PR 8), **#2163** (the significance-clause rule, and
 the writing rules stated to cover commits), **#2164** (the stacked-attribute sweep, PR 12), **#2165** (the `TokenScanner` fixture and
 tool-exclusion audit), **#2166** (augmenter config in one place, PR 7), **#2167** (an explicit
-`null` suppresses an inferred value, closing PR 8).
+`null` suppresses an inferred value, closing PR 8), **#2168** (the extension points guide, PR
+20's page), **#2169** (the generated extension points reference, PR 32).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
