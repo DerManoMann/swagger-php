@@ -53,21 +53,27 @@ PR 11 in [`backlog/archive.md`](backlog/archive.md), in one place rather than re
 **Make the spec pipeline as good as it can be at what it already does**, rather than
 widening what it covers. Three strands: finish the test migration as far as it will go,
 find behaviour classic tests assert and spec tests do not, and get the documentation right.
-The first strand finished with #2157 (PR 10); what is left of the other two is the order
-below.
+
+**All three are now closed.** The test migration finished with #2157 (PR 10). The
+behaviour hunt ran out with PR 26, and what it found is fixed — #2154, #2155, #2159, #2162.
+The documentation strand ended with #2168 and #2169, which gave integrators the page and the
+generated reference they had nothing of before.
 
 This displaced the previous order, which had 3.2 field coverage in the middle of it. **PR 22
 and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading before either
 is picked up again, because it inverts their dependency.
 
-Suggested order:
+**Nothing is queued behind the goal any more**, which makes the next move a choice rather
+than a continuation. The candidates, none of them obviously first:
 
-1. **PR 20's extension points page only** — the largest remaining documentation gap, since
-   nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
-   it is outward-facing and a separate decision.
-
-**PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
-shows thin, and the entry carries the numbers and the mechanics.
+- **PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
+  shows thin, and the entry carries the numbers and the mechanics.
+- **PR 28** is the only open bug: `HybridBridge` converts a webhook's operation twice.
+- **Q5** is live and governs `Response` in shipped code, not just PR 22's Phase 4. It is a
+  design question rather than a task, and answering it unparks PR 22.
+- **PR 30** cuts hybrid's two classic processors, which matters more once v7 makes hybrid
+  the default.
+- **PR 33** and **PR 34** are dependency hygiene, cheap and independent.
 
 **PR 6** was conditional on PR 3, which #2158 finished — its verify-first half now has a
 home in `DocsAccuracyTest`, so what remains is the per-fragment verify-or-generate choice
@@ -383,7 +389,12 @@ and `indentedBr()` went. Against that: it generates the classic attributes and a
 pages, and classic is removed in v8, so this may be work with a short life. Worth doing only
 if something else needs to touch that generator anyway.
 
-### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it
+### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it — **page done, #2168 + #2169**
+
+The documentation half shipped: `guide/extension-points.md` (#2168) covers the hooks and how
+they compose, and `reference/extension-points.md` (#2169) generates the list of what runs by
+default. What remains is the proof of concept itself, which is outward-facing and a separate
+decision.
 
 Two halves, both parked and both worth keeping.
 
