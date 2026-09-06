@@ -803,28 +803,9 @@ several of these classes are used by downstream code, per the extension-points t
 PR 20) but touches call sites across `src/` and `tools/`, so worth batching into one pass
 rather than doing it ad hoc mid unrelated PRs.
 
-### PR 28 — `HybridBridge` converts a webhook's operation twice
+### PR 28 — `HybridBridge` converts a webhook's operation twice — **done, #2170**
 
-`collect()` dispatches each classic annotation through a `match`, and most branches guard with
-`!$annotation->_context->is('nested')`. The `Annotations\Operation` branch does not. A classic
-`Webhook` holding a `Post` therefore yields two spec operations: one from
-`convertWebhook()`, and one from the flat operation branch picking the nested `Post` up again.
-
-Benign today. The second copy has neither `path` nor `webhook`, so `compilePaths()` and
-`compileWebhooks()` both skip it and the emitted document is correct — which is why it has
-never shown. It surfaced only because #2154's `operationId` uniqueness check counted both
-copies and reported a duplicate that does not exist in the source.
-
-#2154 works around it by skipping operations that reach no document, which is independently
-correct: uniqueness is a property of the document. The duplication itself is untouched.
-
-The fix looks like one guard, matching the neighbouring branches — the `PathItem` branch
-already carries `&& !($annotation instanceof Annotations\Webhook)` for the same
-double-handling, so the shape is established. What needs checking first is whether a nested
-operation inside a plain `PathItem` relies on the unguarded branch, since `convertPathItem()`
-may or may not carry its operations across.
-
-Classic-only by construction, so it disappears at v8 — worth weighing against fixing it.
+Moved to [`backlog/archive.md`](backlog/archive.md).
 
 ---
 

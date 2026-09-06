@@ -1,3 +1,25 @@
+### PR 28 — `HybridBridge` converts a webhook's operation twice — **done, #2170**
+
+The duplicate was the harmless half. The unguarded `Annotations\Operation` branch also
+collected operations nested in a `PathItem`, and those carry no path of their own — it
+belongs to the `PathItem` — so it produced them with `path` unset and `compilePaths()` dropped
+them. Classic emitted the operation; hybrid emitted `/nested: []`. This entry called the branch
+"benign today", which held only for the webhook copy.
+
+**The fix this entry proposed would have been wrong.** It suggested one guard matching the
+neighbouring branches. On its own that removes the duplicate and leaves the empty path item,
+because `convertPathItem()` never carried operations across. The entry was right to flag that
+as the thing to check first — the answer turned out to be that the flat branch was the *only*
+route for those operations, and a broken one.
+
+What shipped instead: `collectPathItem()` takes a `PathItem`'s operations across with its
+path, as `convertWebhook()` already did for webhooks, both sharing a `nestedOperations()`
+traversal. Only then is the `is('nested')` guard safe on the flat branch.
+
+`HybridBridgeTest` compares hybrid against classic for both shapes. That comparison did not
+exist anywhere — `ScratchTest` runs classic and spec only — which is the systemic gap, now
+[PR 35](#pr-35--scratchtest-never-runs-hybrid-and-14-fixtures-disagree-when-it-does).
+
 ### PR 32 — nothing lists the extension points that ship — **done, #2169**
 
 `ExtensionPointGenerator` produces `reference/extension-points.md` from the live defaults —
