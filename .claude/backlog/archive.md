@@ -1,3 +1,14 @@
+### PR 7 — augmenter configuration is documented on two pages — **done, #2166**
+
+"Configuring augmenters" deleted from `reference/architecture.md`. `reference/builder.md`
+already showed the same four operations plus `PathFilter`, and `withAugmenters()` is a
+`Builder` method, so the architecture page keeps the phases and how to write an augmenter
+while the builder page keeps the wiring — the split #2130 applied to the resolver.
+
+"Declaring configuration" had pointed at the deleted section with a link that was already
+loose: it said `#[Config]` makes a parameter settable via `-D`/`-c`, but pointed at a block
+showing the programmatic form. It now names both routes.
+
 ### PR 8 — remaining spec test gaps — **done, #2137 + #2150 + #2162 + the null rule**
 
 Closed in four parts. #2137 took `ComponentIndex`, slot-target validation and the attributes

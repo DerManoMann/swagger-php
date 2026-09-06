@@ -38,7 +38,9 @@ Since then: **#2154** (input validation plus the `SpecificationWalker` fix, PR 2
 keys plus the duplicate 3.0 diagnostic it exposed, PR 15), **#2161** (level 6 type
 annotations for the spec namespaces, PR 29), **#2162** (the method-level `Schema` crash and
 the slot-type invariant that found it, PR 8), **#2163** (the significance-clause rule, and
-the writing rules stated to cover commits), **#2164** (the stacked-attribute sweep, PR 12).
+the writing rules stated to cover commits), **#2164** (the stacked-attribute sweep, PR 12), **#2165** (the `TokenScanner` fixture and
+tool-exclusion audit), **#2166** (augmenter config in one place, PR 7), **#2167** (an explicit
+`null` suppresses an inferred value, closing PR 8).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
@@ -59,8 +61,7 @@ is picked up again, because it inverts their dependency.
 
 Suggested order:
 
-1. **PR 7** — augmenter config on two pages. Small, independent, do it in passing.
-2. **PR 20's extension points page only** — the largest remaining documentation gap, since
+1. **PR 20's extension points page only** — the largest remaining documentation gap, since
    nothing under `docs/` addresses integrators. The Nelmio proof of concept stays parked;
    it is outward-facing and a separate decision.
 
@@ -242,18 +243,9 @@ Generate only where the fragment is worth *showing* in full; verify everywhere e
 Sequencing: unblocked. The two gates were PR 4 (generators merged, #2141) and PR 3 (the
 verify home, #2158); both are done. What remains is the per-fragment choice above.
 
-### PR 7 — augmenter configuration is documented on two pages
+### PR 7 — augmenter configuration is documented on two pages — **done, #2166**
 
-`reference/architecture.md` § "Configuring augmenters" and `reference/builder.md`
-§ "Augmenter configuration" both show a `withAugmenters()` block doing the same four things.
-`builder.md`'s is a superset — it adds the `PathFilter` example and already links back to
-`architecture.md` for pipeline design.
-
-Same split as was applied to the resolver in #2130: `builder.md` owns wiring, because
-`withAugmenters()` is a `Builder` method; `architecture.md` owns what the phases are and how
-to write an augmenter. Delete "Configuring augmenters" from `architecture.md`.
-
-Predates all of this work; noticed while re-homing the resolver docs.
+Moved to [`backlog/archive.md`](backlog/archive.md).
 
 ### PR 8 — remaining spec test gaps — **done, #2137 + #2150 + #2162 + the null rule**
 
