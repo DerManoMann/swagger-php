@@ -978,7 +978,7 @@ PHP, so a platform pin must not stop 8.6 picking packages that need 8.6. `config
 constrains resolution rather than reporting the runtime, so the interaction with
 `--ignore-platform-req` and with the `highest` job needs confirming rather than assuming.
 
-### PR 35 — `ScratchTest` never runs hybrid, and 14 fixtures disagree when it does
+### PR 35 — `ScratchTest` never runs hybrid, and 14 fixtures disagree when it does — **mode added, #2171**
 
 `ScratchTest`'s mode axis is `CLASSIC` and `SPEC`. Hybrid is exercised only by `ExamplesTest`,
 `DocSnippetsTest` and `CommandlineTest`, none of which compare it against the classic document
@@ -1004,10 +1004,15 @@ it is the tempting move, and it would enshrine whatever the bridge currently dro
 sampled — `Tags` — fails on a missing `summary`, which is the same species as PR 28: a field
 the bridge does not carry across. Each of the 14 is a finding until shown otherwise.
 
-Sequencing that avoids a 14-way stall: add the mode with the 24 passing fixtures, and exclude
-the 14 by name with a comment pointing here, so the exclusion list shrinks as each is fixed
-and the suite stays green throughout. That is the same shape as the allowlist PR 12 describes
-for fixtures with no `-spec.php`.
+**#2171 did the first half**: the mode is in the matrix, 330 cases became 422, and the 14 are
+excluded by name in `ScratchTest::scratchTestCases()` with the reason inline. Emptying that
+list fails on exactly those 14, so it carries no stale entries — the same honesty check the
+tool exclusions in PR 31 turned out to need.
+
+What is left is the 14 themselves. Each is a field the bridge fails to carry across; the one
+sampled, `Tags`, drops a `summary`. Fixing one means removing its name and watching that
+fixture go green, which is a self-contained unit of work each time. Overrides were deliberately
+not used: a `-hybrid.yaml` would pin the bug as expected output.
 
 Worth knowing before starting: a reflector source yields nothing in classic or hybrid, since
 both scan files — `addSource(new \ReflectionClass(...))` silently produces an empty document
