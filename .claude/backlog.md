@@ -14,10 +14,11 @@ written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
-Nothing is open. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
-changes), **#2136** (developer docs, and the writing rules), **#2137** (`ComponentIndex`,
-slot-target validation, and the attributes nothing was compiling), **#2138** (compiler
-diagnostics reaching the configured logger, PR 13), **#2139** (README corrections),
+**#2171 is open**, green and awaiting merge. Merged so far: **#2134** (spec docs
+cleanup), **#2135** (rector rule changes), **#2136** (developer docs, and the writing
+rules), **#2137** (`ComponentIndex`, slot-target validation, and the attributes nothing
+was compiling), **#2138** (compiler diagnostics reaching the configured logger, PR 13),
+**#2139** (README corrections),
 **#2140** (the `ScratchTest` failure #2137 and #2138 produced only once merged, see PR 15),
 **#2141** (the doc generator merge, PR 4), **#2142** (`.dist` convention for the phpstan
 config), **#2130** (resolver step), **#2143** (rector 2.6.5, and pinned tooling),
@@ -41,7 +42,9 @@ the slot-type invariant that found it, PR 8), **#2163** (the significance-clause
 the writing rules stated to cover commits), **#2164** (the stacked-attribute sweep, PR 12), **#2165** (the `TokenScanner` fixture and
 tool-exclusion audit), **#2166** (augmenter config in one place, PR 7), **#2167** (an explicit
 `null` suppresses an inferred value, closing PR 8), **#2168** (the extension points guide, PR
-20's page), **#2169** (the generated extension points reference, PR 32).
+20's page), **#2169** (the generated extension points reference, PR 32), **#2170** (nested
+operations collected from the parent that owns them, PR 28) and **#2171** (hybrid on
+`ScratchTest`'s mode axis and the eight defects that found, PR 35).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
@@ -59,6 +62,13 @@ behaviour hunt ran out with PR 26, and what it found is fixed — #2154, #2155, 
 The documentation strand ended with #2168 and #2169, which gave integrators the page and the
 generated reference they had nothing of before.
 
+The behaviour strand then reopened once, on a different instrument. PR 26 compared what
+the two pipelines' *tests* assert; #2171 compared what they *emit*, by putting hybrid on
+`ScratchTest`'s mode axis. That turned up eight more defects — six in `HybridBridge`, two
+in the spec pipeline — after the survey of assertions had gone quiet, and PR 36 is the one
+finding left over. A strand is exhausted only for the comparison that was run: hybrid is
+still uncompared in `ExamplesTest`, `DocSnippetsTest` and `CommandlineTest`.
+
 This displaced the previous order, which had 3.2 field coverage in the middle of it. **PR 22
 and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading before either
 is picked up again, because it inverts their dependency.
@@ -68,7 +78,10 @@ than a continuation. The candidates, none of them obviously first:
 
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
   shows thin, and the entry carries the numbers and the mechanics.
-- **PR 28** is the only open bug: `HybridBridge` converts a webhook's operation twice.
+- **PR 36** is the only open bug, and #2171 left it: `Augmenter\Names` infers a component
+  key from the declaring class for schemas, parameters and request bodies and for nothing
+  else, so an unnamed response, header, example or link keys positionally and its
+  class-name `$ref` never resolves.
 - **Q5** is live and governs `Response` in shipped code, not just PR 22's Phase 4. It is a
   design question rather than a task, and answering it unparks PR 22.
 - **PR 30** cuts hybrid's two classic processors, which matters more once v7 makes hybrid
