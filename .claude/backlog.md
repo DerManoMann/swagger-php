@@ -978,7 +978,7 @@ PHP, so a platform pin must not stop 8.6 picking packages that need 8.6. `config
 constrains resolution rather than reporting the runtime, so the interaction with
 `--ignore-platform-req` and with the `highest` job needs confirming rather than assuming.
 
-### PR 35 — `ScratchTest` never runs hybrid, and 14 fixtures disagree when it does — **mode added, #2171**
+### PR 35 — `ScratchTest` never runs hybrid, and 14 fixtures disagree when it does — **done, #2171**
 
 `ScratchTest`'s mode axis is `CLASSIC` and `SPEC`. Hybrid is exercised only by `ExamplesTest`,
 `DocSnippetsTest` and `CommandlineTest`, none of which compare it against the classic document
@@ -1004,19 +1004,55 @@ it is the tempting move, and it would enshrine whatever the bridge currently dro
 sampled — `Tags` — fails on a missing `summary`, which is the same species as PR 28: a field
 the bridge does not carry across. Each of the 14 is a finding until shown otherwise.
 
-**#2171 did the first half**: the mode is in the matrix, 330 cases became 422, and the 14 are
-excluded by name in `ScratchTest::scratchTestCases()` with the reason inline. Emptying that
-list fails on exactly those 14, so it carries no stale entries — the same honesty check the
-tool exclusions in PR 31 turned out to need.
+**#2171 did all of it**: the mode is in the matrix at 466 cases with nothing excluded. The
+premise above was two-thirds right. Eight of the 14 were defects — six in the bridge (seven
+JSON Schema keywords, `summary`/`parent`/`kind` on a tag, `headers` on an encoding, a
+property's own encoding, nested-only schema types collected as class schemas, class-level
+`Parameter`/`RequestBody` skipped) and two in the spec pipeline, which the hybrid comparison
+found by accident.
 
-What is left is the 14 themselves. Each is a field the bridge fails to carry across; the one
-sampled, `Tags`, drops a `summary`. Fixing one means removing its name and watching that
-fixture go green, which is a self-contained unit of work each time. Overrides were deliberately
-not used: a `-hybrid.yaml` would pin the bug as expected output.
+The other six were **classic quirks, not hybrid faults** — a `description` duplicated beside a
+`oneOf`, `type: [string]` where the spec compiler writes `type: string`. Hybrid feeds the spec
+compilers, so it is now held to the spec expectation where a fixture has a spec pair and to
+classic's otherwise. Only `ThirdPartyAnnotation` needed a `-hybrid.yaml` override, for a
+genuine rendering difference: spec puts `type: object` on a class-derived schema that only
+composes an `allOf`, classic does not.
+
+So the "each of the 14 is a finding until shown otherwise" rule was worth holding, but the
+conclusion it implied — that every disagreement is a dropped field — was not. Comparing two
+pipelines finds bugs in both, and sometimes the fixture is the thing that is wrong.
+
+`Auth` lost its split `-classic.yaml`/`-spec.yaml` expectations along the way: they existed
+only because `Auth-spec.php` declared a `mutualTLS` scheme classic cannot express, which
+`CompilerTest` already covers end to end.
 
 Worth knowing before starting: a reflector source yields nothing in classic or hybrid, since
 both scan files — `addSource(new \ReflectionClass(...))` silently produces an empty document
 rather than failing. It cost a false-passing test while writing PR 28's coverage.
+
+### PR 36 — `Names` infers a component key from the class for some component buckets only
+
+`Augmenter\Names` fills a missing component key from the declaring class, but only for schemas,
+parameters and — since #2171 — request bodies. Nothing does the same for responses, headers,
+examples or links.
+
+The consequence is not cosmetic. `OpenApi31Compiler` keys an unnamed component positionally —
+`fn (OA\RequestBody $body, int $index): string => $body->request ?? 'body' . $index` — so a
+class-level attribute with no explicit key compiles to `body0`, and because
+`ComponentIndex::buildRefMap()` skips any component whose name is null, a `$ref` given as a
+class name never resolves either. Both symptoms showed up together in #2171, where a bare
+`#[OAT\RequestBody]` on a class produced `$ref: OpenApi\Tests\Fixtures\Scratch\RequestBodyRef`
+against a component called `body0`.
+
+#2171 added `inferRequestBodyNames()` because a fixture demanded it, and stopped there. The
+remaining four are the same shape — a `getReflector() instanceof \ReflectionClass` guard and a
+`??= getShortClassName()` — but each wants a fixture proving the class-name `$ref` resolves,
+which is the part that makes it more than a one-liner. `buildRefMap()` already walks every
+bucket, so no index work is needed.
+
+Worth deciding as one question rather than four: whether "declared on a class means named after
+the class" is a rule the spec pipeline holds everywhere, or a schema convenience that happens to
+suit request bodies too.
 
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
