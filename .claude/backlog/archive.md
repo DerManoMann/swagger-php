@@ -1,3 +1,30 @@
+### PR 32 — nothing lists the extension points that ship — **done, #2169**
+
+`ExtensionPointGenerator` produces `reference/extension-points.md` from the live defaults —
+`AttributeFactory::getTranslators()` and `Resolver::withResolvers()` — the same discovery
+`AugmenterGenerator` uses on `Builder::getAugmenters()`. Walking the defaults rather than a
+directory answers the open-set question the entry raised: the page lists what actually ships,
+in run order, and cannot drift.
+
+The three questions the entry said to settle first, as resolved:
+
+- **One page, not sections.** `guide/spec-attributes.md` and `reference/spec-attributes.md`
+  were the precedent — a how-to paired with a generated list under the same name.
+- **Augmenters and compilers are linked, not repeated.** Augmenters already had a generated
+  page; the compiler table in `reference/architecture.md` is hand-written and verified by
+  `DocsAccuracyTest::testCompilerTableMatchesDocs()`, so generating it a second time would
+  have duplicated detail and bought nothing.
+- **No `getResolvers()` was added.** `Resolver::withResolvers()` already hands the list to a
+  callable, so the generator captures it there rather than widening `src/` for a docs change.
+  The asymmetry with `AttributeFactory::getTranslators()` remains.
+
+Two things the work turned up. The site build catches a dead *page* link but not a dead
+*fragment*, which is how `#property-spec-only` survived in `spec-attributes.md` after #2162
+corrected the page half of the same link — the real slug is `oa-property-spec-only`. And a
+generated reference makes a hand-written mention of the same fact a drift risk: the guide's
+description of `OptionalPropertyAttributeTranslator` became a link once the reference carried
+it.
+
 ### PR 7 — augmenter configuration is documented on two pages — **done, #2166**
 
 "Configuring augmenters" deleted from `reference/architecture.md`. `reference/builder.md`
