@@ -14,8 +14,8 @@ written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
-**#2172** (PR 36) and **#2173** (PR 38) are open and green. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector
-rule changes), **#2136** (developer docs, and the writing rules), **#2137**
+Nothing is open. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
+changes), **#2136** (developer docs, and the writing rules), **#2137**
 (`ComponentIndex`, slot-target validation, and the attributes nothing was compiling),
 **#2138** (compiler diagnostics reaching the configured logger, PR 13), **#2139** (README
 corrections), **#2140** (the `ScratchTest` failure #2137 and #2138 produced only once
@@ -43,8 +43,10 @@ the writing rules stated to cover commits), **#2164** (the stacked-attribute swe
 tool-exclusion audit), **#2166** (augmenter config in one place, PR 7), **#2167** (an explicit
 `null` suppresses an inferred value, closing PR 8), **#2168** (the extension points guide, PR
 20's page), **#2169** (the generated extension points reference, PR 32), **#2170** (nested
-operations collected from the parent that owns them, PR 28) and **#2171** (hybrid on
-`ScratchTest`'s mode axis and the eight defects that found, PR 35).
+operations collected from the parent that owns them, PR 28), **#2171** (hybrid on
+`ScratchTest`'s mode axis and the eight defects that found, PR 35), **#2172** (a component key
+inferred from the class for every bucket, PR 36) and **#2173** (a generic docblock resolved to
+the type it parameterises, PR 38).
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
@@ -1044,7 +1046,7 @@ Worth knowing before starting: a reflector source yields nothing in classic or h
 both scan files — `addSource(new \ReflectionClass(...))` silently produces an empty document
 rather than failing. It cost a false-passing test while writing PR 28's coverage.
 
-### PR 36 — `Names` infers a component key from the class for some component buckets only — **done, `fix/component-names`**
+### PR 36 — `Names` infers a component key from the class for some component buckets only — **done, #2172**
 
 `Augmenter\Names` fills a missing component key from the declaring class, but only for schemas,
 parameters and — since #2171 — request bodies. Nothing does the same for responses, headers,
