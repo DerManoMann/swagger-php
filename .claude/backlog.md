@@ -74,12 +74,15 @@ This displaced the previous order, which had 3.2 field coverage in the middle of
 and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading before either
 is picked up again, because it inverts their dependency.
 
-**Nothing is queued behind the goal any more**, and with PR 36 done there is no open bug,
-which makes the next move a choice rather than a continuation. The candidates, none of them
-obviously first:
+**Nothing is queued behind the goal any more**, which makes the next move a choice rather
+than a continuation. PR 36 cleared the list as it stood and added PR 37 back to it, which is
+the usual shape: the fix reads the code around it and finds the next thing. The candidates,
+none of them obviously first:
 
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
   shows thin, and the entry carries the numbers and the mechanics.
+- **PR 37** is the only open bug, and PR 36 left it: the nested maps still key by position,
+  so a nameless header or example inside a response compiles to a JSON array.
 - **Q5** is live and governs `Response` in shipped code, not just PR 22's Phase 4. It is a
   design question rather than a task, and answering it unparks PR 22.
 - **PR 30** cuts hybrid's two classic processors, which matters more once v7 makes hybrid
@@ -1105,6 +1108,38 @@ without a key is an error there, and `@OA\Header`, `@OA\Link` and `@OA\Examples`
 valid on a class at all. So `ComponentNames` spells the keys out on the classic side and omits
 them on the spec side, and the single expected document asserts that inferring and naming by
 hand produce the same thing.
+
+### PR 37 — a nested map with no key still compiles to a JSON array
+
+PR 36 fixed this for the `components` buckets and stopped there. The nested maps — a
+`Response`'s `headers` and `links`, a `MediaType`'s `examples` and `encoding` — still go
+through `compileNamedMap()`, whose fallback is `$item->$key ?? (string) $index`. An integer
+key makes the whole map serialize as a JSON array, and OpenAPI requires
+`Map[string, Object]` in every one of those positions:
+
+```json
+"headers":  [ { "description": "nameless nested header" } ],
+"examples": [ { "summary": "nameless nested example" } ]
+```
+
+**Spec is worse than classic here**, which is the part that decides it. Classic rejects the
+same input — `@OA\Header() is missing key-field: "header"`, asserted in
+`AbstractAnnotationTest` — while spec emits a document no validator will accept and says
+nothing. That is the failure mode PR 15 and #2162 both turned out to be, in a third place.
+
+The component half is already written and can be copied: drop the entry, warn once. What
+does not carry over is where the warning goes. `validateNames()` walks the `Specification`
+buckets, and these live inside operations, so it needs `collectSchemas()`-style traversal or
+a walker visit — which is the real work, not the keying.
+
+Worth deciding at the same time: `compileNamedMap()` keeps three genuine fallbacks that are
+*not* this bug — a response keyed by status code, a media type defaulting to
+`application/json`, a nested link falling back to `'link'`. The first two are values rather
+than names. The third is the same species as the `operationId` fallback PR 36 removed, and
+probably should go with it.
+
+Found while writing PR 36's fixture; scoped out of it deliberately, because the entry was
+about component identity and this is about a map key that never had one.
 
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
