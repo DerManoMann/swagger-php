@@ -74,15 +74,18 @@ This displaced the previous order, which had 3.2 field coverage in the middle of
 and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading before either
 is picked up again, because it inverts their dependency.
 
-**Nothing is queued behind the goal any more**, which makes the next move a choice rather
-than a continuation. PR 36 cleared the list as it stood and added PR 37 back to it, which is
-the usual shape: the fix reads the code around it and finds the next thing. The candidates,
-none of them obviously first:
+**Nothing is queued behind the goal any more**, so the order below is a choice rather than a
+continuation — but PR 38 has a reason to go first, and the rest do not. PR 36 cleared the list
+as it stood and put PR 37 and PR 38 back on it, which is the usual shape: the fix reads the code
+around it and finds the next thing.
 
+- **PR 38 is the one to take next.** A `@var Foo<T>` docblock resolves to nothing at all, in
+  classic and spec alike, and silently. It also blocks showing the NelmioApiDocBundle PoC, which
+  the entry explains. A narrower spec-only ref bug rides along with it.
+- **PR 37** is the other open bug, and PR 36 left it: the nested maps still key by position, so
+  a nameless header or example inside a response compiles to a JSON array.
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
   shows thin, and the entry carries the numbers and the mechanics.
-- **PR 37** is the only open bug, and PR 36 left it: the nested maps still key by position,
-  so a nameless header or example inside a response compiles to a JSON array.
 - **Q5** is live and governs `Response` in shipped code, not just PR 22's Phase 4. It is a
   design question rather than a task, and answering it unparks PR 22.
 - **PR 30** cuts hybrid's two classic processors, which matters more once v7 makes hybrid
@@ -106,7 +109,8 @@ rather than trusted; [`backlog/performance/`](backlog/performance/README.md), PR
 PR 17's own write-ups; [`backlog/testcase-concerns/`](backlog/testcase-concerns/README.md),
 PR 10's; [`backlog/nelmio-poc/`](backlog/nelmio-poc/README.md), PR 20's; and
 [`backlog/spec-3.2/`](backlog/spec-3.2/README.md), the full field-by-field audit behind
-PR 22.
+PR 22; and [`backlog/docblock-types/`](backlog/docblock-types/README.md), PR 38's
+reproduction.
 
 Entries move to [`backlog/archive.md`](backlog/archive.md) once finished, whether they merged
 or closed without a change — the terse form stays in "Where this stands" above. Move an entry
@@ -1140,6 +1144,57 @@ probably should go with it.
 
 Found while writing PR 36's fixture; scoped out of it deliberately, because the entry was
 about component identity and this is about a map key that never had one.
+
+### PR 38 — a generic docblock resolves to nothing, in both pipelines
+
+Three properties of the same class type, differing only in their docblock, run through all three
+modes. Reproduced on `origin/master` at `bfa6b0ce`, so both findings predate #2171 and PR 36:
+
+| declared as | classic | hybrid | spec |
+| --- | --- | --- | --- |
+| `public Target $native` | resolves | resolves | resolves |
+| `/** @var Target<string> */` | **`{}`** | **`{}`** | **`{}`** |
+| `/** @var Target */` | resolves | resolves | resolves |
+
+The script behind the table is in [`backlog/docblock-types/`](backlog/docblock-types/README.md).
+
+**The generic docblock is the finding, and it belongs to both pipelines.** A property typed
+`public Target $x` resolves on its own; adding `/** @var Target<string> */` above it makes the
+resolver return nothing, with no fall back to the native type. So a generic docblock is strictly
+worse than writing none, which is the opposite of what a docblock is for. Both pipelines do it,
+so this is not spec catching up with classic — it is shared, and older than either.
+
+Worth taking before the NelmioApiDocBundle PoC is shown to anyone. It is exactly what makes that
+bundle's `GenericTypesController` come out with every property empty, and generic-type support is
+the most recent thing the bundle built. The PoC's README has to say so, which is a poor
+advertisement for a pipeline being offered as the replacement.
+
+**A second, much narrower one, spec only.** In the *global namespace*, a short-name docblock
+compiles to a `$ref` with a leading backslash, which never matches the ref map —
+`ComponentIndex` keys on `getClassName()`, which has none:
+
+| in the global namespace, spec mode | |
+| --- | --- |
+| `/** @var GTarget */` | `$ref: \GTarget` — unresolved |
+| `/** @var \GTarget */` | resolves |
+| no docblock | resolves |
+
+Inside a namespace the short name resolves against it and comes out clean, which is why the
+table above does not show this. Classic gets the global case right, so unlike the generic
+docblock there is a correct implementation to compare against rather than design.
+
+That makes it the shape PR 26 went looking for — behaviour classic asserts and spec does not —
+turning up after that hunt was declared closed, and after #2171 found eight more by comparing
+outputs rather than tests. Third time. The lesson is not that the survey was sloppy; it is that
+each new axis of comparison is a new instrument, and this one (vary the docblock, hold the type)
+had never been pointed at anything.
+
+Where to start: `Type\LegacyTypeResolver` and `Type\TypeInfoTypeResolver` both feed
+`Types::augmentProperty()`, which bails when the resolver returns something that is not a
+`SchemaType`. The first question is whether both resolvers drop the generic or only one —
+`ScratchTest` runs both, so a fixture with these three properties pins the whole thing, and the
+resolver axis is already in the matrix. The global-namespace case needs its own fixture, since
+every `Scratch` fixture is namespaced.
 
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
