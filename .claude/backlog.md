@@ -14,12 +14,13 @@ written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
-**#2171 is open**, green and awaiting merge. Merged so far: **#2134** (spec docs
-cleanup), **#2135** (rector rule changes), **#2136** (developer docs, and the writing
-rules), **#2137** (`ComponentIndex`, slot-target validation, and the attributes nothing
-was compiling), **#2138** (compiler diagnostics reaching the configured logger, PR 13),
-**#2139** (README corrections),
-**#2140** (the `ScratchTest` failure #2137 and #2138 produced only once merged, see PR 15),
+**#2171 is open**, green and awaiting merge, with PR 36 stacked on it as
+`fix/component-names`. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector
+rule changes), **#2136** (developer docs, and the writing rules), **#2137**
+(`ComponentIndex`, slot-target validation, and the attributes nothing was compiling),
+**#2138** (compiler diagnostics reaching the configured logger, PR 13), **#2139** (README
+corrections), **#2140** (the `ScratchTest` failure #2137 and #2138 produced only once
+merged, see PR 15),
 **#2141** (the doc generator merge, PR 4), **#2142** (`.dist` convention for the phpstan
 config), **#2130** (resolver step), **#2143** (rector 2.6.5, and pinned tooling),
 **#2144** (scratch fixtures for Head/Options/Trace and Link, PR 9),
@@ -73,15 +74,12 @@ This displaced the previous order, which had 3.2 field coverage in the middle of
 and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading before either
 is picked up again, because it inverts their dependency.
 
-**Nothing is queued behind the goal any more**, which makes the next move a choice rather
-than a continuation. The candidates, none of them obviously first:
+**Nothing is queued behind the goal any more**, and with PR 36 done there is no open bug,
+which makes the next move a choice rather than a continuation. The candidates, none of them
+obviously first:
 
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
   shows thin, and the entry carries the numbers and the mechanics.
-- **PR 36** is the only open bug, and #2171 left it: `Augmenter\Names` infers a component
-  key from the declaring class for schemas, parameters and request bodies and for nothing
-  else, so an unnamed response, header, example or link keys positionally and its
-  class-name `$ref` never resolves.
 - **Q5** is live and governs `Response` in shipped code, not just PR 22's Phase 4. It is a
   design question rather than a task, and answering it unparks PR 22.
 - **PR 30** cuts hybrid's two classic processors, which matters more once v7 makes hybrid
@@ -1043,7 +1041,7 @@ Worth knowing before starting: a reflector source yields nothing in classic or h
 both scan files — `addSource(new \ReflectionClass(...))` silently produces an empty document
 rather than failing. It cost a false-passing test while writing PR 28's coverage.
 
-### PR 36 — `Names` infers a component key from the class for some component buckets only
+### PR 36 — `Names` infers a component key from the class for some component buckets only — **done, `fix/component-names`**
 
 `Augmenter\Names` fills a missing component key from the declaring class, but only for schemas,
 parameters and — since #2171 — request bodies. Nothing does the same for responses, headers,
@@ -1066,6 +1064,47 @@ bucket, so no index work is needed.
 Worth deciding as one question rather than four: whether "declared on a class means named after
 the class" is a rule the spec pipeline holds everywhere, or a schema convenience that happens to
 suit request bodies too.
+
+**The rule holds everywhere, and the question answered itself once the code was read** — there
+were already *two* rules, not one. Schema and RequestBody took the class name; Parameter took
+`name` and Link took `operationId`, which is "the key comes from the field that already
+identifies it". Responses, headers and examples have no such field, which is why they fell
+through. Both rules stand: a class-declared component takes the class short name, and
+`Parameter` keeps `name` ahead of it.
+
+Three things the entry did not predict, each found by making the fix rather than by the survey
+that wrote the entry:
+
+- **The positional fallback emitted invalid documents, not merely odd names.**
+  `components.headers` and `components.examples` compiled to JSON *arrays* where OpenAPI
+  requires `Map[string, Object]`, and `components.responses` took an empty-string key from
+  `(string) null`. Reproducible in spec mode through `#[OA\Components]` stacked on a class,
+  so it was never hybrid-only.
+- **The key logic was duplicated three times, not two.** `Augmenter\Cleanup` carried a third
+  copy beside the compiler's and `ComponentIndex`'s, and all three disagreed — a link with no
+  `link` compiled under its `operationId`, indexed as nothing, and was pruned as unreferenced.
+  `Specification\ComponentName` is now the single answer, and the compiler's invented
+  fallbacks went with it: an unnamed component is dropped and reported, and a key claimed
+  twice is reported too.
+- **`compileExample()` never emitted `$ref`**, unlike `compileHeader()` and `compileLink()`,
+  so an example could be named and still never referenced.
+
+Two `HybridBridge` bugs came with them, surfaced by the new duplicate-key warning rather than
+looked for. A `SecurityScheme` nested in `Components` was converted twice — its match arm was
+the only one carrying no nested guard. Guarding it exposed why that had gone unnoticed: a
+`Components` merged into `OpenApi`, which is what the *attribute* form always produces, was
+never converted at all, so every component declared that way was silently dropped and the
+unguarded arm had been accidentally rescuing the schemes.
+
+That is #2171's lesson a second time. The instrument that finds bugs in both pipelines need
+not be a survey — here it was one new warning and one fixture whose classic and spec halves
+had to agree.
+
+**Classic does not hold this rule and should not be made to.** A class-level `@OA\Response`
+without a key is an error there, and `@OA\Header`, `@OA\Link` and `@OA\Examples` are not
+valid on a class at all. So `ComponentNames` spells the keys out on the classic side and omits
+them on the spec side, and the single expected document asserts that inferring and naming by
+hand produce the same thing.
 
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
