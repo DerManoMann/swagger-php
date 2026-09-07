@@ -14,8 +14,7 @@ written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
-**#2171 is open**, green and awaiting merge, with PR 36 stacked on it as
-`fix/component-names`. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector
+**#2172** (PR 36) and **#2173** (PR 38) are open and green. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector
 rule changes), **#2136** (developer docs, and the writing rules), **#2137**
 (`ComponentIndex`, slot-target validation, and the attributes nothing was compiling),
 **#2138** (compiler diagnostics reaching the configured logger, PR 13), **#2139** (README
@@ -74,15 +73,12 @@ This displaced the previous order, which had 3.2 field coverage in the middle of
 and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading before either
 is picked up again, because it inverts their dependency.
 
-**Nothing is queued behind the goal any more**, so the order below is a choice rather than a
-continuation — but PR 38 has a reason to go first, and the rest do not. PR 36 cleared the list
-as it stood and put PR 37 and PR 38 back on it, which is the usual shape: the fix reads the code
-around it and finds the next thing.
+**Nothing is queued behind the goal any more**, which makes the order below a choice rather than
+a continuation. PR 36 cleared the list as it stood and put PR 37 and PR 38 back on it; PR 38 is
+gone again already. That is the usual shape — the fix reads the code around it and finds the next
+thing.
 
-- **PR 38 is the one to take next.** A `@var Foo<T>` docblock resolves to nothing at all, in
-  classic and spec alike, and silently. It also blocks showing the NelmioApiDocBundle PoC, which
-  the entry explains. A narrower spec-only ref bug rides along with it.
-- **PR 37** is the other open bug, and PR 36 left it: the nested maps still key by position, so
+- **PR 37** is the only open bug, and PR 36 left it: the nested maps still key by position, so
   a nameless header or example inside a response compiles to a JSON array.
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
   shows thin, and the entry carries the numbers and the mechanics.
@@ -1145,7 +1141,7 @@ probably should go with it.
 Found while writing PR 36's fixture; scoped out of it deliberately, because the entry was
 about component identity and this is about a map key that never had one.
 
-### PR 38 — a generic docblock resolves to nothing, in both pipelines
+### PR 38 — a generic docblock resolves to nothing, in both pipelines — **done, #2173**
 
 Three properties of the same class type, differing only in their docblock, run through all three
 modes. Reproduced on `origin/master` at `bfa6b0ce`, so both findings predate #2171 and PR 36:
@@ -1189,12 +1185,32 @@ outputs rather than tests. Third time. The lesson is not that the survey was slo
 each new axis of comparison is a new instrument, and this one (vary the docblock, hold the type)
 had never been pointed at anything.
 
-Where to start: `Type\LegacyTypeResolver` and `Type\TypeInfoTypeResolver` both feed
-`Types::augmentProperty()`, which bails when the resolver returns something that is not a
-`SchemaType`. The first question is whether both resolvers drop the generic or only one —
-`ScratchTest` runs both, so a fixture with these three properties pins the whole thing, and the
-resolver axis is already in the matrix. The global-namespace case needs its own fixture, since
-every `Scratch` fixture is namespaced.
+**The cause was one missing arm, and the table above was reading a symptom.** `Type\TypeResolver`
+— the mapper `TypeInfoTypeResolver` delegates to, distinct from the `TypeResolverInterface`
+implementations — matches `BuiltinType`, `ObjectType`, `IntRangeType`, `ExplicitType`,
+`ArrayShapeType` and `CollectionType`, and had nothing for `GenericType`. It fell through to an
+empty `SchemaType`, so `Types::augmentProperty()` bailed and the property kept no type.
+
+So "both pipelines, older than either" was wrong twice over. symfony/type-info parses the generic
+correctly and hands back a `GenericType` wrapping the parameterised type; swagger-php discarded
+it. And `LegacyTypeResolver` reaches `TypeMapper` without touching this class, so it was never
+broken — classic looked broken only because `TypeInfoTypeResolver` is the default. Three of the
+four mode/resolver cells failed, and all three failed for the same one reason.
+
+The lead came from asking whose code reads docblock generics. It is type-info's, which made
+"swagger-php is mishandling what it gets back" the first thing to check rather than the last.
+Worth keeping as a habit: when a bug sits on an integration seam, establish which side produced
+the wrong value before reasoning about either.
+
+The global-namespace half was a second missing normalisation in the same method — an `ObjectType`
+class name kept the leading slash type-info gives it there. Both fixes are in #2173, with
+`DocblockGenerics` covering all four cells against one expected document and `GlobalNamespaceTypes`
+covering the case no `Scratch` fixture can reach.
+
+**cs-fixer deleted the docblocks the fixtures exist for.** `no_superfluous_phpdoc_tags` reads
+`@var Target` above `public Target $x` as redundant, which it is everywhere except here. The
+tests still passed and proved nothing. Both fixtures are now in the cs-fixer filter with the
+reason stated, next to the entries PR 31 audited — a live exclusion rather than a dead one.
 
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 

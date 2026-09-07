@@ -20,7 +20,12 @@ generic     {} nothing      {} nothing      {} nothing
 docblock    resolves        resolves        resolves
 ```
 
-Every cell should read `resolves`. A fix has to turn the middle row green in all three columns.
+Fixed in #2173; every cell reads `resolves` from that commit on. Kept so the case can be
+re-checked rather than trusted — the failure was silent, and a regression would be too.
+
+The middle row failed in classic only because `TypeInfoTypeResolver` is the default. Pass the
+legacy resolver and classic passes on `origin/master` too, which is why the script names modes
+rather than resolvers: it reports what a user gets, not where the defect lives.
 
 ## The second finding is not in this table
 
