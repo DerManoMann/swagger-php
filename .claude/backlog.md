@@ -14,7 +14,7 @@ written, not by priority; the order to work through them is below.
 
 ## Where this stands
 
-Nothing is open. Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
+Merged so far: **#2134** (spec docs cleanup), **#2135** (rector rule
 changes), **#2136** (developer docs, and the writing rules), **#2137**
 (`ComponentIndex`, slot-target validation, and the attributes nothing was compiling),
 **#2138** (compiler diagnostics reaching the configured logger, PR 13), **#2139** (README
@@ -48,6 +48,8 @@ operations collected from the parent that owns them, PR 28), **#2171** (hybrid o
 inferred from the class for every bucket, PR 36) and **#2173** (a generic docblock resolved to
 the type it parameterises, PR 38).
 
+**#2174** (PR 37) is open and green.
+
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
 real rather than inferred; the current baseline and what it does and does not mean are in
@@ -80,8 +82,9 @@ a continuation. PR 36 cleared the list as it stood and put PR 37 and PR 38 back 
 gone again already. That is the usual shape — the fix reads the code around it and finds the next
 thing.
 
-- **PR 37** is the only open bug, and PR 36 left it: the nested maps still key by position, so
-  a nameless header or example inside a response compiles to a JSON array.
+- **PR 39** is the only open bug: `Schema::$examples` compiles to a map where JSON Schema wants
+  a list, and the redocly ignore file is hiding the struct error. It needs a decision about the
+  three Example Object fields a list cannot carry, so it is not a one-liner.
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
   shows thin, and the entry carries the numbers and the mechanics.
 - **Q5** is live and governs `Response` in shipped code, not just PR 22's Phase 4. It is a
@@ -1111,7 +1114,7 @@ valid on a class at all. So `ComponentNames` spells the keys out on the classic 
 them on the spec side, and the single expected document asserts that inferring and naming by
 hand produce the same thing.
 
-### PR 37 — a nested map with no key still compiles to a JSON array
+### PR 37 — a nested map with no key still compiles to a JSON array — **done, #2174**
 
 PR 36 fixed this for the `components` buckets and stopped there. The nested maps — a
 `Response`'s `headers` and `links`, a `MediaType`'s `examples` and `encoding` — still go
@@ -1142,6 +1145,59 @@ probably should go with it.
 
 Found while writing PR 36's fixture; scoped out of it deliberately, because the entry was
 about component identity and this is about a map key that never had one.
+
+**Done. The three fallbacks split the way the entry guessed, and a fourth call site turned up
+that fits none of them.** Seven maps were name-keyed and now drop an unnamed entry through
+`compileKeyedMap()`, with `validateNestedNames()` reporting it — a response's `headers` and
+`links`, a media type's `examples` and `encoding`, an encoding's `headers`, and a parameter's
+and a header's `examples`. The status-code and content-type maps keep their fallbacks, being
+values. The link's `operationId` fallback went, as predicted.
+
+The fourth is `Schema::$examples`, which shares the helper and is neither: in 3.1 it is the
+JSON Schema keyword, which takes **a list, not a map**. It compiles to a map today. Left alone
+here — an unnamed example is the *normal* case for a list, so dropping one would delete
+intent rather than protect it. See PR 39.
+
+Where the warning goes turned out to be the smaller half. `SpecificationWalker::visit()`
+recurses through every property, so `visit(OA\Response::class, ...)` reaches a response wherever
+it sits, and a `container => [property => key field]` table covers all five containers.
+`Builder` captures `validate()`'s return before calling `compile()`, so a diagnostic raised
+during compilation never reaches `Result`, which is why this had to live in validation rather
+than beside the code that drops the entry.
+
+### PR 39 — `Schema::$examples` compiles to a map, and the spec says list
+
+In OpenAPI 3.1 a Schema Object is JSON Schema, where `examples` is **an array of example
+values**. swagger-php compiles it as a map of Example Objects, keyed like the `examples` that
+hang off a parameter, header or media type — which genuinely are maps:
+
+```yaml
+    YoYo:
+      examples:
+        yo:
+          summary: 'the yo'
+          value: YoYo
+```
+
+**Redocly already flags it, and the finding is switched off.**
+`.redocly.lint-ignore.yaml` carries `#/components/schemas/YoYo/examples` under `struct` for
+`tests/Fixtures/Scratch/Examples3.1.0.yaml`. So `composer redocly` passes while the document
+is structurally wrong, and the entry that hides it looks like every other ignore beside it.
+That is PR 31's shape with the sign flipped: not an exclusion that stopped doing anything, but
+one doing exactly what it says and concealing a defect.
+
+What makes this more than a compile change: `OA\Schema::$examples` is `list<OA\Example>`, and
+an Example Object carries `summary`, `description` and `externalValue` alongside `value`. A
+JSON Schema `examples` array holds bare values, so the other three have nowhere to go. Either
+the property accepts plain values for a schema, or the compiler emits `array_column(…, 'value')`
+and the rest is silently dropped — which is a decision, not a fix.
+
+Worth checking at the same time whether 3.0 differs: there `example` (singular) is the schema
+keyword and `examples` is not a schema field at all, so `OpenApi30Compiler` may already be
+doing something different, or nothing.
+
+Found while scoping PR 37, which routes every other `examples` through the new keyed-map
+helper and leaves this one where it was.
 
 ### PR 38 — a generic docblock resolves to nothing, in both pipelines — **done, #2173**
 
