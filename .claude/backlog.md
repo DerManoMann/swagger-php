@@ -1165,11 +1165,11 @@ it sits, and a `container => [property => key field]` table covers all five cont
 during compilation never reaches `Result`, which is why this had to live in validation rather
 than beside the code that drops the entry.
 
-### PR 39 — `Schema::$examples` compiles to a map, and the spec says list
+### PR 39 — `Schema::$examples` compiles to a map, and its own docblock says list
 
 In OpenAPI 3.1 a Schema Object is JSON Schema, where `examples` is **an array of example
-values**. swagger-php compiles it as a map of Example Objects, keyed like the `examples` that
-hang off a parameter, header or media type — which genuinely are maps:
+values**. `OpenApi31Compiler` compiles it as a map of Example Objects, keyed like the `examples`
+that hang off a parameter, header or media type — which genuinely are maps:
 
 ```yaml
     YoYo:
@@ -1179,25 +1179,51 @@ hang off a parameter, header or media type — which genuinely are maps:
           value: YoYo
 ```
 
-**Redocly already flags it, and the finding is switched off.**
-`.redocly.lint-ignore.yaml` carries `#/components/schemas/YoYo/examples` under `struct` for
-`tests/Fixtures/Scratch/Examples3.1.0.yaml`. So `composer redocly` passes while the document
-is structurally wrong, and the entry that hides it looks like every other ignore beside it.
-That is PR 31's shape with the sign flipped: not an exclusion that stopped doing anything, but
-one doing exactly what it says and concealing a defect.
+**There is no design question here, which is what the first draft of this entry got wrong.**
+`OA\Schema::$examples` already declares what it holds:
 
-What makes this more than a compile change: `OA\Schema::$examples` is `list<OA\Example>`, and
-an Example Object carries `summary`, `description` and `externalValue` alongside `value`. A
-JSON Schema `examples` array holds bare values, so the other three have nowhere to go. Either
-the property accepts plain values for a schema, or the compiler emits `array_column(…, 'value')`
-and the rest is silently dropped — which is a decision, not a fix.
+```php
+@param list<mixed>|null $examples   A list of example values
+```
 
-Worth checking at the same time whether 3.0 differs: there `example` (singular) is the schema
-keyword and `examples` is not a schema field at all, so `OpenApi30Compiler` may already be
-doing something different, or nothing.
+Bare values, exactly what JSON Schema wants. So the property is not ambiguous and nothing has
+to be decided about it. `compileSchema()` ignores that contract by passing the list through
+`compileExamples()`, which reads each element as an `OA\Example` and keys by `->example`. The
+`summary`, `description` and `externalValue` this entry first worried about have nowhere to go
+because they were never meant to be there — a map of Example Objects is what a media type,
+parameter or header takes, and one of those is where an author wanting them should be.
 
-Found while scoping PR 37, which routes every other `examples` through the new keyed-map
-helper and leaves this one where it was.
+**One mistake, four symptoms, in a chain.** The `Examples` fixture passes `OA\Example` objects
+into a `list<mixed>` that wants values. Nothing catches it: the runtime type is `?array` and
+`mixed` accepts anything. 3.1 then compiles those objects into a map. Redocly flags the map as a
+`struct` error, and `.redocly.lint-ignore.yaml` carries
+`#/components/schemas/YoYo/examples` for `tests/Fixtures/Scratch/Examples3.1.0.yaml`, so
+`composer redocly` passes on a structurally wrong document. That is PR 31's shape inverted: not
+an exclusion that stopped doing anything, but one doing exactly what it says and hiding a defect.
+
+**And it left the 3.0 branch untested and worse.** `OpenApi30Compiler` honours the contract —
+`$result['example'] = $schema->examples[0]`, a value — so fed an Example Object it serializes the
+whole thing, swagger-php internals included:
+
+```json
+"example": { "x": null, "attachables": null, "example": "yo",
+             "summary": "the yo", "description": null, "value": "YoYo",
+             "externalValue": null, "ref": null }
+```
+
+No `Examples3.0.0.yaml` exists, so no fixture covers it. The two compilers disagree about what
+the property holds, and only one of them agrees with the docblock.
+
+The work, once the premise is right: emit the list as a list in 3.1 (3.2 inherits), fix the
+fixture pair to pass values, regenerate expectations including a 3.0 one, and delete the redocly
+ignore. 3.0 then does what it always intended.
+
+Warn when an element is an `OA\Example`. Nothing else catches it — no static check, and the
+output merely looks odd rather than failing — and this fixture shows how easily it is written.
+Same treatment as PR 36 and PR 37: drop what cannot be placed, and say so.
+
+Found while scoping PR 37, which routes every other `examples` through the new keyed-map helper
+and leaves this one where it was.
 
 ### PR 38 — a generic docblock resolves to nothing, in both pipelines — **done, #2173**
 
