@@ -48,7 +48,10 @@ operations collected from the parent that owns them, PR 28), **#2171** (hybrid o
 inferred from the class for every bucket, PR 36) and **#2173** (a generic docblock resolved to
 the type it parameterises, PR 38).
 
-**#2174** (PR 37) is open and green.
+**#2174** (PR 37), **#2175** (PR 39, spec) and **#2176** (PR 39, classic — closes
+[#1994](https://github.com/zircote/swagger-php/issues/1994)) are open, stacked in that order.
+
+**Nothing is a known bug any more.** What is left is improvement work and Q5.
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
 first time. pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are
@@ -78,13 +81,11 @@ and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading b
 is picked up again, because it inverts their dependency.
 
 **Nothing is queued behind the goal any more**, which makes the order below a choice rather than
-a continuation. PR 36 cleared the list as it stood and put PR 37 and PR 38 back on it; PR 38 is
-gone again already. That is the usual shape — the fix reads the code around it and finds the next
-thing.
+a continuation. PR 36 cleared the list, then put PR 37 and PR 38 back on it; PR 37 found PR 39;
+all four are now done or in review. That is the usual shape — a fix reads the code around it and
+finds the next thing — and it has run out for the moment, so what follows is improvement work
+and Q5 rather than defects.
 
-- **PR 39** is the only open bug: `Schema::$examples` compiles to a map where JSON Schema wants
-  a list, and the redocly ignore file is hiding the struct error. It needs a decision about the
-  three Example Object fields a list cannot carry, so it is not a one-liner.
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next coverage run
   shows thin, and the entry carries the numbers and the mechanics.
 - **Q5** is live and governs `Response` in shipped code, not just PR 22's Phase 4. It is a
@@ -1165,7 +1166,7 @@ it sits, and a `container => [property => key field]` table covers all five cont
 during compilation never reaches `Result`, which is why this had to live in validation rather
 than beside the code that drops the entry.
 
-### PR 39 — `Schema::$examples` compiles to a map, and its own docblock says list
+### PR 39 — `Schema::$examples` compiles to a map, and its own docblock says list — **done, #2175 + #2176**
 
 In OpenAPI 3.1 a Schema Object is JSON Schema, where `examples` is **an array of example
 values**. `OpenApi31Compiler` compiles it as a map of Example Objects, keyed like the `examples`
@@ -1224,6 +1225,42 @@ Same treatment as PR 36 and PR 37: drop what cannot be placed, and say so.
 
 Found while scoping PR 37, which routes every other `examples` through the new keyed-map helper
 and leaves this one where it was.
+
+**It was already reported, as [#1994](https://github.com/zircote/swagger-php/issues/1994), open
+and marked critical.** That issue states the rule from the specification — `Parameter.examples`
+and `MediaType.examples` are maps of Example Objects, `Schema.examples` is the JSON Schema
+keyword and takes an array of literal values — and cites 4.8.19.2 and the model-with-example
+shape. Nothing here found anything the reporter had not, which is worth saying: the backlog
+reasoned its way to a conclusion that was sitting in the issue tracker the whole time. **Search
+the open issues when an entry is written, not when it is closed.**
+
+The issue also names `Property`, which this entry did not. It needed no work but did need
+checking, because "closes" is a claim: classic's `Property extends Schema` inherits
+`jsonSerialize()`, and spec's `Property` wraps a `?Schema $schema` compiled through
+`compileSchema()`. Covered by structure rather than by duplicated code.
+
+**Done in two PRs, deliberately split.** #2175 fixes the spec pipeline and #2176 fixes classic,
+because the second changes output in the *stable* pipeline and deserved to be revertable on its
+own. Classic collected `@OA\Examples` under a schema and keyed them, so
+`Schema::jsonSerialize()` now maps them to their values for 3.1 and later.
+
+**Both redocly ignore entries are gone**, which was the point — 183 explicitly-ignored problems
+down to 181. Before removing them each was checked by deleting it and re-running: they errored,
+so they were load-bearing rather than stale. PR 31 argues for exactly that check on the way in;
+this is the same check on the way out.
+
+Two things the work turned up that the entry did not predict:
+
+- **3.0 had no expectation at all**, which is why its branch — `$result['example'] =
+  $schema->examples[0]` — went untested and serialized whole Example objects, `x`, `attachables`
+  and `ref` included. It now has one. 3.0 keeps a `-spec` split legitimately: `examples` is not
+  a schema field there, so classic drops it while spec carries the first value across as
+  `example`. Both warn.
+- **`ScratchTest` declared a log message that does not exist.** `'Examples-3.0.0'` expected
+  `@OA\Schema() is only allowed as of 3.1.0`; the real text is `@OA\Schema::examples`. With no
+  3.0 expectation the case never ran, so the declaration was never exercised and the wrong text
+  never mismatched. A third species of dead configuration, after PR 31's tool exclusions and the
+  redocly ignore above: an expectation nothing asserts.
 
 ### PR 38 — a generic docblock resolves to nothing, in both pipelines — **done, #2173**
 
