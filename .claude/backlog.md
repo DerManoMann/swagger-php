@@ -49,7 +49,14 @@ inferred from the class for every bucket, PR 36) and **#2173** (a generic docblo
 the type it parameterises, PR 38).
 
 **#2174** (PR 37), **#2175** (PR 39, spec) and **#2176** (PR 39, classic — closes
-[#1994](https://github.com/zircote/swagger-php/issues/1994)) are open, stacked in that order.
+[#1994](https://github.com/zircote/swagger-php/issues/1994)) merged in that order, and
+**6.8.0** is tagged at #2176.
+
+That release drew [#2177](https://github.com/zircote/swagger-php/issues/2177) the next day:
+#2176 left the nesting declaration saying a schema's examples were Example Objects, so
+`@OA\Examples` nested under one asked for an `example` key and a `summary` that nothing
+serialises. **#2178** fixes it, accepts plain values as the JSON Schema keyword always
+should have, and is open. PR 40 came out of the same investigation.
 
 **Nothing is a known bug any more.** What is left is improvement work and Q5.
 
@@ -1336,6 +1343,37 @@ reason stated, next to the entries PR 31 audited — a live exclusion rather tha
 ### PR 27 — sibling merge depends on declaration order, and loses attributes silently — **done, #2159**
 
 Moved to [`backlog/archive.md`](backlog/archive.md).
+
+### PR 40 — classic's `Header` models less than half the Header Object
+
+`OpenApi\Annotations\Header` declares `ref`, `header`, `description`, `required`, `schema`,
+`deprecated` and `allowEmptyValue`. The specification's Header Object also has `style`,
+`explode`, `example`, `examples` and `content`. None of the five exist in classic, in the
+annotation or the attribute, so there is no way to write them and nothing to serialise.
+
+`Spec\Header` has `example` and `examples`, and `OpenApi31Compiler::NESTED_MAPS` already
+carries `OA\Header::class => ['examples' => 'example']` for them. So the two pipelines
+disagree about what a header can say, and the gap is classic's.
+
+**Found while answering [#2177](https://github.com/zircote/swagger-php/issues/2177)**, which
+is about `@OA\Examples` under a schema. Checking that `Examples::$_parents` was right for
+every context turned up `Header` missing from it — and then that the property it would fill
+is absent too. The first reading, recorded in #2178's review as a loose thread, was that the
+nesting was missing; that was wrong, and worth stating because a missing entry in
+`$_parents` looks like a one-line fix and this is not one.
+
+**Whether to do it at all is the question, not how.** `src/Annotations/` and
+`src/Attributes/` are closed to new features — [ROADMAP.md](../ROADMAP.md) removes classic in
+v8 — so five new fields there is exactly what that rule exists to prevent. Against that: a
+header carrying an example is ordinary OpenAPI, and a user writing one today gets silence
+rather than a diagnostic, which is the worst of the three possible answers.
+
+The cheap middle is to say so. `Header` could reject `@OA\Examples` and the other four with
+a message naming the spec pipeline, turning a silent drop into a pointer. That is a
+diagnostic, not a feature, and it fits inside the closed-area rule.
+
+Related: `@OA\Examples` lists `Header::class` in neither direction, so nothing warns today
+even though `Examples::$_parents` is the mechanism that would.
 
 ---
 
