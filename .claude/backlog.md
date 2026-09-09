@@ -55,8 +55,27 @@ the type it parameterises, PR 38).
 That release drew [#2177](https://github.com/zircote/swagger-php/issues/2177) the next day:
 #2176 left the nesting declaration saying a schema's examples were Example Objects, so
 `@OA\Examples` nested under one asked for an `example` key and a `summary` that nothing
-serialises. **#2178** fixes it, accepts plain values as the JSON Schema keyword always
-should have, and is open. PR 40 came out of the same investigation.
+serialises. **#2178** fixed it and accepted plain values as the JSON Schema keyword always
+should have. PR 40 came out of the same investigation.
+
+**Release notes: `08c8a2d2` contains far more than its title says.** #2178 was reviewed as
+its own pull request but never merged as one. #2179, a one-line docblock fix stacked on it,
+was based on `master` — a cross-repo pull request cannot target a branch on the fork — so
+its diff carried all six commits, and squash-merging it landed the lot under
+`fix(Attributes): repair the Items constructor docblock (#2179)`. #2178 is closed as merged;
+#2177 is closed against that commit.
+
+So the log and the pull request title both understate it. Whoever writes the notes for the
+release after 6.8.0 should describe `08c8a2d2` by its contents: `@OA\Examples` under a
+schema no longer demands an `example` key or a `summary`, a schema's `examples` accepts
+plain values in both syntaxes, and two diagnostics are added for cases that used to pass in
+silence. Whether that is 6.8.1 or 6.9.0 is open — it fixes a regression 6.8.0 shipped, which
+argues patch, but accepting plain values is new input, which argues minor.
+
+**The stacking is the lesson.** GitHub will not take a fork branch as a base, so a stacked
+pull request has to be based on `master` and carries its parent's commits whatever the
+description says. Either wait for the parent to merge before opening the child, or expect
+one merge to take both.
 
 **Nothing is a known bug any more.** What is left is improvement work and Q5.
 
@@ -1358,7 +1377,7 @@ disagree about what a header can say, and the gap is classic's.
 **Found while answering [#2177](https://github.com/zircote/swagger-php/issues/2177)**, which
 is about `@OA\Examples` under a schema. Checking that `Examples::$_parents` was right for
 every context turned up `Header` missing from it — and then that the property it would fill
-is absent too. The first reading, recorded in #2178's review as a loose thread, was that the
+is absent too. The first reading, recorded as a loose thread while reviewing #2178, was that the
 nesting was missing; that was wrong, and worth stating because a missing entry in
 `$_parents` looks like a one-line fix and this is not one.
 
