@@ -126,8 +126,8 @@ and Q5 rather than defects.
 **PR 6** was conditional on PR 3, which #2158 finished — its verify-first half now has a
 home in `DocsAccuracyTest`, so what remains is the per-fragment verify-or-generate choice
 in its entry. **PR 16**, **PR 17**, **PR 18**, **PR 23** and **PR 29** are all orthogonal to
-this goal. **PR 24** is in review, and smaller than it looked — #2163 had already landed the
-half about bodies.
+this goal. **PR 24** is in review as #2181, and smaller than it looked — #2163 had already
+landed the half about bodies.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). **Q5 is live
 again** — it governs `Response` in shipped code, not just PR 22's Phase 4.
@@ -675,7 +675,7 @@ cheapest confirmation that the output is actually accepted — it was already ri
 Full audit (with spec citations), the phase breakdown, and Q5's two sketched options:
 [`backlog/spec-3.2/README.md`](backlog/spec-3.2/README.md).
 
-### PR 24 — nothing says what a commit message should contain — **in review**
+### PR 24 — nothing says what a commit message should contain — **in review, #2181**
 
 **Mostly closed before it was picked up.** #2163 landed the bodies half while this entry sat
 here: `docs/dev/writing-docs.md` now says the prose rules cover commit messages and that a
