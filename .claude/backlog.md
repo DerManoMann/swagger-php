@@ -65,12 +65,13 @@ its diff carried all six commits, and squash-merging it landed the lot under
 `fix(Attributes): repair the Items constructor docblock (#2179)`. #2178 is closed as merged;
 #2177 is closed against that commit.
 
-So the log and the pull request title both understate it. Whoever writes the notes for the
-release after 6.8.0 should describe `08c8a2d2` by its contents: `@OA\Examples` under a
-schema no longer demands an `example` key or a `summary`, a schema's `examples` accepts
-plain values in both syntaxes, and two diagnostics are added for cases that used to pass in
-silence. Whether that is 6.8.1 or 6.9.0 is open — it fixes a regression 6.8.0 shipped, which
-argues patch, but accepting plain values is new input, which argues minor.
+So the log and the pull request title both understate it. **6.8.1 is tagged at `08c8a2d2`**
+(2026-09-09), and its notes describe the commit by its contents rather than its title:
+`@OA\Examples` under a schema no longer demands an `example` key or a `summary`, a schema's
+`examples` accepts plain values in both syntaxes, and two diagnostics are added for cases
+that used to pass in silence. Patch won over minor — accepting plain values is new input,
+but the release exists to repair a regression 6.8.0 shipped, and the upgrade note it carries
+is about 6.8.0's output change rather than the new input.
 
 **The stacking is the lesson.** GitHub will not take a fork branch as a base, so a stacked
 pull request has to be based on `master` and carries its parent's commits whatever the
@@ -118,13 +119,15 @@ and Q5 rather than defects.
   design question rather than a task, and answering it unparks PR 22.
 - **PR 30** cuts hybrid's two classic processors, which matters more once v7 makes hybrid
   the default.
-- **PR 33** and **PR 34** are dependency hygiene, cheap and independent.
+- **PR 33** and **PR 34**, the dependency hygiene pair, are both off the list: 33 is parked
+  for v7, where the ROADMAP already raises the floor it found, and 34 is closed — the pin it
+  proposed is a no-op for `lowest` and a regression for `highest`.
 
 **PR 6** was conditional on PR 3, which #2158 finished — its verify-first half now has a
 home in `DocsAccuracyTest`, so what remains is the per-fragment verify-or-generate choice
-in its entry. **PR 16**, **PR 17**, **PR 18**, **PR 23**, **PR 24** and **PR 29**
-are all orthogonal to this goal; 24 is cheap enough to fold into anything already touching
-CONTRIBUTING.
+in its entry. **PR 16**, **PR 17**, **PR 18**, **PR 23** and **PR 29** are all orthogonal to
+this goal. **PR 24** is in review, and smaller than it looked — #2163 had already landed the
+half about bodies.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). **Q5 is live
 again** — it governs `Response` in shipped code, not just PR 22's Phase 4.
@@ -672,7 +675,23 @@ cheapest confirmation that the output is actually accepted — it was already ri
 Full audit (with spec citations), the phase breakdown, and Q5's two sketched options:
 [`backlog/spec-3.2/README.md`](backlog/spec-3.2/README.md).
 
-### PR 24 — nothing says what a commit message should contain
+### PR 24 — nothing says what a commit message should contain — **in review**
+
+**Mostly closed before it was picked up.** #2163 landed the bodies half while this entry sat
+here: `docs/dev/writing-docs.md` now says the prose rules cover commit messages and that a
+body documents what the diff does rather than why, and CONTRIBUTING carries the one-line
+orientation pointing at it. So the gap below is narrower than written.
+
+What was left is the subject line. CONTRIBUTING stated the shape for **pull request titles**
+only; the shape for commits, and the list of allowed types, lived just in `AGENTS.md`, which
+is written for agents rather than contributors. A human reading CONTRIBUTING end to end
+learned how to title the pull request and not the commits inside it.
+
+Adding it turned up a second thing: **the documented type list was missing `test`.** It is in
+regular use and has been through review — #2158, #2165, #2167 and #2171 all merged under it —
+so the list was wrong rather than the practice. Both files now name six types.
+
+The original framing follows.
 
 `.github/PULL_REQUEST_TEMPLATE.md` and CONTRIBUTING's "Pull request titles follow
 `type(Scope): subject`" both govern pull requests. The only rule touching commits is one
@@ -970,7 +989,17 @@ per-rule test showed the second is still needed.
 
 Moved to [`backlog/archive.md`](backlog/archive.md).
 
-### PR 33 — declared dependency floors nothing verifies
+### PR 33 — declared dependency floors nothing verifies — **parked for v7**
+
+**PARKED (2026-09-11).** The one finding is the `nikic/php-parser` floor, and raising it to
+`^5.0` is already a v7 line in [ROADMAP](../ROADMAP.md). Doing it in v6 drops declared
+support in a patch or minor release, which is the one thing the finding does not argue for —
+the branch is untested, not broken, and a consumer resolving `require` only really does get
+4.19.0. So the entry stays as the reasoning for that v7 line rather than as work of its own.
+
+PR 34, its sibling, is closed rather than parked — the platform pin it proposed turned out
+to be a no-op for the comparison and a regression elsewhere. The comparison itself needs no
+config change, so re-running it here costs one resolve.
 
 Found while wondering whether any `composer.json` floor had quietly become unreachable. The
 check is cheap: resolve with `--prefer-lowest` and compare what composer picks against each
@@ -983,10 +1012,17 @@ their lowest branch — with one exception, and it depends on context:
 | Context | `nikic/php-parser` resolves to |
 | --- | --- |
 | with `require-dev` | 5.7.0 — the `^4.19` branch is unreachable |
-| `require` only, platform pinned to 8.2 | 4.19.0 — the floor is real |
+| a manifest carrying `require` only | 4.19.0 — the floor is real |
 
 What holds it up is entirely the dev coverage stack: `phpunit/php-code-coverage` requires
 `^5.7.0`, `sebastian/complexity` and `sebastian/lines-of-code` require `^5.0`.
+
+**The second row was originally credited to a platform pin, and that was wrong** (measured
+2026-09-11). The pin has nothing to do with it, and `composer update --no-dev` does not
+produce that row either — `--no-dev` skips *installing* dev packages but still solves with
+them, so 57 of them land in the lock and php-parser still resolves to 5.7.0. Only a
+manifest with no `require-dev` at all gives 4.19.0. The conclusion is unchanged, and if
+anything firmer: a consumer really does get 4.19.0, and nothing in this repo can.
 
 **So `^4.19` is declared support CI has never exercised**, and cannot, in any matrix cell. A
 consumer really does get 4.19.0, so dropping the branch is a genuine decision rather than a
@@ -1007,22 +1043,41 @@ Two ways to close it, and they are not exclusive:
 The same `--prefer-lowest` comparison is worth re-running whenever a floor is raised; it costs
 one resolve and needs no judgement.
 
-### PR 34 — `--prefer-lowest` means something different in every CI cell
+### PR 34 — `--prefer-lowest` means something different in every CI cell — **closed, not doing**
 
-`composer.json` sets no `config.platform.php`, so composer resolves against whatever PHP is
-running. The `lowest` half of the build matrix runs on 8.2 through 8.6, which means five cells
-each resolve a different dependency set, and none of them is pinned to the declared minimum of
-`>=8.2`.
+**CLOSED (2026-09-11).** The entry ended with "needs confirming rather than assuming". It was
+confirmed, and both halves of the premise are false. Kept for the numbers, so the pin is not
+proposed again.
 
-Setting `config.platform.php` to `8.2.0` makes the lowest set reproducible — the same one
-locally, in every cell, and for anyone reading the lock. It is what made the PR 33 comparison
-answerable at all; without it the scratch resolution followed the host PHP rather than the
-floor.
+The claim was that `composer.json` sets no `config.platform.php`, so the five `lowest` cells
+each resolve a different dependency set against whatever PHP is running, and pinning to
+`8.2.0` would make one reproducible set.
 
-Worth checking before doing it: the `highest` cells should keep resolving against the real
-PHP, so a platform pin must not stop 8.6 picking packages that need 8.6. `config.platform`
-constrains resolution rather than reporting the runtime, so the interaction with
-`--ignore-platform-req` and with the `highest` job needs confirming rather than assuming.
+**There is only ever one set.** Resolving `--prefer-lowest --prefer-stable` against each
+simulated platform gives a byte-identical 74-package list on 8.2, 8.3, 8.4, 8.5 and 8.6, and
+adding the pin changes nothing on any of them. Floors have no upper PHP bound, so the host
+version never enters the lowest solution. Nothing was unreproducible.
+
+**The pin does reach the `highest` cells, and that is the whole problem.**
+`config.platform.php` constrains every resolution, not the `--prefer-lowest` one. Measured on
+PHP 8.5, adding it to `composer.json` moves the highest set backwards:
+
+| | without the pin | with `platform.php: 8.2.0` |
+| --- | --- | --- |
+| `phpunit/phpunit` | 13.3.3 | 11.5.56 |
+| `symfony/console` | v8.1.6 | v7.4.18 |
+| `symfony/yaml` | v8.1.6 | v7.4.18 |
+
+PHPUnit 13 and Symfony 8 both need PHP ≥ 8.4, so the pin excludes them everywhere. The
+`highest` cells on 8.4, 8.5 and 8.6 are the only thing exercising the `^8.0` half of
+`symfony/console`, which is declared support. The change costs that and buys nothing.
+
+**What the four extra `lowest` cells are actually for** — since they resolve identically,
+their value is runtime rather than resolution: floor dependencies running on a newer PHP.
+That is coverage a resolution diff cannot see, and it is the reason not to trim them either.
+
+The re-run remains worth doing whenever a floor is raised, as PR 33 says. It needs no config
+change — `composer update --prefer-lowest --prefer-stable --dry-run` is the whole procedure.
 
 ### PR 35 — `ScratchTest` never runs hybrid, and 14 fixtures disagree when it does — **done, #2171**
 
