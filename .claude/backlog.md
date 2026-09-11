@@ -1497,3 +1497,31 @@ so CI always resolves the latest dependencies. A new rector or cs-fixer release 
 every branch's `code-style` job red with no change to the repo — which is how this
 surfaced (see PR #2135).
 
+### PR 41 — lowering the `symfony/console` floor to 6.4 — **held, branch kept local**
+
+`composer.json` declares `symfony/console` as `^7.4 || ^8.0`. Dropping the floor to
+`^6.4 || ^7.0 || ^8.0` is done and working on `fix/symfony-console-constraint`, commit
+`0145ef28`. It is **deliberately not pushed and has no PR.**
+
+What the branch contains, since the worktree is gone and the commit is the only record:
+
+- `GenerateCommand` rebuilt on `Command::configure()`/`execute()`, because the
+  `#[Argument]`/`#[Option]` attributes it used are 7.4-only
+- that option metadata moved into `GenerateInput::getDefinition()`, with
+  `GenerateInput::hydrate()` filling the properties from `InputInterface`
+- `bin/openapi` registering through `addCommands()`
+- `DocsAccuracyTest` pinning only the options this project declares
+- a `symfony/string` conflict below 5.4.41
+
+Five files, +141/-23.
+
+**Held on purpose: let others contribute first.** Nobody has asked for a 6.4 floor. Taking it
+now means carrying a hand-rolled `getDefinition()`/`hydrate()` pair in place of the attribute
+API for the sake of a version nobody has named, and that code has to be maintained against
+every Symfony release whether or not it is ever used. If the need is real it will arrive as an
+issue, and the branch is then a ready answer rather than speculative maintenance.
+
+Worktree removed 2026-09-11; the branch ref stays. Revisit when someone asks for 6.4, not
+before.
+
+
