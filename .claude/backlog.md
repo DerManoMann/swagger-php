@@ -78,6 +78,10 @@ pull request has to be based on `master` and carries its parent's commits whatev
 description says. Either wait for the parent to merge before opening the child, or expect
 one merge to take both.
 
+**#2181** (PR 24) and **#2182** (the status-code response warning from Q5) merged on 2026-09-11.
+**#2183** (hybrid comparison in `ExamplesTest`/`DocSnippetsTest`) and **#2184** (PR 30,
+removing the classic processors from hybrid) are in review.
+
 **Nothing is a known bug any more.** What is left is improvement work and Q5.
 
 phpstan now covers `tools/` as of #2141, so the doc generators have static analysis for the
@@ -101,7 +105,9 @@ the two pipelines' *tests* assert; #2171 compared what they *emit*, by putting h
 `ScratchTest`'s mode axis. That turned up eight more defects — six in `HybridBridge`, two
 in the spec pipeline — after the survey of assertions had gone quiet, and PR 36 is the one
 finding left over. A strand is exhausted only for the comparison that was run: hybrid is
-still uncompared in `ExamplesTest`, `DocSnippetsTest` and `CommandlineTest`.
+still uncompared in `ExamplesTest`, `DocSnippetsTest` and `CommandlineTest`. **#2183
+addresses this** — `getSpecFilename()` and `DocSnippetsTest` now prefer spec expectations
+for hybrid, and `ExamplesTest` runs spec sources in hybrid mode (+58 tests).
 
 This displaced the previous order, which had 3.2 field coverage in the middle of it. **PR 22
 and PR 25 are parked** — see PR 22 for the reasoning, which is worth reading before either
@@ -118,7 +124,7 @@ and Q5 rather than defects.
 - **Q5** is live and governs `Response` in shipped code, not just PR 22's Phase 4. It is a
   design question rather than a task, and answering it unparks PR 22.
 - **PR 30** cuts hybrid's two classic processors, which matters more once v7 makes hybrid
-  the default.
+  the default. **In review as #2184.**
 - **PR 33** and **PR 34**, the dependency hygiene pair, are both off the list: 33 is parked
   for v7, where the ROADMAP already raises the floor it found, and 34 is closed — the pin it
   proposed is a no-op for `lowest` and a regression for `highest`.
@@ -126,7 +132,7 @@ and Q5 rather than defects.
 **PR 6** was conditional on PR 3, which #2158 finished — its verify-first half now has a
 home in `DocsAccuracyTest`, so what remains is the per-fragment verify-or-generate choice
 in its entry. **PR 16**, **PR 17**, **PR 18**, **PR 23** and **PR 29** are all orthogonal to
-this goal. **PR 24** is in review as #2181, and smaller than it looked — #2163 had already
+this goal. **PR 24** is done (#2181), and was smaller than it looked — #2163 had already
 landed the half about bodies.
 
 Q3 revisits when spec stops being beta (v7); Q4 when classic is removed (v8). **Q5 is live
@@ -255,7 +261,7 @@ contradiction, what `PathItem` and `MediaType` need in order to be `$ref`-able, 
 
 Cheap and independent of the answer: **warn when a root `Response`'s key looks like a status
 code.** A reusable response named `200` is a failed merge every time, and it is the only part
-of this a user sees today.
+of this a user sees today. **Done in #2182.**
 
 ---
 
@@ -699,7 +705,7 @@ cheapest confirmation that the output is actually accepted — it was already ri
 Full audit (with spec citations), the phase breakdown, and Q5's two sketched options:
 [`backlog/spec-3.2/README.md`](backlog/spec-3.2/README.md).
 
-### PR 24 — nothing says what a commit message should contain — **in review, #2181**
+### PR 24 — nothing says what a commit message should contain — **done, #2181**
 
 **Mostly closed before it was picked up.** #2163 landed the bodies half while this entry sat
 here: `docs/dev/writing-docs.md` now says the prose rules cover commit messages and that a
@@ -948,7 +954,7 @@ by-product.
 The rest is classic and dies with v8, which is what makes a global bump a much smaller job
 then than now.
 
-### PR 30 — hybrid runs two classic processors for a mapping the bridge already knows
+### PR 30 — hybrid runs two classic processors for a mapping the bridge already knows — **in review, #2184**
 
 `Builder::doHybridAssemble()` builds a `Generator` whose entire processor pipeline is
 `MergeJsonContent` and `MergeXmlContent`. Those two rewrite a `JsonContent` or `XmlContent`
