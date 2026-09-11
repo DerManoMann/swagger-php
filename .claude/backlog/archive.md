@@ -467,6 +467,70 @@ That is coverage a resolution diff cannot see, and it is the reason not to trim 
 The re-run remains worth doing whenever a floor is raised, as PR 33 says. It needs no config
 change — `composer update --prefer-lowest --prefer-stable --dry-run` is the whole procedure.
 
+### Q3. Are the classic-vs-spec output differences real? — **RESOLVED (2026-09-11)**
+
+Yes, five of them, and the answer came from the fixtures rather than a survey. `ScratchTest`
+holds every mode to one shared expectation unless a mode-specific file exists, so the override
+files **are** the divergence list. Read after #2171 put hybrid on the mode axis: 43 classic
+families, 40 with a spec pair, 494 cases green.
+
+| Fixture | Scope | Difference |
+| --- | --- | --- |
+| `DuplicateRef` | all versions | spec emits `type: object` on the `allOf` schema |
+| `MergeTraitsExtended` | all versions | same `type: object`, plus nullability inferred from `?\DateTime` |
+| `ThirdPartyAnnotation` | all versions, `-hybrid` | same `type: object` — a classic-only fixture, so hybrid diverges from classic |
+| `NullRef` | 3.1 / 3.2 | classic repeats `description` outside `oneOf`; spec emits it once |
+| `MultiTypeProperty` | 3.1 / 3.2, type-info resolver | classic emits `type: [string]`, spec `type: string` |
+| `Examples` | 3.0 only | `Schema::examples` is 3.1+: classic drops it, spec downgrades to `example`. Both warn |
+
+Five distinct causes, not six files — `type: object` accounts for three of them. The version
+and resolver scoping is the part the entry previously guessed at: `NullRef` and
+`MultiTypeProperty` agree at 3.0, `Examples` only differs at 3.0, and `MultiTypeProperty`
+differs under the type-info resolver alone.
+
+**`Auth` is off the list, and how it left matters.** It was the first of the five, and #2171
+resolved it by **deleting the `mutualTLS` case from both fixtures** (`bfa6b0ce`) — the
+pipelines did not converge, the coverage did. That divergence was a fixture-source difference
+all along (classic's `OAT\SecurityScheme` validates `type` against four values and cannot
+express `mutualTLS`), not a pipeline one, which is why it could be edited away. The capability
+gap is still real and now nothing pins it.
+
+**What this settles for `docs/guide/spec-attributes.md` § Other differences**, which is where
+the hedged claims live:
+
+- **`type: object` on `allOf` schemas** — confirmed. Not "in some cases": every class-level
+  schema with `allOf`.
+- **Nullable `$ref` does not duplicate `description`** — confirmed, and 3.1+ only.
+- **Nullable inference from PHP types** — confirmed by `MergeTraitsExtended::$deleted_at`;
+  "classic may not infer in all cases" can name the case.
+- **Single-element `type` arrays reduced to string** — confirmed, but narrower than written:
+  the type-info resolver at 3.1+.
+- **Duplicate `$ref` deduplication in `allOf`** — **documented backwards.** The fixture named
+  for it emits one `$ref` in both modes. Running the scenario found duplication in the other
+  direction: spec and hybrid emit the `$ref` twice when the explicit one is written as a
+  class-string, classic once. That is PR 42, and the claim left the page.
+- **Trait property ordering** — **real, and the stated rule was backwards.** Nothing in the
+  suite pins it (`assertSpecEquals` compares maps order-independently), so it had to be run:
+  classic follows `use` declaration order, spec reverses it. Documented as measured; the
+  reversal itself is PR 43.
+- **No `requestBody` on `Get`/`Head`/`Options`/`Trace`** — an API-surface difference, not an
+  output one; no fixture can show it, and none should.
+- **Missing: `Schema::examples` at 3.0.** Classic drops, spec downgrades to `example`. Real,
+  documented nowhere.
+
+The trigger (before spec becomes the default) did not need waiting for — the instrument that
+answered this was #2171's mode axis, which arrived for other reasons.
+
+`docs/guide/spec-attributes.md` was rewritten against this (2026-09-11): hedges dropped,
+version and resolver scoping added, the `Schema::examples` case written up, the dedup claim
+removed, trait ordering corrected. Three follow-ups fall out — PR 42, PR 43, and `mutualTLS`
+losing its fixture.
+
+**The two claims nobody could act on were both wrong, and each hid a defect.** Neither was a
+case of documentation drifting away from working code: the hedge was the tell that the
+comparison had been reasoned about rather than run, and running it is what produced PR 42 and
+PR 43. A hedge is worth treating as an unreviewed bug report rather than as sloppy prose.
+
 ### Q1. What replaces the DTO tree in `architecture.md`? — **RESOLVED (2026-08-28)**
 
 Delete it. The generated `reference/spec-attributes.md` already lists every attribute with

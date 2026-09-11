@@ -4,18 +4,6 @@ Design questions still needing an answer. A PARKED question names the trigger th
 revives it; a RESOLVED question moves to [archive.md](archive.md) with its reasoning.
 Flow rules: [README.md](README.md).
 
-**Q3. Are the classic-vs-spec output differences real?** — PARKED (2026-08-28), now
-answerable. Trigger: before spec becomes the default (v7).
-Leave the hedged claims for now; spec mode is still optional/beta.
-
-The evidence turns out to exist already and to be cheap to read: `ScratchTest` compares all
-three modes against one shared expected document unless a `-spec.yaml` override exists, so
-the five overrides in `tests/Fixtures/Scratch/` **are** the list of real divergences —
-`Auth`, `DuplicateRef`, `MergeTraitsExtended`, `NullRef` (3.1/3.2 only) and
-`MultiTypeProperty` (type-info resolver only). The other 34 families assert byte-identical
-output. Reading those five diffs settles this without a survey; see PR 26 in
-[archive.md](archive.md).
-
 **Q4. How much of `docs/adr/` is actually an ADR?** — PARKED (2026-08-28).
 Trigger: classic removed (v8).
 Written as a reference/experiment to see if the format was useful. Both files describe the

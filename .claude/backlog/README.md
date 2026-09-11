@@ -42,13 +42,16 @@ entry number so it survives renumbering: [benchmarks/](benchmarks/README.md),
 
 ## Where this stands
 
-**Nothing is a known bug.** What is left is improvement work and Q5.
+**Two known bugs**, both spec-side, both small: PR 42 (a duplicate `$ref`) and PR 43
+(reversed trait property order). The rest is improvement work and Q5.
 
 - **#2183** (hybrid comparison in `ExamplesTest`/`DocSnippetsTest`) and **#2184**
   (PR 30, removing the classic processors from hybrid) are in review — see
   [active.md](active.md).
 - **6.8.1** is the latest release, tagged at `08c8a2d2` (2026-09-09); the release-notes
   story behind that commit is in [archive.md](archive.md).
+- **Q3** is answered (2026-09-11): five real classic-vs-spec output differences, and the
+  two doc claims that could not be acted on were each hiding one of the bugs above.
 - **Q5** is the live design question — it governs `Response` in shipped code, and
   answering it unparks PR 22.
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next
