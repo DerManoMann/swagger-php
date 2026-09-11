@@ -4,7 +4,8 @@ The full write-up behind PR 20 in the [backlog](../../backlog.md).
 
 ### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it
 
-Two halves, both parked and both worth keeping.
+Two halves, both worth keeping. The design docs are parked; the proof of concept is public
+and has been introduced upstream (2026-09-11).
 
 **The design docs** were on `feat/downstream-support`, 1632 lines across four files. That
 branch has been dropped — almost everything it proposed has since shipped:
@@ -42,13 +43,18 @@ augmenters, five translators, plus `Run.php` and a `poc.php` entry point. It exe
 extension points rather than being a real integration: attribute translators for Symfony's
 routing and `MapRequestPayload` / `MapQueryParameter`, augmenters for models, and auto
 annotation of classes and public properties via a translator. `Run.php` carries a note that
-the `MapRequestPayload` handling is deliberately one of several possible approaches. There
-are uncommitted changes in the working tree, including a `ModelAutoTranslator` →
-`SchemaAutoTranslator` rename.
+the `MapRequestPayload` handling is deliberately one of several possible approaches.
 
-The plan is to review it, polish lightly — it is meant to showcase the extension points, not
-to be production code — and put it in front of the Nelmio project as an early heads-up ahead
-of v7/v8.
+Reviewed, polished and published (2026-09-11). The branch is squashed to a single commit on
+top of upstream 5.11.1 at
+[`spec-poc`](https://github.com/DerManoMann/NelmioApiDocBundle/tree/spec-poc) in the public
+fork, with the write-up at `src/SpecPoC/README.md`. `composer.json` now requires swagger-php
+`^6.8` — the earlier `^5.7.8 || ^6.0` resolved to versions without the hooks the PoC uses.
+
+Introduced to the Nelmio project as
+[nelmio/NelmioApiDocBundle#2803](https://github.com/nelmio/NelmioApiDocBundle/issues/2803)
+(2026-09-11) — deliberately an issue and not a pull request, since the point is an early
+heads-up ahead of v7/v8 rather than a change to land.
 
 **Re-check the docs against master before showing anyone.** They were written before #2130
 and several claims have moved:

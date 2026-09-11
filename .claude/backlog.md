@@ -438,14 +438,15 @@ and `indentedBr()` went. Against that: it generates the classic attributes and a
 pages, and classic is removed in v8, so this may be work with a short life. Worth doing only
 if something else needs to touch that generator anyway.
 
-### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it — **page done, #2168 + #2169**
+### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it — **page done, #2168 + #2169; PoC introduced, nelmio#2803**
 
 The documentation half shipped: `guide/extension-points.md` (#2168) covers the hooks and how
 they compose, and `reference/extension-points.md` (#2169) generates the list of what runs by
 default. What remains is the proof of concept itself, which is outward-facing and a separate
 decision.
 
-Two halves, both parked and both worth keeping.
+Two halves, both worth keeping. The design docs are parked; the proof of concept is public
+and has been introduced upstream (2026-09-11).
 
 **The design docs** were on `feat/downstream-support`, 1632 lines across four files. That
 branch has been dropped — almost everything it proposed has since shipped:
@@ -483,13 +484,18 @@ augmenters, five translators, plus `Run.php` and a `poc.php` entry point. It exe
 extension points rather than being a real integration: attribute translators for Symfony's
 routing and `MapRequestPayload` / `MapQueryParameter`, augmenters for models, and auto
 annotation of classes and public properties via a translator. `Run.php` carries a note that
-the `MapRequestPayload` handling is deliberately one of several possible approaches. There
-are uncommitted changes in the working tree, including a `ModelAutoTranslator` →
-`SchemaAutoTranslator` rename.
+the `MapRequestPayload` handling is deliberately one of several possible approaches.
 
-The plan is to review it, polish lightly — it is meant to showcase the extension points, not
-to be production code — and put it in front of the Nelmio project as an early heads-up ahead
-of v7/v8.
+Reviewed, polished and published (2026-09-11). The branch is squashed to a single commit on
+top of upstream 5.11.1 at
+[`spec-poc`](https://github.com/DerManoMann/NelmioApiDocBundle/tree/spec-poc) in the public
+fork, with the write-up at `src/SpecPoC/README.md`. `composer.json` now requires swagger-php
+`^6.8` — the earlier `^5.7.8 || ^6.0` resolved to versions without the hooks the PoC uses.
+
+Introduced to the Nelmio project as
+[nelmio/NelmioApiDocBundle#2803](https://github.com/nelmio/NelmioApiDocBundle/issues/2803)
+(2026-09-11) — deliberately an issue and not a pull request, since the point is an early
+heads-up ahead of v7/v8 rather than a change to land.
 
 **Re-check the docs against master before showing anyone.** They were written before #2130
 and several claims have moved:
@@ -1365,7 +1371,9 @@ so this is not spec catching up with classic — it is shared, and older than ei
 Worth taking before the NelmioApiDocBundle PoC is shown to anyone. It is exactly what makes that
 bundle's `GenericTypesController` come out with every property empty, and generic-type support is
 the most recent thing the bundle built. The PoC's README has to say so, which is a poor
-advertisement for a pipeline being offered as the replacement.
+advertisement for a pipeline being offered as the replacement. The branch went public and
+nelmio#2803 went up on 2026-09-11, so this is now *behind* the announcement rather than ahead
+of it — the fix is a follow-up to point at from that issue, not a prerequisite.
 
 **A second, much narrower one, spec only.** In the *global namespace*, a short-name docblock
 compiles to a `$ref` with a leading backslash, which never matches the ref map —
