@@ -497,6 +497,24 @@ Introduced to the Nelmio project as
 (2026-09-11) — deliberately an issue and not a pull request, since the point is an early
 heads-up ahead of v7/v8 rather than a change to land.
 
+**Generic instantiations stay out of core.** The PoC emits one schema for `GenericClass<T>`
+where the bundle emits eleven, one per instantiation (`GenericClass`, `GenericClass2`, …).
+That gap is a decision, not a todo:
+
+- swagger-php already ships the mechanism. `Builder::withResolver()` is the hook, and the
+  PoC's own README names a registry-backed resolver as the answer.
+- There is no neutral naming scheme to ship. `GenericClass2` is positional and depends on
+  encounter order — a presentation choice OpenAPI says nothing about, so core would own that
+  scheme forever and anyone wanting a different one would have to fight it.
+- `ModelRegistry` already is that naming layer, in the one project known to need it.
+
+Revisit if a second consumer asks. Even then the reusable part is the traversal that expands a
+generic into per-instantiation components, not the naming, and that could ship as an optional
+package without core committing to a scheme.
+
+Not to be confused with PR 38 — a generic *docblock* resolving to nothing. That one was a core
+bug in both pipelines and shipped in #2173.
+
 **Re-check the docs against master before showing anyone.** They were written before #2130
 and several claims have moved:
 
@@ -1371,9 +1389,9 @@ so this is not spec catching up with classic — it is shared, and older than ei
 Worth taking before the NelmioApiDocBundle PoC is shown to anyone. It is exactly what makes that
 bundle's `GenericTypesController` come out with every property empty, and generic-type support is
 the most recent thing the bundle built. The PoC's README has to say so, which is a poor
-advertisement for a pipeline being offered as the replacement. The branch went public and
-nelmio#2803 went up on 2026-09-11, so this is now *behind* the announcement rather than ahead
-of it — the fix is a follow-up to point at from that issue, not a prerequisite.
+advertisement for a pipeline being offered as the replacement. Taken in time: #2173 shipped in
+6.7.2 on 2026-09-08, three days before the branch went public, so the PoC's README no longer
+has to say it.
 
 **A second, much narrower one, spec only.** In the *global namespace*, a short-name docblock
 compiles to a `$ref` with a leading backslash, which never matches the ref map —

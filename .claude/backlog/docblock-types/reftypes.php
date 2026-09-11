@@ -69,4 +69,4 @@ foreach ($properties as $property) {
     ));
 }
 
-echo "\nEvery cell should read \"resolves\". Two do not, and only one of the two is spec-only.\n";
+echo "\nEvery cell should read \"resolves\". Fixed in #2173 — a cell that does not is a regression.\n";
