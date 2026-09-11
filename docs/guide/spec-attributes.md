@@ -501,11 +501,11 @@ Or apply globally via the OpenApi attribute or via PathItem (cloned to all opera
 
 ## Other differences
 
-Beyond the API changes listed above, spec mode produces slightly different output in some cases:
+Beyond the API changes listed above, the two pipelines differ in the following ways.
 
 ### Explicit `type: object` on `allOf` schemas
 
-When a class-based schema uses `allOf`, spec mode emits an explicit `type: object` on the schema itself. Classic mode omits it.
+A class-level schema that uses `allOf` carries an explicit `type: object` in spec mode. Classic mode omits it.
 
 ```php
 #[OA\Schema(
@@ -539,17 +539,9 @@ create-user:
         - email
 ```
 
-This is semantically stricter — the schema explicitly declares it must be an object, rather than leaving the type to be inferred from the `allOf` members.
+### Single-element `type` arrays reduced to string (3.1+)
 
-### Duplicate `$ref` deduplication in `allOf`
-
-When a class extends a parent that has its own schema, the `Inheritance` augmenter adds a `$ref` to the parent in `allOf`. If you also declare that same `$ref` explicitly, spec mode deduplicates it — only one entry survives. Classic mode may emit the same `$ref` twice.
-
-Reusing the `CreateUser` example above: it both extends `AbstractUser` and names `abstract-user` in its own `allOf`. In spec mode that `$ref` appears once rather than twice — `Refs::dedupAllOfRefs()` drops the duplicate.
-
-### Single-element `type` arrays reduced to string
-
-When a schema's `type` is an array with a single element (e.g. `['string']`), spec mode compiles it as a plain string (`type: 'string'`). Classic mode may emit the array form.
+Where a `type` is an array with a single entry, spec mode compiles it to the scalar form. Classic mode emits the array. Both forms are valid from 3.1; at 3.0, where the array form does not exist, both modes emit the scalar.
 
 ```php
 #[OA\Property]
@@ -557,39 +549,22 @@ When a schema's `type` is an array with a single element (e.g. `['string']`), sp
 public string $name;
 ```
 
-Classic output:
+Classic output (3.1+):
 ```yaml
 name:
   type:
     - string
 ```
 
-Spec output:
+Spec output (3.1+):
 ```yaml
 name:
   type: string
 ```
 
-Both forms are valid in OpenAPI 3.1+, but the scalar form is more conventional for single types.
+### Nullable `$ref` does not duplicate `description` (3.1+)
 
-### No `requestBody` on `Get`, `Head`, `Options`, `Trace`
-
-In spec mode, the typed operation subclasses `OA\Operation\Get`, `OA\Operation\Head`, `OA\Operation\Options`, and `OA\Operation\Trace` do not accept a `requestBody` parameter. This enforces the HTTP semantics where request bodies are not defined for these methods.
-
-Classic mode accepts `requestBody` on all operations (with a comment noting it should be ignored by validators for methods that don't support it). In spec mode the parameter simply does not exist, so passing it raises `Error: Unknown named parameter $requestBody` when the attribute is instantiated.
-
-```php
-// Works in classic mode; a PHP error in spec mode, because
-// Operation\Get::__construct() has no $requestBody parameter:
-#[OA\Operation\Get(path: '/pets', requestBody: new OA\RequestBody(...))]
-
-// Use Post, Put, Patch, or Delete for request bodies:
-#[OA\Operation\Post(path: '/pets', requestBody: new OA\RequestBody(...))]
-```
-
-### Nullable `$ref` does not duplicate `description`
-
-When a schema combines a `$ref` with `nullable: true` and a `description`, classic mode emits the `description` both on the `$ref` entry inside `oneOf` and as a sibling of `oneOf`. Spec mode only emits it on the `$ref` entry.
+When a schema combines a `$ref` with `nullable: true` and a `description`, classic mode emits the `description` both on the `$ref` entry inside `oneOf` and as a sibling of `oneOf`. Spec mode emits it on the `$ref` entry only. At 3.0, where nullability compiles to `nullable: true` rather than a `oneOf`, both modes agree.
 
 ```php
 #[OA\Schema(
@@ -614,13 +589,9 @@ oneOf:
   - { type: 'null' }
 ```
 
-### Trait property ordering
-
-When traits without their own `#[OA\Schema]` are merged inline, the property order in the output may differ between modes. Spec mode orders properties by trait `use` declaration order, which may place trait properties differently than classic mode.
-
 ### Nullable type inference from PHP types
 
-Spec mode consistently infers nullability from PHP type declarations (e.g. `?\DateTime`). For OpenAPI 3.0 this adds `nullable: true`; for 3.1+ it emits `type: ['string', 'null']`. Classic mode may not infer nullability in all cases where the PHP type is nullable.
+Spec mode infers nullability from the PHP type declaration even where the attribute declares a type of its own. Classic mode emits the declared type unchanged. For 3.0 the inferred null adds `nullable: true`; from 3.1 it becomes a type array.
 
 ```php
 #[OA\Property]
@@ -643,6 +614,58 @@ deleted_at:
   format: date-time
   nullable: true
   readOnly: true
+```
+
+### Schema `examples` in a 3.0 document
+
+`examples` is a JSON Schema keyword that arrived with OpenAPI 3.1. Compiling it to 3.0 warns in both modes, then classic mode drops the keyword while spec mode emits its first value as 3.0's `example`.
+
+```php
+#[OA\Schema(schema: 'YoYo', examples: ['YoYo', 'Bare'])]
+class ExampleSchema {}
+```
+
+Classic output (3.0):
+```yaml
+YoYo: {}
+```
+
+Spec output (3.0):
+```yaml
+YoYo:
+  example: YoYo
+```
+
+### Trait property ordering
+
+When traits without their own `#[OA\Schema]` are merged inline, both modes emit the trait properties before the class's own, and disagree on the order among traits: classic mode follows `use` declaration order, spec mode reverses it.
+
+```php
+class Product
+{
+    use HasId;
+    use HasTimestamps;
+
+    #[OA\Property]
+    public string $name;
+}
+```
+
+Classic emits `id`, `created_at`, `updated_at`, `name`; spec emits `created_at`, `updated_at`, `id`, `name`.
+
+### No `requestBody` on `Get`, `Head`, `Options`, `Trace`
+
+In spec mode, the typed operation subclasses `OA\Operation\Get`, `OA\Operation\Head`, `OA\Operation\Options`, and `OA\Operation\Trace` do not accept a `requestBody` parameter. This enforces the HTTP semantics where request bodies are not defined for these methods.
+
+Classic mode accepts `requestBody` on all operations (with a comment noting it should be ignored by validators for methods that don't support it). In spec mode the parameter simply does not exist, so passing it raises `Error: Unknown named parameter $requestBody` when the attribute is instantiated.
+
+```php
+// Works in classic mode; a PHP error in spec mode, because
+// Operation\Get::__construct() has no $requestBody parameter:
+#[OA\Operation\Get(path: '/pets', requestBody: new OA\RequestBody(...))]
+
+// Use Post, Put, Patch, or Delete for request bodies:
+#[OA\Operation\Post(path: '/pets', requestBody: new OA\RequestBody(...))]
 ```
 
 ## References
