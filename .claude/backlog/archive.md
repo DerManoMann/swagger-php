@@ -1,3 +1,508 @@
+# Archive
+
+Finished entries — done, closed, or not doing — with the reasoning that made them so.
+The ledger below is for scanning; the entries after it are for reading when a number
+comes up. Flow rules: [README.md](README.md).
+
+## Ledger
+
+Newest first. An entry number appears once per merge that contributed to it.
+
+| Merged | Entry | What |
+| --- | --- | --- |
+| #2182 | Q5 (partial) | warn when a root `Response`'s key looks like a status code |
+| #2181 | PR 24 | commit subject format and allowed types in CONTRIBUTING |
+| #2179 | — | `Items` constructor docblock; squash carried #2178 — **6.8.1** tagged here |
+| #2178 | — | `@OA\Examples` under a schema (merged via #2179's squash) |
+| #2176 | PR 39 | schema `examples` as list, classic — closes #1994; **6.8.0** tagged here |
+| #2175 | PR 39 | schema `examples` as list, spec |
+| #2174 | PR 37 | drop a nested map entry that has no key |
+| #2173 | PR 38 | generic docblock resolves to the type it parameterises |
+| #2172 | PR 36 | component key inferred from the class for every bucket |
+| #2171 | PR 35 | hybrid on `ScratchTest`'s mode axis; eight defects found |
+| #2170 | PR 28 | nested operations collected from the parent that owns them |
+| #2169 | PR 32 | generated extension points reference |
+| #2168 | PR 20 | extension points guide |
+| #2167 | PR 8 | an explicit `null` suppresses an inferred value |
+| #2166 | PR 7 | augmenter config documented in one place |
+| #2165 | — | `TokenScanner` fixture and tool-exclusion audit |
+| #2164 | PR 12 | stacked-attribute sweep |
+| #2163 | PR 14 | significance-clause rule; writing rules cover commits |
+| #2162 | PR 8 | method-level `Schema` crash and the slot-type invariant |
+| #2161 | PR 29 | level 6 type annotations for the spec namespaces |
+| #2160 | PR 15 | mode-aware `ScratchTest` log keys |
+| #2159 | PR 27 | inner-to-outer sibling merge |
+| #2158 | PR 3 | `DocsAccuracyTest` and `composer docs:check` |
+| #2157 | PR 10 | `OpenApiTestCase` migrated to extracted traits |
+| #2156 | PR 14 | `Server`/`ServerVariable` summaries |
+| #2155 | PR 26 | ref escaping |
+| #2154 | PR 26 | input validation and the `SpecificationWalker` fix |
+| #2153 | PR 26, 14 | attribute targets, `AttributeTargetsTest`; writing-rules scope |
+| #2152 | PR 19 | `$argv` guard |
+| #2151 | PR 19 | phpstan pinned |
+| #2150 | PR 8 | `Undefined::UNDEFINED` on every `mixed` property |
+| #2148 | PR 10 | `ExpectsLogEntries` |
+| #2147 | PR 10 | `AssertsSpecEquals` extracted, `AssertsBuilderResult` retired |
+| #2146 | PR 1 | `#[Config]` attribute; PR description template |
+| #2145 | PR 21 | `TypedList::clear()` |
+| #2144 | PR 9 | scratch fixtures for Head/Options/Trace and Link |
+| #2143 | — | rector 2.6.5, pinned tooling |
+| #2142 | — | `.dist` convention for the phpstan config |
+| #2141 | PR 4 | doc generator merge; phpstan covers `tools/` |
+| #2140 | PR 15 | the `ScratchTest` failure #2137 and #2138 produced only once merged |
+| #2139 | — | README corrections |
+| #2138 | PR 13 | compiler diagnostics reaching the configured logger |
+| #2137 | PR 8 | `ComponentIndex`, slot-target validation, uncompiled attributes |
+| #2136 | — | developer docs, and the writing rules |
+| #2135 | — | rector rule changes |
+| #2134 | — | spec docs cleanup |
+| #2130 | — | resolver step |
+
+## Notes
+
+**Release notes: `08c8a2d2` contains far more than its title says.** #2178 was reviewed as
+its own pull request but never merged as one. #2179, a one-line docblock fix stacked on it,
+was based on `master` — a cross-repo pull request cannot target a branch on the fork — so
+its diff carried all six commits, and squash-merging it landed the lot under
+`fix(Attributes): repair the Items constructor docblock (#2179)`. #2178 is closed as merged;
+#2177 is closed against that commit.
+
+**6.8.1 is tagged at `08c8a2d2`** (2026-09-09), and its notes describe the commit by its
+contents rather than its title: `@OA\Examples` under a schema no longer demands an `example`
+key or a `summary`, a schema's `examples` accepts plain values in both syntaxes, and two
+diagnostics are added for cases that used to pass in silence. Patch won over minor —
+accepting plain values is new input, but the release exists to repair a regression 6.8.0
+shipped, and the upgrade note it carries is about 6.8.0's output change rather than the new
+input.
+
+**The stacking is the lesson.** GitHub will not take a fork branch as a base, so a stacked
+pull request has to be based on `master` and carries its parent's commits whatever the
+description says. Either wait for the parent to merge before opening the child, or expect
+one merge to take both.
+
+**The 2026-09-02 goal, closed.** "Make the spec pipeline as good as it can be at what it
+already does" ran in three strands: the test migration finished with #2157 (PR 10); the
+behaviour hunt ran out with PR 26 and its findings are fixed (#2154, #2155, #2159, #2162);
+the documentation strand ended with #2168 and #2169. The behaviour strand reopened twice on
+new instruments — #2171 compared what the pipelines *emit* rather than what their tests
+assert, and PR 38 varied the docblock while holding the type. The lesson: a strand is
+exhausted only for the comparison that was run; each new axis of comparison is a new
+instrument.
+
+---
+
+## Entries
+
+### PR 24 — nothing says what a commit message should contain — **done, #2181**
+
+**Mostly closed before it was picked up.** #2163 landed the bodies half while this entry sat
+here: `docs/dev/writing-docs.md` now says the prose rules cover commit messages and that a
+body documents what the diff does rather than why, and CONTRIBUTING carries the one-line
+orientation pointing at it. So the gap below is narrower than written.
+
+What was left is the subject line. CONTRIBUTING stated the shape for **pull request titles**
+only; the shape for commits, and the list of allowed types, lived just in `AGENTS.md`, which
+is written for agents rather than contributors. A human reading CONTRIBUTING end to end
+learned how to title the pull request and not the commits inside it.
+
+Adding it turned up a second thing: **the documented type list was missing `test`.** It is in
+regular use and has been through review — #2158, #2165, #2167 and #2171 all merged under it —
+so the list was wrong rather than the practice. Both files now name six types.
+
+The original framing follows.
+
+`.github/PULL_REQUEST_TEMPLATE.md` and CONTRIBUTING's "Pull request titles follow
+`type(Scope): subject`" both govern pull requests. The only rule touching commits is one
+line in `AGENTS.md` — the same `type(Scope): subject` shape and the list of allowed types —
+and it says nothing about bodies.
+
+That is a gap rather than a deliberate omission, because CONTRIBUTING leans on the commit
+trail without ever describing it: "History that lives elsewhere — earlier attempts,
+abandoned branches, related work in other pull requests — belongs in the issue or commit
+trail, not here." Material is being routed somewhere the conventions never define.
+
+The PR template's own guidance transfers almost unchanged — why the change exists rather
+than how, identifiers in backticks, no code snippets, keep to the change at hand — so this
+is a short addition to CONTRIBUTING next to the PR paragraph, not a new document.
+
+Came up while splitting the `Undefined::UNDEFINED` work out of `feat/spec-3.2-fields`:
+writing the message meant guessing at a convention that only exists for PR descriptions.
+
+### PR 39 — `Schema::$examples` compiles to a map, and its own docblock says list — **done, #2175 + #2176**
+
+In OpenAPI 3.1 a Schema Object is JSON Schema, where `examples` is **an array of example
+values**. `OpenApi31Compiler` compiled it as a map of Example Objects, keyed like the `examples`
+that hang off a parameter, header or media type — which genuinely are maps:
+
+```yaml
+    YoYo:
+      examples:
+        yo:
+          summary: 'the yo'
+          value: YoYo
+```
+
+**There is no design question here, which is what the first draft of this entry got wrong.**
+`OA\Schema::$examples` already declares what it holds:
+
+```php
+@param list<mixed>|null $examples   A list of example values
+```
+
+Bare values, exactly what JSON Schema wants. So the property is not ambiguous and nothing has
+to be decided about it. `compileSchema()` ignored that contract by passing the list through
+`compileExamples()`, which read each element as an `OA\Example` and keyed by `->example`. The
+`summary`, `description` and `externalValue` this entry first worried about have nowhere to go
+because they were never meant to be there — a map of Example Objects is what a media type,
+parameter or header takes, and one of those is where an author wanting them should be.
+
+**One mistake, four symptoms, in a chain.** The `Examples` fixture passed `OA\Example` objects
+into a `list<mixed>` that wants values. Nothing catches it: the runtime type is `?array` and
+`mixed` accepts anything. 3.1 then compiled those objects into a map. Redocly flagged the map as
+a `struct` error, and `.redocly.lint-ignore.yaml` carried
+`#/components/schemas/YoYo/examples` for `tests/Fixtures/Scratch/Examples3.1.0.yaml`, so
+`composer redocly` passed on a structurally wrong document. That is PR 31's shape inverted: not
+an exclusion that stopped doing anything, but one doing exactly what it says and hiding a defect.
+
+**And it left the 3.0 branch untested and worse.** `OpenApi30Compiler` honours the contract —
+`$result['example'] = $schema->examples[0]`, a value — so fed an Example Object it serialized the
+whole thing, swagger-php internals included:
+
+```json
+"example": { "x": null, "attachables": null, "example": "yo",
+             "summary": "the yo", "description": null, "value": "YoYo",
+             "externalValue": null, "ref": null }
+```
+
+No `Examples3.0.0.yaml` existed, so no fixture covered it. The two compilers disagreed about
+what the property holds, and only one of them agreed with the docblock.
+
+**It was already reported, as [#1994](https://github.com/zircote/swagger-php/issues/1994), open
+and marked critical.** That issue states the rule from the specification — `Parameter.examples`
+and `MediaType.examples` are maps of Example Objects, `Schema.examples` is the JSON Schema
+keyword and takes an array of literal values — and cites 4.8.19.2 and the model-with-example
+shape. Nothing here found anything the reporter had not, which is worth saying: the backlog
+reasoned its way to a conclusion that was sitting in the issue tracker the whole time. **Search
+the open issues when an entry is written, not when it is closed.**
+
+The issue also names `Property`, which this entry did not. It needed no work but did need
+checking, because "closes" is a claim: classic's `Property extends Schema` inherits
+`jsonSerialize()`, and spec's `Property` wraps a `?Schema $schema` compiled through
+`compileSchema()`. Covered by structure rather than by duplicated code.
+
+**Done in two PRs, deliberately split.** #2175 fixes the spec pipeline and #2176 fixes classic,
+because the second changes output in the *stable* pipeline and deserved to be revertable on its
+own. Classic collected `@OA\Examples` under a schema and keyed them, so
+`Schema::jsonSerialize()` now maps them to their values for 3.1 and later.
+
+**Both redocly ignore entries are gone**, which was the point — 183 explicitly-ignored problems
+down to 181. Before removing them each was checked by deleting it and re-running: they errored,
+so they were load-bearing rather than stale. PR 31 argues for exactly that check on the way in;
+this is the same check on the way out.
+
+Two things the work turned up that the entry did not predict:
+
+- **3.0 had no expectation at all**, which is why its branch — `$result['example'] =
+  $schema->examples[0]` — went untested and serialized whole Example objects, `x`, `attachables`
+  and `ref` included. It now has one. 3.0 keeps a `-spec` split legitimately: `examples` is not
+  a schema field there, so classic drops it while spec carries the first value across as
+  `example`. Both warn.
+- **`ScratchTest` declared a log message that does not exist.** `'Examples-3.0.0'` expected
+  `@OA\Schema() is only allowed as of 3.1.0`; the real text is `@OA\Schema::examples`. With no
+  3.0 expectation the case never ran, so the declaration was never exercised and the wrong text
+  never mismatched. A third species of dead configuration, after PR 31's tool exclusions and the
+  redocly ignore above: an expectation nothing asserts.
+
+### PR 37 — a nested map with no key still compiles to a JSON array — **done, #2174**
+
+PR 36 fixed this for the `components` buckets and stopped there. The nested maps — a
+`Response`'s `headers` and `links`, a `MediaType`'s `examples` and `encoding` — still went
+through `compileNamedMap()`, whose fallback was `$item->$key ?? (string) $index`. An integer
+key makes the whole map serialize as a JSON array, and OpenAPI requires
+`Map[string, Object]` in every one of those positions:
+
+```json
+"headers":  [ { "description": "nameless nested header" } ],
+"examples": [ { "summary": "nameless nested example" } ]
+```
+
+**Spec was worse than classic here**, which is the part that decided it. Classic rejects the
+same input — `@OA\Header() is missing key-field: "header"`, asserted in
+`AbstractAnnotationTest` — while spec emitted a document no validator will accept and said
+nothing. That is the failure mode PR 15 and #2162 both turned out to be, in a third place.
+
+Found while writing PR 36's fixture; scoped out of it deliberately, because the entry was
+about component identity and this is about a map key that never had one.
+
+**Done. The three fallbacks split the way the entry guessed, and a fourth call site turned up
+that fits none of them.** Seven maps were name-keyed and now drop an unnamed entry through
+`compileKeyedMap()`, with `validateNestedNames()` reporting it — a response's `headers` and
+`links`, a media type's `examples` and `encoding`, an encoding's `headers`, and a parameter's
+and a header's `examples`. The status-code and content-type maps keep their fallbacks, being
+values. The link's `operationId` fallback went, as predicted.
+
+The fourth is `Schema::$examples`, which shares the helper and is neither: in 3.1 it is the
+JSON Schema keyword, which takes **a list, not a map**. It compiled to a map. Left alone
+here — an unnamed example is the *normal* case for a list, so dropping one would delete
+intent rather than protect it. See PR 39.
+
+Where the warning goes turned out to be the smaller half. `SpecificationWalker::visit()`
+recurses through every property, so `visit(OA\Response::class, ...)` reaches a response wherever
+it sits, and a `container => [property => key field]` table covers all five containers.
+`Builder` captures `validate()`'s return before calling `compile()`, so a diagnostic raised
+during compilation never reaches `Result`, which is why this had to live in validation rather
+than beside the code that drops the entry.
+
+### PR 38 — a generic docblock resolves to nothing, in both pipelines — **done, #2173**
+
+Three properties of the same class type, differing only in their docblock, run through all three
+modes. Reproduced on `origin/master` at `bfa6b0ce`, so both findings predate #2171 and PR 36:
+
+| declared as | classic | hybrid | spec |
+| --- | --- | --- | --- |
+| `public Target $native` | resolves | resolves | resolves |
+| `/** @var Target<string> */` | **`{}`** | **`{}`** | **`{}`** |
+| `/** @var Target */` | resolves | resolves | resolves |
+
+The script behind the table is in [docblock-types/](docblock-types/README.md).
+
+**The generic docblock is the finding, and it belongs to both pipelines.** A property typed
+`public Target $x` resolves on its own; adding `/** @var Target<string> */` above it made the
+resolver return nothing, with no fall back to the native type. So a generic docblock was strictly
+worse than writing none, which is the opposite of what a docblock is for.
+
+Taken in time for the Nelmio PoC: #2173 shipped in 6.7.2 on 2026-09-08, three days before the
+branch went public, so the PoC's README no longer has to call it out. It is exactly what made
+that bundle's `GenericTypesController` come out with every property empty.
+
+**A second, much narrower one, spec only.** In the *global namespace*, a short-name docblock
+compiled to a `$ref` with a leading backslash, which never matches the ref map —
+`ComponentIndex` keys on `getClassName()`, which has none:
+
+| in the global namespace, spec mode | |
+| --- | --- |
+| `/** @var GTarget */` | `$ref: \GTarget` — unresolved |
+| `/** @var \GTarget */` | resolves |
+| no docblock | resolves |
+
+Inside a namespace the short name resolves against it and comes out clean, which is why the
+table above does not show this. Classic got the global case right, so unlike the generic
+docblock there was a correct implementation to compare against rather than design.
+
+That makes it the shape PR 26 went looking for — behaviour classic asserts and spec does not —
+turning up after that hunt was declared closed, and after #2171 found eight more by comparing
+outputs rather than tests. Third time. The lesson is not that the survey was sloppy; it is that
+each new axis of comparison is a new instrument, and this one (vary the docblock, hold the type)
+had never been pointed at anything.
+
+**The cause was one missing arm, and the table above was reading a symptom.** `Type\TypeResolver`
+— the mapper `TypeInfoTypeResolver` delegates to, distinct from the `TypeResolverInterface`
+implementations — matches `BuiltinType`, `ObjectType`, `IntRangeType`, `ExplicitType`,
+`ArrayShapeType` and `CollectionType`, and had nothing for `GenericType`. It fell through to an
+empty `SchemaType`, so `Types::augmentProperty()` bailed and the property kept no type.
+
+So "both pipelines, older than either" was wrong twice over. symfony/type-info parses the generic
+correctly and hands back a `GenericType` wrapping the parameterised type; swagger-php discarded
+it. And `LegacyTypeResolver` reaches `TypeMapper` without touching this class, so it was never
+broken — classic looked broken only because `TypeInfoTypeResolver` is the default. Three of the
+four mode/resolver cells failed, and all three failed for the same one reason.
+
+The lead came from asking whose code reads docblock generics. It is type-info's, which made
+"swagger-php is mishandling what it gets back" the first thing to check rather than the last.
+Worth keeping as a habit: when a bug sits on an integration seam, establish which side produced
+the wrong value before reasoning about either.
+
+The global-namespace half was a second missing normalisation in the same method — an `ObjectType`
+class name kept the leading slash type-info gives it there. Both fixes are in #2173, with
+`DocblockGenerics` covering all four cells against one expected document and `GlobalNamespaceTypes`
+covering the case no `Scratch` fixture can reach.
+
+**cs-fixer deleted the docblocks the fixtures exist for.** `no_superfluous_phpdoc_tags` reads
+`@var Target` above `public Target $x` as redundant, which it is everywhere except here. The
+tests still passed and proved nothing. Both fixtures are now in the cs-fixer filter with the
+reason stated, next to the entries PR 31 audited — a live exclusion rather than a dead one.
+
+### PR 36 — `Names` infers a component key from the class for some component buckets only — **done, #2172**
+
+`Augmenter\Names` filled a missing component key from the declaring class, but only for schemas,
+parameters and — since #2171 — request bodies. Nothing did the same for responses, headers,
+examples or links.
+
+The consequence was not cosmetic. `OpenApi31Compiler` keyed an unnamed component positionally —
+`fn (OA\RequestBody $body, int $index): string => $body->request ?? 'body' . $index` — so a
+class-level attribute with no explicit key compiled to `body0`, and because
+`ComponentIndex::buildRefMap()` skips any component whose name is null, a `$ref` given as a
+class name never resolved either. Both symptoms showed up together in #2171, where a bare
+`#[OAT\RequestBody]` on a class produced `$ref: OpenApi\Tests\Fixtures\Scratch\RequestBodyRef`
+against a component called `body0`.
+
+**The rule holds everywhere, and the question answered itself once the code was read** — there
+were already *two* rules, not one. Schema and RequestBody took the class name; Parameter took
+`name` and Link took `operationId`, which is "the key comes from the field that already
+identifies it". Responses, headers and examples have no such field, which is why they fell
+through. Both rules stand: a class-declared component takes the class short name, and
+`Parameter` keeps `name` ahead of it.
+
+Three things the entry did not predict, each found by making the fix rather than by the survey
+that wrote the entry:
+
+- **The positional fallback emitted invalid documents, not merely odd names.**
+  `components.headers` and `components.examples` compiled to JSON *arrays* where OpenAPI
+  requires `Map[string, Object]`, and `components.responses` took an empty-string key from
+  `(string) null`. Reproducible in spec mode through `#[OA\Components]` stacked on a class,
+  so it was never hybrid-only.
+- **The key logic was duplicated three times, not two.** `Augmenter\Cleanup` carried a third
+  copy beside the compiler's and `ComponentIndex`'s, and all three disagreed — a link with no
+  `link` compiled under its `operationId`, indexed as nothing, and was pruned as unreferenced.
+  `Specification\ComponentName` is now the single answer, and the compiler's invented
+  fallbacks went with it: an unnamed component is dropped and reported, and a key claimed
+  twice is reported too.
+- **`compileExample()` never emitted `$ref`**, unlike `compileHeader()` and `compileLink()`,
+  so an example could be named and still never referenced.
+
+Two `HybridBridge` bugs came with them, surfaced by the new duplicate-key warning rather than
+looked for. A `SecurityScheme` nested in `Components` was converted twice — its match arm was
+the only one carrying no nested guard. Guarding it exposed why that had gone unnoticed: a
+`Components` merged into `OpenApi`, which is what the *attribute* form always produces, was
+never converted at all, so every component declared that way was silently dropped and the
+unguarded arm had been accidentally rescuing the schemes.
+
+That is #2171's lesson a second time. The instrument that finds bugs in both pipelines need
+not be a survey — here it was one new warning and one fixture whose classic and spec halves
+had to agree.
+
+**Classic does not hold this rule and should not be made to.** A class-level `@OA\Response`
+without a key is an error there, and `@OA\Header`, `@OA\Link` and `@OA\Examples` are not
+valid on a class at all. So `ComponentNames` spells the keys out on the classic side and omits
+them on the spec side, and the single expected document asserts that inferring and naming by
+hand produce the same thing.
+
+### PR 35 — `ScratchTest` never runs hybrid, and 14 fixtures disagree when it does — **done, #2171**
+
+`ScratchTest`'s mode axis was `CLASSIC` and `SPEC`. Hybrid was exercised only by `ExamplesTest`,
+`DocSnippetsTest` and `CommandlineTest`, none of which compared it against the classic document
+it is supposed to reproduce. That is how the nested-operation bug in PR 28 survived: hybrid
+emitted `/nested: []` where classic emitted the operation, and nothing looked.
+
+Adding `Builder\Mode::HYBRID` to the axis needed no fixture work — the source selection only
+swaps in `-spec.php` for `SPEC`, so hybrid reads the classic file as it should. Measured on
+2026-09-06, that gave **463 cases and 38 failures across 14 fixtures**, roughly one per
+version:
+
+| Failures | Fixture |
+| --- | --- |
+| 6 | `RequestBody` |
+| 3 | `UsingRefs`, `ThirdPartyAnnotation`, `Security`, `NestedSchema`, `NestedAdditionalProperties`, `MergeTraitsExtended`, `Encoding`, `DuplicateRef` |
+| 2 | `NullRef`, `MultiTypeProperty`, `Examples` |
+| 1 | `Tags`, `Docblocks` |
+
+So **24 fixtures already matched** and were pinned the moment the mode was added.
+
+**Do not paper the other 14 over with `-hybrid.yaml` overrides.** The lookup supports them, so
+it was the tempting move, and it would enshrine whatever the bridge currently drops. The one
+sampled — `Tags` — failed on a missing `summary`, which is the same species as PR 28: a field
+the bridge does not carry across. Each of the 14 was a finding until shown otherwise.
+
+**#2171 did all of it**: the mode is in the matrix at 466 cases with nothing excluded. The
+premise above was two-thirds right. Eight of the 14 were defects — six in the bridge (seven
+JSON Schema keywords, `summary`/`parent`/`kind` on a tag, `headers` on an encoding, a
+property's own encoding, nested-only schema types collected as class schemas, class-level
+`Parameter`/`RequestBody` skipped) and two in the spec pipeline, which the hybrid comparison
+found by accident.
+
+The other six were **classic quirks, not hybrid faults** — a `description` duplicated beside a
+`oneOf`, `type: [string]` where the spec compiler writes `type: string`. Hybrid feeds the spec
+compilers, so it is now held to the spec expectation where a fixture has a spec pair and to
+classic's otherwise. Only `ThirdPartyAnnotation` needed a `-hybrid.yaml` override, for a
+genuine rendering difference: spec puts `type: object` on a class-derived schema that only
+composes an `allOf`, classic does not.
+
+So the "each of the 14 is a finding until shown otherwise" rule was worth holding, but the
+conclusion it implied — that every disagreement is a dropped field — was not. Comparing two
+pipelines finds bugs in both, and sometimes the fixture is the thing that is wrong.
+
+`Auth` lost its split `-classic.yaml`/`-spec.yaml` expectations along the way: they existed
+only because `Auth-spec.php` declared a `mutualTLS` scheme classic cannot express, which
+`CompilerTest` already covers end to end.
+
+Worth knowing: a reflector source yields nothing in classic or hybrid, since both scan
+files — `addSource(new \ReflectionClass(...))` silently produces an empty document rather
+than failing. It cost a false-passing test while writing PR 28's coverage.
+
+The remaining tail — hybrid uncompared in `ExamplesTest` and `DocSnippetsTest` — is #2183.
+
+### PR 34 — `--prefer-lowest` means something different in every CI cell — **closed, not doing**
+
+**CLOSED (2026-09-11).** The entry ended with "needs confirming rather than assuming". It was
+confirmed, and both halves of the premise are false. Kept for the numbers, so the pin is not
+proposed again.
+
+The claim was that `composer.json` sets no `config.platform.php`, so the five `lowest` cells
+each resolve a different dependency set against whatever PHP is running, and pinning to
+`8.2.0` would make one reproducible set.
+
+**There is only ever one set.** Resolving `--prefer-lowest --prefer-stable` against each
+simulated platform gives a byte-identical 74-package list on 8.2, 8.3, 8.4, 8.5 and 8.6, and
+adding the pin changes nothing on any of them. Floors have no upper PHP bound, so the host
+version never enters the lowest solution. Nothing was unreproducible.
+
+**The pin does reach the `highest` cells, and that is the whole problem.**
+`config.platform.php` constrains every resolution, not the `--prefer-lowest` one. Measured on
+PHP 8.5, adding it to `composer.json` moves the highest set backwards:
+
+| | without the pin | with `platform.php: 8.2.0` |
+| --- | --- | --- |
+| `phpunit/phpunit` | 13.3.3 | 11.5.56 |
+| `symfony/console` | v8.1.6 | v7.4.18 |
+| `symfony/yaml` | v8.1.6 | v7.4.18 |
+
+PHPUnit 13 and Symfony 8 both need PHP ≥ 8.4, so the pin excludes them everywhere. The
+`highest` cells on 8.4, 8.5 and 8.6 are the only thing exercising the `^8.0` half of
+`symfony/console`, which is declared support. The change costs that and buys nothing.
+
+**What the four extra `lowest` cells are actually for** — since they resolve identically,
+their value is runtime rather than resolution: floor dependencies running on a newer PHP.
+That is coverage a resolution diff cannot see, and it is the reason not to trim them either.
+
+The re-run remains worth doing whenever a floor is raised, as PR 33 says. It needs no config
+change — `composer update --prefer-lowest --prefer-stable --dry-run` is the whole procedure.
+
+### Q1. What replaces the DTO tree in `architecture.md`? — **RESOLVED (2026-08-28)**
+
+Delete it. The generated `reference/spec-attributes.md` already lists every attribute with
+its "Allowed in" containment relationships and parameters, and cannot rot. `architecture.md`
+should link there instead of maintaining a parallel tree by hand.
+
+### Q2. Should object-valued augmenter settings be documented as config? — **RESOLVED (2026-08-28)**
+
+No. Config is **a constructor parameter that is not object typed** — ctor params are the
+public API by convention; factories and resolvers are collaborators. Implemented as
+`DocGenerator::configurableParameters()`, used by both reference generators. This dropped
+`inheritance.attributeFactory`, `types.typeResolver`, `docblocks.parser` and four classic
+`*.generator` entries, and `reference/augmenters.md` now matches `-D` exactly.
+
+Interim solution — see follow-up PR 1.
+
+### Not doing: `generator.ignoreOtherAttributes` has no documented home
+
+Dropped 2026-08-28 — classic-only by construction (`Generator::getDefaultConfig()` and
+`Analysers/AttributeAnnotationFactory`, neither used by the spec pipeline), so spec `-D`
+correctly never reports it and the flag has no meaning there. Residual gap accepted: a
+classic user running `-D` sees a key that no reference page explains. Not worth fixing for
+a pipeline removed in v8.
+
+### Not doing: `Operation::$operationId` is documented `@var string` but treated as nullable
+
+Dropped 2026-08-28 — classic-only, and classic is removed in v8, so it is not worth the
+churn. The rector skip for `IfToNullCoalescingAssignRector` on
+`src/Processors/OperationId.php` therefore stays permanently; `rector.php` carries an
+inline comment explaining why.
+
+Note the systemic cause is still live and worth remembering: `composer.lock` is gitignored,
+so CI always resolves the latest dependencies. A new rector or cs-fixer release can turn
+every branch's `code-style` job red with no change to the repo — which is how this
+surfaced (see PR #2135).
+
 ### PR 28 — `HybridBridge` converts a webhook's operation twice — **done, #2170**
 
 The duplicate was the harmless half. The unguarded `Annotations\Operation` branch also
@@ -136,8 +641,6 @@ arguments, sidestepping sibling merge entirely. The `Response`, `RequestBody` an
 scratch fixtures now declare part of their trees as stacked siblings, one container-first, so
 the path is covered rather than avoided.
 
-
-
 ### PR 3 — keep derivable documentation in sync automatically — **done, #2158**
 
 `DocsAccuracyTest` verifies five hand-written documentation claims against the codebase by
@@ -252,4 +755,4 @@ loses the `#[Before]` attribute and PHPUnit stops calling it.
 
 The event-subsystem approach on `origin/expexts-logger-contains` was investigated and
 rejected. Full plan and measurements:
-[`backlog/testcase-concerns/README.md`](testcase-concerns/README.md).
+[testcase-concerns/README.md](testcase-concerns/README.md).

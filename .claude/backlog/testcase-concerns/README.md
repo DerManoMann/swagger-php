@@ -1,6 +1,6 @@
 # `OpenApiTestCase` concerns
 
-The full write-up behind PR 10 in the [backlog](../../backlog.md).
+The full write-up behind PR 10 in the [backlog](../archive.md).
 
 ### PR 10 — extract the pipeline-agnostic half of `OpenApiTestCase` into concerns
 

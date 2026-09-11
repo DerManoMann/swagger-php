@@ -1,6 +1,6 @@
 # Performance
 
-The full write-ups behind PR 16 and PR 17 in the [backlog](../../backlog.md). The scripts
+The full write-ups behind PR 16 and PR 17 in the [backlog](../planned.md). The scripts
 behind the numbers here live in [`../benchmarks/`](../benchmarks/README.md).
 
 ### PR 16 — the mode performance comparison nobody has run

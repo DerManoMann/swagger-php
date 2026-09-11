@@ -1,6 +1,6 @@
 # Docblock types
 
-Reproduction for PR 38 in the [backlog](../../backlog.md) — a generic docblock resolves to
+Reproduction for PR 38 in the [backlog](../archive.md) — a generic docblock resolves to
 nothing, in classic and spec alike.
 
 ```shell

@@ -1,6 +1,6 @@
 # NelmioApiDocBundle proof of concept
 
-The full write-up behind PR 20 in the [backlog](../../backlog.md).
+The full write-up behind PR 20 in the [backlog](../planned.md).
 
 ### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it
 

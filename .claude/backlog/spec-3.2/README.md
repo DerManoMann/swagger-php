@@ -1,6 +1,6 @@
 # OpenAPI 3.2 field coverage
 
-The field-by-field audit behind [PR 22](../../backlog.md). Every `src/Spec/` class and all
+The field-by-field audit behind [PR 22](../planned.md). Every `src/Spec/` class and all
 three `Compiler/OpenApi3xCompiler.php` classes were read against the
 [3.2.0 spec](https://spec.openapis.org/oas/v3.2.0.html); this is what came out missing, what
 turned out already done, and what needs a design decision before it can be done at all.
