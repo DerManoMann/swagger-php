@@ -24,6 +24,10 @@ entry number so it survives renumbering: [benchmarks/](benchmarks/README.md),
 [nelmio-poc/](nelmio-poc/README.md), [spec-3.2/](spec-3.2/README.md),
 [docblock-types/](docblock-types/README.md).
 
+`chore/backlog` stays checked out in a worktree at `.claude/worktrees/chore+backlog` rather
+than being created and removed per change. It changes often enough to earn the slot, and
+keeping it there means it can be read or reviewed at any point without checking anything out.
+
 ## Flow
 
 1. A new entry gets the next PR/Q number in `planned.md`. Numbers are never reused.
