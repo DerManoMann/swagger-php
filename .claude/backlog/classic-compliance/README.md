@@ -106,8 +106,17 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
    `HybridBridge` carrying the new fields across. `Scratch/HeaderObject{,-spec}` pins all
    five in all three modes against **one shared expectation per version** — the fixture
    payoff, first data point.
-2. **Parameter content wiring** — gap 8, one `$_nested` line plus a fixture case;
-   straight bug, its own small branch
+2. **Parameter content wiring** — gap 8 — **done on `fix/classic-parameter-content`**:
+   the `$_nested` line, `Parameter` added to `MediaType::$_parents`, and the merge
+   processors now set `mediaType` for parameter content too. The special case was a
+   2020 workaround (`113c00a5`, "Improve OAS3 compatibility"): without the nested
+   config, serialization leaked `mediaType:` *inside* the media type object, and the
+   guard suppressed the leak by never setting the field. With the config present the
+   serializer keys the map off the field and strips it — and the guard flips to
+   actively wrong, since the key-field validation now requires the field set. Every
+   existing expectation is byte-identical, and the regenerated fixture shows no leak. The pre-existing
+   `Scratch/ParameterContent` fixture (which covered only the working `JsonContent`
+   shortcut) gains the plain-`MediaType` parameter that used to vanish.
 3. **mutualTLS** — `$_types` enum + a 3.0 warn-and-omit to match the spec compiler;
    `Auth` fixture finally covers it in both modes (gap 3)
 4. **Info.summary** — one field, drop at 3.0 with a warning (gap 4)

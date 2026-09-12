@@ -22,6 +22,10 @@ Fix batches land one branch each, smallest first, both pipelines wherever both l
 field: Header → Parameter content wiring → mutualTLS → Info.summary → Schema keywords →
 jsonSchemaDialect; `pathItems` stays parked behind Q5 with PR 22 Phase 4.
 
+**Batch 2 (Parameter content) is done on `fix/classic-parameter-content`, ready for
+review.** One `$_nested` line plus the processor special-case removal it forces, with the
+existing `ParameterContent` fixture extended by the parameter shape that used to vanish.
+
 **Batch 1 (Header) is in review — #2191, branch `fix/classic-header-fields`.** The five
 fields with a schema-XOR-content `validate()`, the merge processors accepting `Header`,
 the `HybridBridge` carrying the fields across, and `Scratch/HeaderObject{,-spec}` pinning
