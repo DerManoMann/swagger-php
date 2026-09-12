@@ -73,8 +73,10 @@ Partial adoption is the story of #5: classic already has `const`, `contains`,
   `PathItem::$query`/`Operation` query method.
 - **Classic-only leftovers, not gaps but noted**: `Schema` still declares draft-4/Swagger-2
   keywords the 3.x spec never had — `additionalItems`, `dependencies`, `collectionFormat`
-  — plus `nullable` (real, 3.0-only). What classic emits for the three dead ones at 3.x is
-  unverified; worth a look while in the file.
+  — plus `nullable` (real, 3.0-only). Verified 2026-09-12: `Attributes\Schema`'s
+  constructor rejects all three, so only the docblock syntax can set them; a docblock
+  that does presumably leaks them into output, the same hole as the content-vocabulary
+  leak batch 5 now covers.
 
 ## Found while fixing
 
@@ -139,7 +141,14 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
    of `summary`; uniform drop diagnostics are PR 25's job. `Scratch/InfoObject{,-spec}`
    pins the full Info Object in all three modes; 3.0 omits `summary` (gap 4).
 5. **Schema keywords** — ten fields classic-side, `contentSchema` spec-side too;
-   3.0 handling per keyword follows the existing warn/drop table in PR 25's entry (gap 5)
+   3.0 handling per keyword follows the existing warn/drop table in PR 25's entry (gap 5).
+   **Scope grew (2026-09-12):** classic currently *leaks* `contentEncoding` and
+   `contentMediaType` into 3.0 documents — invalid keywords, emitted silently, since
+   `Schema::jsonSerialize()`'s 3.0 branch strips only `examples` and `const`. The batch
+   must add the missing 3.0 handling for the two existing siblings alongside the ten new
+   keywords. Ranking within the batch: `if`/`then`/`else`, `prefixItems` and
+   `dependentRequired` are the ones people reach for; `contentSchema` rides along to
+   complete its two-thirds-supported family and would be the first cut if one were needed.
 6. **jsonSchemaDialect** — **PARKED (2026-09-12)**. Trigger: someone asks for it, or
    `$schema` on Schema Objects ever becomes expressible. The field is optional with a
    defined default, and it only carries information when a document's schemas can use a
