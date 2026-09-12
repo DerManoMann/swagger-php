@@ -95,11 +95,14 @@ Partial adoption is the story of #5: classic already has `const`, `contains`,
   assertion still bites (it caught an empty spec document here). Always follow a
   regeneration run with a second run, regeneration off. Noted in PR 12's mechanics.
 
-**Loose end, not investigated:** `SecurityScheme` attributes stacked on the same class
-as an operation are emitted by classic but silently dropped by hybrid — all of them,
-not just mutualTLS. The `Auth` fixture's own-class arrangement works in every mode, so
-this is about the stacked-with-an-operation shape reaching the bridge as `nested`.
-Worth a look with the other bridge collection conditions.
+**Retracted loose end (2026-09-12, same day):** batch 3's smoke test suggested hybrid
+silently drops security schemes stacked with an operation. Investigated: it was the
+`Cleanup` augmenter removing *unreferenced* components — the smoke tests declared
+schemes no operation's `security` used. With a reference, even the worst-case stacked
+shape emits correctly in hybrid. There is no bridge bug; the real observation is only
+that classic and spec/hybrid differ in their unused-component cleanup *defaults*, which
+is documented behaviour. ScratchTest masks this class of confusion by disabling
+`Cleanup` — worth remembering when a hybrid smoke test loses a component.
 
 ## Fix batches
 
