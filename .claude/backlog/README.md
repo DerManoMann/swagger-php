@@ -42,8 +42,9 @@ entry number so it survives renumbering: [benchmarks/](benchmarks/README.md),
 
 ## Where this stands
 
-**Two known bugs**, both spec-side, both small: PR 42 (a duplicate `$ref`) and PR 43
-(reversed trait property order). The rest is improvement work and Q5.
+**Two known bugs**, both spec-side, both small: PR 42 (a duplicate `$ref`, **#2185**) and
+PR 43 (reversed trait property order, **#2186**). Both are fixed and in review — see
+[active.md](active.md). The rest is improvement work and Q5.
 
 - **#2183** (hybrid comparison in `ExamplesTest`/`DocSnippetsTest`) and **#2184**
   (PR 30, removing the classic processors from hybrid) are in review — see
