@@ -19,8 +19,11 @@ two missing from the **spec pipeline as well**, invisible to PR 22's audit becau
 diffed 3.1 against 3.2 and these are 3.1 gaps in both pipelines.
 
 Fix batches land one branch each, smallest first, both pipelines wherever both lack the
-field: Header → Parameter content wiring → mutualTLS → Info.summary → Schema keywords →
-jsonSchemaDialect; `pathItems` stays parked behind Q5 with PR 22 Phase 4.
+field: Header → Parameter content wiring → mutualTLS → Info.summary → Schema keywords.
+`jsonSchemaDialect` is parked (2026-09-12): optional, defined default, and only
+meaningful with non-default schema dialects, which neither pipeline can express — the
+sweep notes carry the reasoning and the revival trigger. `pathItems` stays parked behind
+Q5 with PR 22 Phase 4.
 
 **Batch 3 (mutualTLS) is in review — #2193, branch `fix/classic-mutualtls`.** Enum entry,
 3.0 warn-and-omit matching the spec compiler's message so one log expectation covers all

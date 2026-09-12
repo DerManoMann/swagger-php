@@ -132,7 +132,14 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
 4. **Info.summary** — one field, drop at 3.0 with a warning (gap 4)
 5. **Schema keywords** — ten fields classic-side, `contentSchema` spec-side too;
    3.0 handling per keyword follows the existing warn/drop table in PR 25's entry (gap 5)
-6. **jsonSchemaDialect** — both pipelines, 3.1+ only (gap 6)
+6. **jsonSchemaDialect** — **PARKED (2026-09-12)**. Trigger: someone asks for it, or
+   `$schema` on Schema Objects ever becomes expressible. The field is optional with a
+   defined default, and it only carries information when a document's schemas can use a
+   non-default dialect — which neither pipeline supports. The only honest value a user
+   could set today is the default (redundant), and any other value would describe
+   schemas the generator cannot produce. Passes the carve-out's letter, fails its
+   spirit. When revived: one plain property plus a 3.0 warn-and-drop, both pipelines
+   (gap 6).
 7. **pathItems** — parked behind Q5, with PR 22 Phase 4 (gap 7)
 
 Expected fixture payoff: divergent `-spec.yaml` expectations collapse where the divergence
