@@ -22,7 +22,7 @@ Fix batches land one branch each, smallest first, both pipelines wherever both l
 field: Header → Parameter content wiring → mutualTLS → Info.summary → Schema keywords →
 jsonSchemaDialect; `pathItems` stays parked behind Q5 with PR 22 Phase 4.
 
-**Batch 3 (mutualTLS) is done on `fix/classic-mutualtls`, ready for review.** Enum entry,
+**Batch 3 (mutualTLS) is in review — #2193, branch `fix/classic-mutualtls`.** Enum entry,
 3.0 warn-and-omit matching the spec compiler's message so one log expectation covers all
 three modes, and the `Auth` fixture finally covers the scheme type. A loose end went to
 the sweep notes: hybrid silently drops security schemes stacked on an operation's class.

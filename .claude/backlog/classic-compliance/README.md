@@ -123,7 +123,7 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
    existing expectation is byte-identical, and the regenerated fixture shows no leak. The pre-existing
    `Scratch/ParameterContent` fixture (which covered only the working `JsonContent`
    shortcut) gains the plain-`MediaType` parameter that used to vanish.
-3. **mutualTLS** — **done on `fix/classic-mutualtls`**: the `$_types` enum entry, a
+3. **mutualTLS** — **in review, #2193**: the `$_types` enum entry, a
    `validate()` warning at 3.0.x with the spec compiler's message text (one shared
    `$expectedLogs` key covers all three modes — `str_contains` matching), and a
    `Components::jsonSerialize()` override that drops mutualTLS schemes from 3.0
