@@ -22,6 +22,11 @@ Fix batches land one branch each, smallest first, both pipelines wherever both l
 field: Header → Parameter content wiring → mutualTLS → Info.summary → Schema keywords →
 jsonSchemaDialect; `pathItems` stays parked behind Q5 with PR 22 Phase 4.
 
+**Batch 3 (mutualTLS) is done on `fix/classic-mutualtls`, ready for review.** Enum entry,
+3.0 warn-and-omit matching the spec compiler's message so one log expectation covers all
+three modes, and the `Auth` fixture finally covers the scheme type. A loose end went to
+the sweep notes: hybrid silently drops security schemes stacked on an operation's class.
+
 **Batch 2 (Parameter content) is in review — #2192, branch
 `fix/classic-parameter-content`.** One `$_nested` line plus the processor special-case removal it forces, with the
 existing `ParameterContent` fixture extended by the parameter shape that used to vanish.

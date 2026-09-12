@@ -95,6 +95,12 @@ Partial adoption is the story of #5: classic already has `const`, `contains`,
   assertion still bites (it caught an empty spec document here). Always follow a
   regeneration run with a second run, regeneration off. Noted in PR 12's mechanics.
 
+**Loose end, not investigated:** `SecurityScheme` attributes stacked on the same class
+as an operation are emitted by classic but silently dropped by hybrid — all of them,
+not just mutualTLS. The `Auth` fixture's own-class arrangement works in every mode, so
+this is about the stacked-with-an-operation shape reaching the bridge as `nested`.
+Worth a look with the other bridge collection conditions.
+
 ## Fix batches
 
 Each is one branch, smallest first; both pipelines wherever both lack the field:
@@ -117,8 +123,12 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
    existing expectation is byte-identical, and the regenerated fixture shows no leak. The pre-existing
    `Scratch/ParameterContent` fixture (which covered only the working `JsonContent`
    shortcut) gains the plain-`MediaType` parameter that used to vanish.
-3. **mutualTLS** — `$_types` enum + a 3.0 warn-and-omit to match the spec compiler;
-   `Auth` fixture finally covers it in both modes (gap 3)
+3. **mutualTLS** — **done on `fix/classic-mutualtls`**: the `$_types` enum entry, a
+   `validate()` warning at 3.0.x with the spec compiler's message text (one shared
+   `$expectedLogs` key covers all three modes — `str_contains` matching), and a
+   `Components::jsonSerialize()` override that drops mutualTLS schemes from 3.0
+   documents, since a scheme can't remove itself from the parent map. The `Auth`
+   fixture now covers it in both syntaxes; 3.0 omits, 3.1/3.2 carry it.
 4. **Info.summary** — one field, drop at 3.0 with a warning (gap 4)
 5. **Schema keywords** — ten fields classic-side, `contentSchema` spec-side too;
    3.0 handling per keyword follows the existing warn/drop table in PR 25's entry (gap 5)
