@@ -140,7 +140,7 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
    `License::$identifier` precedent classic-side and the spec compiler's own handling
    of `summary`; uniform drop diagnostics are PR 25's job. `Scratch/InfoObject{,-spec}`
    pins the full Info Object in all three modes; 3.0 omits `summary` (gap 4).
-5. **Schema keywords** — **done on `fix/classic-schema-keywords`**: the ten keywords in
+5. **Schema keywords** — **in review, #2195**: the ten keywords in
    `JsonSchemaTrait` (and its constructor template + all six attribute constructors),
    `contentSchema` on `Spec\Schema` with a 3.1 compiler emit, the bridge mapping the lot,
    and a `SchemaKeywords` fixture with one component schema per keyword family, plus an

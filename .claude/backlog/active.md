@@ -25,7 +25,7 @@ meaningful with non-default schema dialects, which neither pipeline can express 
 sweep notes carry the reasoning and the revival trigger. `pathItems` stays parked behind
 Q5 with PR 22 Phase 4.
 
-**Batch 5 (Schema keywords) is done on `fix/classic-schema-keywords`, ready for review.**
+**Batch 5 (Schema keywords) is in review — #2195, branch `fix/classic-schema-keywords`.**
 The ten keywords everywhere classic repeats its schema surface (trait, template, six
 attribute constructors), `contentSchema` spec-side, mirrored 3.0 warn/drop handling, and
 three forced fixes — single-annotation nesting in the classic constructor, the bridge
