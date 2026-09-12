@@ -104,6 +104,11 @@ Mechanics worth knowing before starting:
 - Regenerate by uncommenting `file_put_contents` in `ScratchTest::testScratch()`. Always
   pair it with `--filter <Fixture>`: an unfiltered run rewrites **every** fixture, and the
   current dumper differs from what is committed, so the diff is enormous and mostly noise.
+- **Regeneration self-compares.** With `file_put_contents` on, each mode overwrites the
+  shared expectation and then asserts against its own output — the last writer wins, so
+  classic/spec divergence hides behind a green run. Only the expected-logs assertion still
+  bites. Always follow a regeneration run with a second run, regeneration off (PR 40's
+  fixture shipped an empty spec document past the diff this way; the log check caught it).
 - `$expectedLogs` is keyed `{fixture}-{version}`, applying to every mode, or
   `{fixture}-{version}-{mode}` for a diagnostic only one mode raises; both keys contribute
   when both are present (#2160). `ExpectsLogEntries` is strict, so an undeclared entry fails
@@ -544,61 +549,6 @@ Two ways to close it, and they are not exclusive:
 
 The same `--prefer-lowest` comparison is worth re-running whenever a floor is raised; it costs
 one resolve and needs no judgement.
-
-### PR 40 — classic spec-compliance gaps: `Header`, `mutualTLS`, and the rule that kept them
-
-**Reframed 2026-09-12.** This entry began as the `Header` finding below and concluded with
-"the cheap middle is a diagnostic", because classic is closed to new features. That
-conclusion is withdrawn: the gaps are to be fixed, and the closed-area rule in AGENTS.md now
-carries the carve-out — an OpenAPI construct classic claims to model but cannot express is a
-spec-compliance defect, not a feature. What changed the answer is the packagist major-version
-data (share of monthly downloads):
-
-| Month | v3 | v4 | v5 | v6 |
-|---|---|---|---|---|
-| 2025-08 | 10.2% | 53.0% | 29.6% | — |
-| 2026-02 | 8.4% | 43.5% | 38.0% | 5.1% |
-| 2026-08 | 5.8% | 32.7% | 22.5% | 35.8% |
-
-Majors decay slowly — v4 still carries a third of all downloads, v3 ~6% years after
-replacement — and v6 is the last major where classic is the primary API. Whatever shape
-classic is in when v7 forks off is the shape the long tail lives with, effectively
-permanently. Fixes shipped in 6.x do reach users: within-major upgrades are the ones people
-actually take. The carve-out is deliberately narrow — new *capabilities* stay closed, and
-internal quality (PR 29's classic annotation debt) stays parked for v8.
-
-**The known gaps:**
-
-- **`Header` models less than half the Header Object.** `OpenApi\Annotations\Header`
-  declares `ref`, `header`, `description`, `required`, `schema`, `deprecated` and
-  `allowEmptyValue`; the specification's Header Object also has `style`, `explode`,
-  `example`, `examples` and `content`. None of the five exist in classic, in the annotation
-  or the attribute, so there is no way to write them and nothing to serialise. `Spec\Header`
-  has `example` and `examples`, and `OpenApi31Compiler::NESTED_MAPS` already carries
-  `OA\Header::class => ['examples' => 'example']` for them — the gap is classic's.
-- **`Examples::$_parents` omits `Header`**, in both directions, so even the nesting that
-  `example`/`examples` would need is unwired.
-- **`mutualTLS` cannot be written.** `SecurityScheme` validates `type` against
-  http / apiKey / oauth2 / openIdConnect only — PR 12's finding, left as-is at the time on
-  "classic is frozen" grounds. Now in scope here.
-
-**Found while answering [#2177](https://github.com/zircote/swagger-php/issues/2177)**, which
-is about `@OA\Examples` under a schema. Checking that `Examples::$_parents` was right for
-every context turned up `Header` missing from it — and then that the property it would fill
-is absent too. The first reading, recorded as a loose thread while reviewing #2178, was that
-the nesting was missing; that was wrong, and worth stating because a missing entry in
-`$_parents` looks like a one-line fix and this is not one.
-
-**A payoff beyond the gaps themselves: fixture pairs collapse.** Some `-spec.yaml`
-expectation files exist only because classic emits less than spec for the same document;
-each expression gap closed lets that pair fold back into one shared expectation. And
-`mutualTLS` is absent from `Scratch` entirely today — the classic anchor could not carry it —
-so closing that gap is what lets the `Auth` fixture finally cover it in both modes.
-
-**Worth a completing sweep before starting.** All three gaps were found incidentally — two
-answering #2177, one writing the `Auth` fixture. A field-by-field diff of classic's
-annotations against the 3.x object tables, the method PR 22 used against 3.2, would turn
-"the gaps we tripped over" into "the gaps".
 
 ### PR 41 — lowering the `symfony/console` floor to 6.4 — **HELD, branch kept local**
 

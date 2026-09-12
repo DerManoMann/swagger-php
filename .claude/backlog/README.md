@@ -22,7 +22,8 @@ Supporting material lives in a folder per topic, named for the topic rather than
 entry number so it survives renumbering: [benchmarks/](benchmarks/README.md),
 [performance/](performance/README.md), [testcase-concerns/](testcase-concerns/README.md),
 [nelmio-poc/](nelmio-poc/README.md), [spec-3.2/](spec-3.2/README.md),
-[docblock-types/](docblock-types/README.md).
+[docblock-types/](docblock-types/README.md),
+[classic-compliance/](classic-compliance/README.md).
 
 `chore/backlog` stays checked out in a worktree at `.claude/worktrees/chore+backlog` rather
 than being created and removed per change. It changes often enough to earn the slot, and
@@ -46,10 +47,10 @@ keeping it there means it can be read or reviewed at any point without checking 
 
 ## Where this stands
 
-**No known bugs, nothing active** (2026-09-12). The two spec-side bugs Q3 surfaced —
-the duplicate `$ref` (PR 42, **#2185**) and reversed trait property order (PR 43,
-**#2186**) — are merged, as are the docs pivot to definition lists (PR 18, **#2187**)
-and the `Utils/` audit (PR 23, **#2189**). What remains is improvement work in
+**No known bugs; PR 40 is the active work** (2026-09-12). The two spec-side bugs Q3
+surfaced — the duplicate `$ref` (PR 42, **#2185**) and reversed trait property order
+(PR 43, **#2186**) — are merged, as are the docs pivot to definition lists (PR 18,
+**#2187**) and the `Utils/` audit (PR 23, **#2189**). The rest is improvement work in
 [planned.md](planned.md) and Q5.
 
 - **6.8.1** is the latest release, tagged at `08c8a2d2` (2026-09-09); the release-notes
@@ -60,9 +61,10 @@ and the `Utils/` audit (PR 23, **#2189**). What remains is improvement work in
   answering it unparks PR 22.
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next
   coverage run shows thin.
-- **PR 40** is widened (2026-09-12): classic spec-compliance gaps are defects, per the
-  new carve-out in AGENTS.md's closed-area rule. The packagist major-version numbers
-  behind the decision are in the entry.
+- **PR 40** is active: the classic sweep ran 2026-09-12 and found seven gaps, two of
+  them (`jsonSchemaDialect`, `contentSchema`) missing from the spec pipeline too — see
+  [classic-compliance/](classic-compliance/README.md) for the findings, the carve-out
+  reasoning and the packagist numbers, and [active.md](active.md) for the fix batches.
 
 pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are real
 rather than inferred. phpstan covers `tools/` since #2141.

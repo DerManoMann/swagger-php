@@ -17,9 +17,13 @@ to be wrong: the same question governs `Response` in shipped code and the four c
 types' `isRoot()` implementations — see below. It is now a live design question independent of
 3.2. Answering it unparks PR 22.
 
-`Parameter`/`Header`/`Link` solve this with a component-key constructor field (`parameter:`,
-`header:`, `link:`) plus a conditional `isRoot()` that is true only when that key is set and
-`ref` is not. `PathItem` has neither — it is unconditionally root, and its `path` is always a
+`Parameter`/`Link` solve this with a component-key constructor field (`parameter:`, `link:`)
+plus a conditional `isRoot()` that is true only when that key is set and `ref` is not.
+(**Correction 2026-09-12**, found writing PR 40's fixture: `Header` has the key field but
+**no `isRoot()` at all** — it becomes a component positionally, stacked with `#[Components]`
+or alone on a class with the key inferred, and a standalone `Header` with an explicit key
+and no `Components` sibling throws `Non-root attribute … remains after resolution`. So the
+component-key types now disagree in a fifth way.) `PathItem` has neither — it is unconditionally root, and its `path` is always a
 resolved URL, never a component name, so nothing distinguishes "the shared metadata for
 `/pets/{id}`" from "a reusable path-item template to `$ref` from elsewhere". `MediaType` is
 worse: `$mediaType` is simultaneously the value (`'application/json'`) and, today, the only

@@ -4,4 +4,27 @@ Entries in progress or in review — one per open branch or pull request. If thi
 grows past a handful of entries, that is itself the signal. Flow rules:
 [README.md](README.md).
 
-Nothing is active right now.
+### PR 40 — classic spec-compliance gaps — **sweep done, fixes queued**
+
+The completing sweep ran 2026-09-12: every classic annotation's fields diffed against the
+3.1 object tables, schema-first with the prose as tiebreak. Full findings, the cleared
+false positives, and the six fix batches: [classic-compliance/README.md](classic-compliance/README.md).
+
+Seven gaps. The three the entry started with (`Header`'s five fields plus its `Examples`
+wiring, `mutualTLS`, and `Components.pathItems` by way of Q5) survived, and the sweep
+added four: `Info.summary`, ten JSON Schema keywords on `Schema` (classic adopted the
+3.1 keywords partway — `contains` without `minContains`, `unevaluatedProperties` without
+`unevaluatedItems`), `OpenApi.jsonSchemaDialect`, and `Schema.contentSchema` — the last
+two missing from the **spec pipeline as well**, invisible to PR 22's audit because that
+diffed 3.1 against 3.2 and these are 3.1 gaps in both pipelines.
+
+Fix batches land one branch each, smallest first, both pipelines wherever both lack the
+field: Header → Parameter content wiring → mutualTLS → Info.summary → Schema keywords →
+jsonSchemaDialect; `pathItems` stays parked behind Q5 with PR 22 Phase 4.
+
+**Batch 1 (Header) is done on `fix/classic-header-fields`, ready for review.** The five
+fields with a schema-XOR-content `validate()`, the merge processors accepting `Header`,
+the `HybridBridge` carrying the fields across, and `Scratch/HeaderObject{,-spec}` pinning
+all three modes against one shared expectation per version. Verifying it turned up gap 8
+(classic `Parameter` silently drops a plain `MediaType` in `content`) and a Q5 correction
+(spec `Header` has no `isRoot()`); both recorded.
