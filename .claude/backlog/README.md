@@ -60,6 +60,9 @@ and the `Utils/` audit (PR 23, **#2189**). What remains is improvement work in
   answering it unparks PR 22.
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next
   coverage run shows thin.
+- **PR 40** is widened (2026-09-12): classic spec-compliance gaps are defects, per the
+  new carve-out in AGENTS.md's closed-area rule. The packagist major-version numbers
+  behind the decision are in the entry.
 
 pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are real
 rather than inferred. phpstan covers `tools/` since #2141.
