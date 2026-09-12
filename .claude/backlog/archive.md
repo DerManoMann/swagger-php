@@ -10,6 +10,8 @@ Newest first. An entry number appears once per merge that contributed to it.
 
 | Merged | Entry | What |
 | --- | --- | --- |
+| #2184 | PR 30 | hybrid unwraps `JsonContent`/`XmlContent` without the classic processors |
+| #2183 | PR 35 (tail) | hybrid held to spec expectations in `ExamplesTest` and `DocSnippetsTest` |
 | #2182 | Q5 (partial) | warn when a root `Response`'s key looks like a status code |
 | #2181 | PR 24 | commit subject format and allowed types in CONTRIBUTING |
 | #2179 | — | `Items` constructor docblock; squash carried #2178 — **6.8.1** tagged here |
@@ -92,6 +94,47 @@ instrument.
 ---
 
 ## Entries
+
+### PR 30 — hybrid runs two classic processors for a mapping the bridge already knows — **done, #2184**
+
+`Builder::doHybridAssemble()` builds a `Generator` whose entire processor pipeline is
+`MergeJsonContent` and `MergeXmlContent`. Those two rewrite a `JsonContent` or `XmlContent`
+nested in a `Response`, `RequestBody` or `Parameter` into
+`content['application/json'|'application/xml'] = MediaType(schema: ...)`, lift `example`,
+`examples` and `encoding` off the schema, and drop the original annotation. `HybridBridge`
+then reads `content` — its own docblock stated the dependency: "Expects only
+MergeJsonContent/MergeXmlContent to have run".
+
+The media type is fixed per annotation class, so nothing is being discovered. The bridge
+could synthesize the `Spec\MediaType` directly in `convertResponse()`, `convertRequestBody()`
+and `convertParameter()`, and hybrid's `Generator` call would reduce to scan and analyse with
+no processor pipeline at all.
+
+Why it is worth doing rather than tidy: **v7 makes hybrid the default mode** (see
+[ROADMAP](../../ROADMAP.md)), so this overhead moves onto the path most projects take, and
+PR 16 already measured hybrid at 1.46x slower than classic. This is one identified piece of
+that, with fixed rules and no intermediate state.
+
+Two things a change has to keep:
+
+- `MergeJsonContent` warns when the content sits somewhere it cannot nest ("Unexpected
+  ... must be nested"). Moving the mapping without the diagnostic makes that case silent —
+  the failure mode PR 15 and #2162 both turned out to be.
+- It clears `example`, `examples` and `encoding` on the schema after lifting them to the
+  media type. Skipping that emits them in both places.
+
+**#2184** moves the unwrapping into `HybridBridge::resolveContent()`, reading
+`JsonContent`/`XmlContent` from `_unmerged`, and empties the processor pipeline in
+`doHybridAssemble()`.
+
+### PR 35 (tail) — hybrid comparison in the remaining test suites — **done, #2183**
+
+The tail of PR 35: hybrid ran in `ExamplesTest`, `DocSnippetsTest` and `CommandlineTest`
+but was never compared against an expectation that would catch a deviation. **#2183**
+makes `getSpecFilename()` and `DocSnippetsTest` prefer spec expectations for hybrid —
+the precedence `ScratchTest` already uses — and lets `ExamplesTest` run spec sources in
+hybrid mode (+58 tests). `CommandlineTest` was deliberately left out: it is a wrapper
+around the same generator paths the other suites already compare.
 
 ### PR 24 — nothing says what a commit message should contain — **done, #2181**
 

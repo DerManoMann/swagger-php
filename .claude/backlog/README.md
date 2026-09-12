@@ -47,8 +47,7 @@ PR 43 (reversed trait property order, **#2186**). Both are fixed and in review â
 [active.md](active.md). The rest is improvement work and Q5.
 
 - **#2183** (hybrid comparison in `ExamplesTest`/`DocSnippetsTest`) and **#2184**
-  (PR 30, removing the classic processors from hybrid) are in review â€” see
-  [active.md](active.md).
+  (PR 30, removing the classic processors from hybrid) are merged.
 - **6.8.1** is the latest release, tagged at `08c8a2d2` (2026-09-09); the release-notes
   story behind that commit is in [archive.md](archive.md).
 - **Q3** is answered (2026-09-11): five real classic-vs-spec output differences, and the
