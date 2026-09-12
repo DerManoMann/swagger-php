@@ -463,6 +463,40 @@ by-product.
 The rest is classic and dies with v8, which is what makes a global bump a much smaller job
 then than now.
 
+**Level 7 is the level worth aiming at, and costs less than 6.** Observed first on another
+project, then measured here on master (2026-09-12): level 6 now reports 551, and level 7
+reports 816 — so the 6 → 7 step adds 265 where 5 → 6 added 551. Smaller, and a different
+kind of finding:
+
+| | count |
+|---|---|
+| `argument.type` | 146 |
+| `return.type` | 34 |
+| `offsetAccess.*` | 30 |
+| `assign.propertyType` | 14 |
+| `property.notFound` | 13 |
+| `property.nonObject` | 9 |
+| `foreach.nonIterable` | 8 |
+| `binaryOp.invalid` | 6 |
+| `method.notFound` | 5 |
+| **total** | **265** |
+
+Level 6 asks for annotations; level 7 reports `mixed` reaching a position that is typed —
+an argument, a return, an offset, a property write. Those are the ones that can be wrong
+rather than merely undeclared, which is where the value is.
+
+Two things that change the ordering argument:
+
+- **`docs/examples` contributes nothing at level 7.** All 193 of its errors are
+  `missingType`, so the chunk this entry calls the next and most expensive one is entirely
+  level-6 work. Level 7 can be reached without touching it.
+- **The level-7 set is mostly not classic.** By area: `tests` 121, `src` spec and shared 76,
+  classic 45, `tools` 23. Waiting for v8 clears 17% of it, against the much larger share of
+  the level-6 backlog classic takes with it.
+
+So the two levels are not one queue. Level 6 is annotation work that v8 shrinks; level 7 is
+a bug hunt over code that stays.
+
 ### PR 31 — nothing notices when a tool exclusion stops excluding anything
 
 `.php-cs-fixer.dist.php` and `rector.php` between them carried seven exclusions that did
