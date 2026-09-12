@@ -577,3 +577,53 @@ every Symfony release whether or not it is ever used. If the need is real it wil
 issue, and the branch is then a ready answer rather than speculative maintenance.
 
 Worktree removed 2026-09-11; the branch ref stays.
+
+### PR 45 — a real-codebase corpus: profiling targets, and tracking spec-pipeline adoption
+
+Two research threads share one data-gathering exercise (run 2026-09-12): finding large open
+codebases to run the library against — real warning noise, real usage patterns, and
+eventually the PR 16/PR 17 performance work measured on something that is not a generated
+fixture — and measuring whether anyone uses the spec pipeline yet. No open issue matches
+either thread.
+
+**Finding users is two queries.** GitHub code search,
+`gh api search/code -f q='"zircote/swagger-php" filename:composer.json'`, returns ~2,964
+repos (default branches of active public repos only, no star sort — rank by sampling hits
+and batch-querying `stargazerCount` over GraphQL). Packagist's dependents API,
+`packagist.org/packages/zircote/swagger-php/dependents.json?order_by=downloads`, ranks the
+*packages*: nelmio/api-doc-bundle (70M downloads, `^5.7.8 || ^6.0`), l5-swagger (40M,
+`^6.0`), shopware/core (6M, `^6.4`); hyperf/swagger is still on `^4.6`.
+
+**Spec-pipeline adoption is zero, and the searches that show it are the tracker.**
+`"use OpenApi\Builder;"` (23 hits), `"Mode::SPEC"` (18) and `"Mode::HYBRID"` (12) — deduped,
+every hit is this repo or a vendored copy of it (simplerisk and dle_api commit `vendor/`);
+the one genuine external use is `laixhe/laixhe-api`, a small personal project calling the
+Builder from a generate script. Do not bother with `"OpenApi\Spec"`: the legacy search
+tokenizer drops the backslash and returns ~21k false hits. Zero is structurally expected —
+most v6 installs arrive through nelmio and l5-swagger, which drive the classic `Generator`,
+so Builder adoption trails wrapper adoption rather than release uptake. Re-running the three
+searches occasionally is a cheap adoption tracker: the result sets are small enough that
+every new hit is worth reading for what patterns people reach for first.
+
+(Release uptake itself is fast: the per-minor packagist series shows each 6.x minor absorbed
+within days of tagging, so a large `^6` base auto-upgrades. The major-share table lives in
+[classic-compliance/README.md](classic-compliance/README.md).)
+
+**Profiling candidates**, star-ranked from a 213-repo sample of the composer.json hits, each
+constraint read from the repo's manifest:
+
+| Repo | Constraint | Why |
+|---|---|---|
+| shopware/shopware | `^6.4` | probably the largest open swagger-php codebase; very active |
+| thorsten/phpMyFAQ | `~6.7.1` | tracks the latest release almost immediately |
+| AzuraCast/AzuraCast | `^6` | 4k stars, active, real API surface |
+| xibosignage/xibo-cms | `^5.8` | large (229MB), active — v5→v6 migration case |
+| Cockpit-HQ/Cockpit, Tatoeba/tatoeba2, karlomikus/bar-assistant | `^5.x` | mid-size, active, still v5 — deprecation and migration testing |
+
+Shopware + phpMyFAQ + AzuraCast give three different shapes on v6 (platform monorepo,
+classic PHP app, Doctrine-heavy API); the `^5.x` group is the migration set. Caveat: the
+sample ranked 213 of ~3k repos, so other large ones may exist unseen.
+
+What done looks like: pick two or three, get their generation running locally, and record
+what falls out — warnings, patterns worth fixtures, timings. Measurements land in
+[performance/](performance/README.md) once there are numbers.

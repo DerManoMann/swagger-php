@@ -25,6 +25,11 @@ meaningful with non-default schema dialects, which neither pipeline can express 
 sweep notes carry the reasoning and the revival trigger. `pathItems` stays parked behind
 Q5 with PR 22 Phase 4.
 
+**Batch 4 (Info.summary) is done on `fix/classic-info-summary`, ready for review.**
+Property, attribute parameter, bridge, and a silent 3.0 drop matching the
+`License::$identifier` precedent — the warn-or-not question belongs to PR 25. New
+`InfoObject` fixture pins the full Info Object in all three modes.
+
 **Batch 3 (mutualTLS) is in review — #2193, branch `fix/classic-mutualtls`.** Enum entry,
 3.0 warn-and-omit matching the spec compiler's message so one log expectation covers all
 three modes, and the `Auth` fixture finally covers the scheme type. (Batch 3's suspected

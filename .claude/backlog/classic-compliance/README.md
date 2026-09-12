@@ -132,7 +132,12 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
    `Components::jsonSerialize()` override that drops mutualTLS schemes from 3.0
    documents, since a scheme can't remove itself from the parent map. The `Auth`
    fixture now covers it in both syntaxes; 3.0 omits, 3.1/3.2 carry it.
-4. **Info.summary** — one field, drop at 3.0 with a warning (gap 4)
+4. **Info.summary** — **done on `fix/classic-info-summary`**: the property, the
+   attribute parameter, the bridge carrying it, and a silent 3.0 drop in
+   `Info::jsonSerialize()` — silent rather than warned, matching both the
+   `License::$identifier` precedent classic-side and the spec compiler's own handling
+   of `summary`; uniform drop diagnostics are PR 25's job. `Scratch/InfoObject{,-spec}`
+   pins the full Info Object in all three modes; 3.0 omits `summary` (gap 4).
 5. **Schema keywords** — ten fields classic-side, `contentSchema` spec-side too;
    3.0 handling per keyword follows the existing warn/drop table in PR 25's entry (gap 5)
 6. **jsonSchemaDialect** — **PARKED (2026-09-12)**. Trigger: someone asks for it, or
