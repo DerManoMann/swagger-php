@@ -10,6 +10,7 @@ Newest first. An entry number appears once per merge that contributed to it.
 
 | Merged | Entry | What |
 | --- | --- | --- |
+| #2188 | PR 44 | what a `Changes` entry is for, in CONTRIBUTING and the template |
 | #2184 | PR 30 | hybrid unwraps `JsonContent`/`XmlContent` without the classic processors |
 | #2183 | PR 35 (tail) | hybrid held to spec expectations in `ExamplesTest` and `DocSnippetsTest` |
 | #2182 | Q5 (partial) | warn when a root `Response`'s key looks like a status code |
@@ -94,6 +95,19 @@ instrument.
 ---
 
 ## Entries
+
+### PR 44 — a `Changes` entry has no stated altitude — **done, #2188**
+
+CONTRIBUTING asked for a `Changes` list "kept high level" without saying what that rules out,
+so the same detail kept coming back: conditions, counts, and behaviour the diff already
+shows. Not wrong, just unreadable in bulk — they bury the one or two entries that carry the
+shape of the change.
+
+**#2188** states that an entry names what moved in one line, and that a condition, a count or
+a signature is what the diff is for. The template comment carries the same test where it is
+read while drafting.
+
+Found by writing #2187's description badly twice, after the same note on #2185 and #2186.
 
 ### PR 20 — the NelmioApiDocBundle proof of concept, and the docs behind it — **done, #2168 + #2169; PoC at nelmio#2803**
 

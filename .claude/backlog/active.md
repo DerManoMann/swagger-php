@@ -112,21 +112,6 @@ Two things the entry's cost estimate missed. It is **not** short-lived work — 
 with v8. And the section-marker counts make the 2000-line docs diff reviewable: identical on
 every page, 522 list items in and 522 definition-list entries out.
 
-### PR 44 — a `Changes` entry has no stated altitude — **in review, #2188**
-
-Branch: `docs/pr-changes-altitude`.
-
-CONTRIBUTING asked for a `Changes` list "kept high level" without saying what that rules out,
-so the same detail kept coming back: conditions, counts, and behaviour the diff already
-shows. Not wrong, just unreadable in bulk — they bury the one or two entries that carry the
-shape of the change.
-
-**#2188** states that an entry names what moved in one line, and that a condition, a count or
-a signature is what the diff is for. The template comment carries the same test where it is
-read while drafting.
-
-Found by writing #2187's description badly twice, after the same note on #2185 and #2186.
-
 ### PR 23 — audit where classes ended up after the `Utils/` migration — **in review, #2189**
 
 Branch: `refactor/utils-audit`.
