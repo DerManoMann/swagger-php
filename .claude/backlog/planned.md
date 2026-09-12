@@ -147,17 +147,6 @@ cache) needs stating rather than assuming.
 Full measurements, phase breakdown, and the open blockers:
 [performance/README.md](performance/README.md).
 
-### PR 18 — `AttributeGenerator` is the last generator rendering by hand
-
-#2141 moved augmenters, spec attributes and processors onto the shared `Sections`
-abstraction. `AttributeGenerator` still renders inline through `Renderer::classDescription()`
-and `Renderer::references()`, which exist only for it.
-
-Porting it would finish the job and let those two methods go, the way `processorOptions()`
-and `indentedBr()` went. Against that: it generates the classic attributes and annotations
-pages, and classic is removed in v8, so this may be work with a short life. Worth doing only
-if something else needs to touch that generator anyway.
-
 ### PR 22 — OpenAPI 3.2 field coverage in `src/Spec/` — **PARKED (2026-09-02)**
 
 Trigger: PR 25's `#[Since]` mechanism exists, and Q5 is answered (for Phase 4).

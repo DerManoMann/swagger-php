@@ -73,3 +73,56 @@ unused `$schema` parameter. The order is pinned in `InheritanceBcTest` against a
 comparing, so nothing else could have caught it. Consolidating that fixture into one file per
 pipeline does not work: classic resolves fixture classes through PSR-4 autoloading, so each
 type needs its own file.
+
+### PR 18 — `AttributeGenerator` is the last generator rendering by hand — **in review, #2187**
+
+Branch: `refactor/attribute-generator-sections`.
+
+#2141 moved augmenters, spec attributes and processors onto the shared `Sections`
+abstraction. `AttributeGenerator` still renders inline through `Renderer::classDescription()`
+and `Renderer::references()`, which exist only for it.
+
+Porting it would finish the job and let those two methods go, the way `processorOptions()`
+and `indentedBr()` went. Against that: it generates the classic attributes and annotations
+pages, and classic is removed in v8, so this may be work with a short life. Worth doing only
+if something else needs to touch that generator anyway.
+
+**The port had a decision inside it.** `AttributeGenerator` used five `Renderer` methods,
+not the two this entry named, and nothing else called any of them. Three were byte-identical
+to their section classes; two were not, so porting meant picking which rendering survives:
+
+- `Renderer::parameters()` emitted a `<dl>`; `ParametersSection` emitted a markdown list
+- `Renderer::references()` had no `↗`; `ReferencesSection` did
+
+**The markdown list is broken, which settled it.** A blank line closes a list item, so every
+paragraph after the first renders outside the entry — unindented, detached from its
+parameter, taking the required flag with it. Classic descriptions are routinely
+multi-paragraph, so a naive port would have wrecked `attributes.md` and `annotations.md`.
+Types fail from the other side: `htmlentities()` output escaped again by the markdown code
+span, which is why `spec-attributes.md` rendered `list&lt;Schema&gt;` on screen. That one was
+live, not hypothetical.
+
+So **#2187** pivots everything to the definition list rather than the reverse: one parameters
+renderer, `Renderer` reduced to the page frame, and the spec pages restyled with the doubled
+entities gone. Side-by-side of the two renderings, generated through the docs site's own
+markdown renderer: https://claude.ai/code/artifact/213dce41-079b-4865-ac35-ef8cbf7092a8
+
+Two things the entry's cost estimate missed. It is **not** short-lived work — `Sections` and
+`ParametersSection` are shared with the spec pages, so only `AttributeGenerator` itself dies
+with v8. And the section-marker counts make the 2000-line docs diff reviewable: identical on
+every page, 522 list items in and 522 definition-list entries out.
+
+### PR 44 — a `Changes` entry has no stated altitude — **in review, #2188**
+
+Branch: `docs/pr-changes-altitude`.
+
+CONTRIBUTING asked for a `Changes` list "kept high level" without saying what that rules out,
+so the same detail kept coming back: conditions, counts, and behaviour the diff already
+shows. Not wrong, just unreadable in bulk — they bury the one or two entries that carry the
+shape of the change.
+
+**#2188** states that an entry names what moved in one line, and that a condition, a count or
+a signature is what the diff is for. The template comment carries the same test where it is
+read while drafting.
+
+Found by writing #2187's description badly twice, after the same note on #2185 and #2186.
