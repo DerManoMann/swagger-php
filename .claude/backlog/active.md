@@ -126,3 +126,67 @@ a signature is what the diff is for. The template comment carries the same test 
 read while drafting.
 
 Found by writing #2187's description badly twice, after the same note on #2185 and #2186.
+
+### PR 23 — audit where classes ended up after the `Utils/` migration — **in review, #2189**
+
+Branch: `refactor/utils-audit`.
+
+#2039 moved `TokenScanner` and others into `OpenApi\Utils`, and it has been the default
+landing spot for anything that isn't obviously `Spec\`/`Attributes\` vocabulary ever since.
+Some of what's there is genuinely general-purpose (`TypedList`, `TokenScanner`,
+`SourceLocation`), and some looks like it belongs to a subsystem that already has its own
+directory:
+
+- `AttributeFactory` — assembly-time attribute translation, driven by
+  `AttributeTranslatorInterface` implementations; `src/Assembler/` already exists for exactly
+  this (`AbstractAttributeTranslator`, `DefaultAttributeTranslator`,
+  `OptionalPropertyAttributeTranslator`)
+- `PipeInterface` — the augmenter extension-point interface `Builder::withAugmenters()`
+  accepts. `src/Contracts/` holds every other public extension-point interface
+  (`AttributeInterface`, `AttributeTranslatorInterface`, `CompilerInterface`,
+  `ResolverInterface`); `PipeInterface` reads like the odd one out
+- `SpecificationWalker` — walks a `Specification`; `src/Specification/` already exists for
+  its collaborators (`ComponentIndex`)
+- `CollectingLogger` — `src/Loggers/` already exists (`DefaultLogger`) and holds none of the
+  other logger implementations
+
+Not a decision, just a survey worth doing before the next class has to land in `Utils/` by
+default because nobody checked whether it has a better home — which is how this came up:
+picking a home for `Config` (PR 1) required reasoning it through from scratch instead of
+following a clear convention.
+
+Each move is small in isolation (rename, fix imports, likely a deprecated shim at the old
+location the way `src/Pipeline.php` and `src/SourceFinder.php` already alias into `Utils/` —
+several of these classes are used by downstream code, per the extension-points table in
+PR 20) but touches call sites across `src/` and `tools/`, so worth batching into one pass
+rather than doing it ad hoc mid unrelated PRs.
+
+**The survey moved two of the four candidates, and added one this entry missed.**
+
+- `TypeMapper` — not on the list above, and the clearest case of the lot: used only by
+  `TypeResolverInterface` and `src/Type/*`, with `src/Type/` already there. Moved, with a
+  deprecated subclass, since a custom type resolver reaches it through
+  `AbstractTypeResolver`.
+- `CollectingLogger` and `SpecificationWalker` — moved as proposed. `SpecificationWalker`
+  loses the stutter on the way, as `Specification\Walker`. Neither is documented surface, so
+  neither gets a shim.
+- `AttributeFactory` — **stays.** Its own docblock says it is shared between the Assembler
+  and augmenter pipes that manufacture spec objects from reflection, and the call sites agree:
+  `Builder`, `Assembler`, and three `Augmenter\Inheritance*` classes. A class two subsystems
+  share is not owned by either, so `src/Assembler/` would misname it.
+- `PipeInterface` — **stays**, and the reasoning is the useful part. This entry argued from
+  visibility: `Contracts/` holds every other public extension-point interface. But what
+  `Contracts/` holds describes *OpenAPI concepts* — attribute, translator, compiler, resolver
+  — and `PipeInterface` is `__invoke()` plus `group()`, a pipe in a generic pipeline. Swap
+  `Utils\Pipeline` for a library and the interface leaves with it. Moved, then reverted.
+
+**What `Utils/` is for is now written down**, in `docs/dev/pipeline.md` beside the existing
+note on directory layout — which was the point of the entry, since the cost was never the
+current placements but the next class defaulting there.
+
+Two hazards worth knowing before the next move of this shape, both caught by tests rather
+than by reading. Unqualified references that resolved inside `OpenApi\Utils` break silently
+on the way out — `Walker` lost `JsonPointer`. Worse, a deprecated interface shim makes
+`instanceof` lie: with `PipeInterface` moved, `Pipeline`'s bare reference resolved to the
+shim, so pipes implementing the new interface failed the check and fell into the default
+group. A class shim does not have this problem; an interface shim always does.
