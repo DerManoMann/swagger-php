@@ -132,7 +132,7 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
    `Components::jsonSerialize()` override that drops mutualTLS schemes from 3.0
    documents, since a scheme can't remove itself from the parent map. The `Auth`
    fixture now covers it in both syntaxes; 3.0 omits, 3.1/3.2 carry it.
-4. **Info.summary** — **done on `fix/classic-info-summary`**: the property, the
+4. **Info.summary** — **in review, #2194**: the property, the
    attribute parameter, the bridge carrying it, and a silent 3.0 drop in
    `Info::jsonSerialize()` — silent rather than warned, matching both the
    `License::$identifier` precedent classic-side and the spec compiler's own handling
