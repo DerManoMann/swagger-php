@@ -46,13 +46,12 @@ keeping it there means it can be read or reviewed at any point without checking 
 
 ## Where this stands
 
-**Two known bugs**, both spec-side, both small: PR 42 (a duplicate `$ref`, **#2185**) and
-PR 43 (reversed trait property order, **#2186**). Both are fixed and in review — see
-[active.md](active.md). The rest is improvement work and Q5.
+**No known bugs, nothing active** (2026-09-12). The two spec-side bugs Q3 surfaced —
+the duplicate `$ref` (PR 42, **#2185**) and reversed trait property order (PR 43,
+**#2186**) — are merged, as are the docs pivot to definition lists (PR 18, **#2187**)
+and the `Utils/` audit (PR 23, **#2189**). What remains is improvement work in
+[planned.md](planned.md) and Q5.
 
-- **#2183** (hybrid comparison in `ExamplesTest`/`DocSnippetsTest`) and **#2184**
-  (PR 30, removing the classic processors from hybrid) are merged.
-- Four entries are in review at once — PR 18, 23, 42 and 43, see [active.md](active.md).
 - **6.8.1** is the latest release, tagged at `08c8a2d2` (2026-09-09); the release-notes
   story behind that commit is in [archive.md](archive.md).
 - **Q3** is answered (2026-09-11): five real classic-vs-spec output differences, and the

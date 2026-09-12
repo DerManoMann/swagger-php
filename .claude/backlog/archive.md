@@ -10,6 +10,10 @@ Newest first. An entry number appears once per merge that contributed to it.
 
 | Merged | Entry | What |
 | --- | --- | --- |
+| #2186 | PR 43 | trait members merged in `use` order, pinned in `InheritanceBcTest` |
+| #2189 | PR 23 | `Utils/` audit — three classes moved, the directory's purpose written down |
+| #2185 | PR 42 | `allOf` refs deduplicated after class-string resolution |
+| #2187 | PR 18 | every reference page rendered through the section classes |
 | #2188 | PR 44 | what a `Changes` entry is for, in CONTRIBUTING and the template |
 | #2184 | PR 30 | hybrid unwraps `JsonContent`/`XmlContent` without the classic processors |
 | #2183 | PR 35 (tail) | hybrid held to spec expectations in `ExamplesTest` and `DocSnippetsTest` |
@@ -95,6 +99,118 @@ instrument.
 ---
 
 ## Entries
+
+### PR 43 — spec reverses trait property order — **done, #2186**
+
+`Inheritance\Schemas::mergeMembers()` ended with
+
+```php
+$schema->properties = [...$merged, ...($schema->properties ?? [])];
+```
+
+so each source prepended. Over one trait that gave the intended result — inherited members
+before the class's own — but `expandTraits()` called it once per trait, so two traits landed
+in the reverse of their `use` order, and three reversed fully: declaring `T1`, `T2`, `T3`
+emitted `p3`, `p2`, `p1`. Classic and hybrid emit `p1`, `p2`, `p3`. Map key order carries no
+meaning in OpenAPI, so nothing was *wrong* with the document — but reverse `use` order was
+not a choice anyone made, and it was one of the five known classic/spec divergences for no
+reason. **Found answering Q3**, where the docs stated the rule backwards.
+
+**#2186** accumulates merged members across parents, traits and interfaces and prepends the
+block once, in visit order; `mergeMembers()` takes the accumulator by reference and loses its
+unused `$schema` parameter. The order is pinned in `InheritanceBcTest` against a new
+`ClassUsingOrderedTraits` fixture in both pipelines — `AssertsSchemaStructure` sorts before
+comparing, so nothing else could have caught it. Consolidating that fixture into one file per
+pipeline does not work: classic resolves fixture classes through PSR-4 autoloading, so each
+type needs its own file.
+
+### PR 23 — audit where classes ended up after the `Utils/` migration — **done, #2189**
+
+#2039 moved `TokenScanner` and others into `OpenApi\Utils`, and it had been the default
+landing spot for anything that isn't obviously `Spec\`/`Attributes\` vocabulary ever since —
+which is how this came up: picking a home for `Config` (PR 1) required reasoning it through
+from scratch instead of following a clear convention.
+
+**The survey moved two of the four candidates, and added one the entry missed.**
+
+- `TypeMapper` — not on the original list, and the clearest case of the lot: used only by
+  `TypeResolverInterface` and `src/Type/*`, with `src/Type/` already there. Moved, with a
+  deprecated subclass, since a custom type resolver reaches it through
+  `AbstractTypeResolver`.
+- `CollectingLogger` and `SpecificationWalker` — moved as proposed, to `src/Loggers/` and
+  `src/Specification/`. `SpecificationWalker` loses the stutter on the way, as
+  `Specification\Walker`. Neither is documented surface, so neither gets a shim.
+- `AttributeFactory` — **stays.** Its own docblock says it is shared between the Assembler
+  and augmenter pipes that manufacture spec objects from reflection, and the call sites
+  agree: `Builder`, `Assembler`, and three `Augmenter\Inheritance*` classes. A class two
+  subsystems share is not owned by either, so `src/Assembler/` would misname it.
+- `PipeInterface` — **stays**, and the reasoning is the useful part. The entry argued from
+  visibility: `Contracts/` holds every other public extension-point interface. But what
+  `Contracts/` holds describes *OpenAPI concepts* — attribute, translator, compiler,
+  resolver — and `PipeInterface` is `__invoke()` plus `group()`, a pipe in a generic
+  pipeline. Swap `Utils\Pipeline` for a library and the interface leaves with it. Moved,
+  then reverted.
+
+**What `Utils/` is for is now written down**, in `docs/dev/pipeline.md` beside the existing
+note on directory layout — which was the point of the entry, since the cost was never the
+current placements but the next class defaulting there.
+
+Two hazards worth knowing before the next move of this shape, both caught by tests rather
+than by reading. Unqualified references that resolved inside `OpenApi\Utils` break silently
+on the way out — `Walker` lost `JsonPointer`. Worse, a deprecated interface shim makes
+`instanceof` lie: with `PipeInterface` moved, `Pipeline`'s bare reference resolved to the
+shim, so pipes implementing the new interface failed the check and fell into the default
+group. A class shim does not have this problem; an interface shim always does.
+
+### PR 42 — spec emits a duplicate `$ref` when the parent is named by class-string — **done, #2185**
+
+`Refs::dedupAllOfRefs()` compared `$ref` values as strings, and ran in the same pass that
+later resolves class-strings — `__invoke()` called it before `resolveFQCNRefs()`. So a schema
+whose `allOf` carried a user-written `ref: Parent::class` alongside the
+`#/components/schemas/parent` that `Inheritance\Schemas::addAllOfRef()` adds had two entries
+that were not equal yet, both survived dedup, and both then resolved to the same pointer.
+Spec and hybrid both did it; classic emits one. Writing the same ref as a pointer rather
+than a class-string deduped correctly, which is why `Scratch/DuplicateRef` — whose whole
+subject is this — did not catch it: its `allOf` named `#/components/schemas/abstract-user`
+directly. **Found answering Q3** — the docs claimed the opposite (spec dedups, classic "may
+emit the same `$ref` twice"), which is what prompted running it.
+
+**#2185** dedups on the resolved form: `Refs::__invoke()` runs `dedupAllOfRefs()` after
+`resolveRefRefs()` and `resolveFQCNRefs()`, so entries are compared once they carry their
+final value. `Scratch/DuplicateRef` gains the class-string form, and the duplicate `$ref`
+entry leaves the classic/spec differences in `guide/spec-attributes.md` — classic emits one.
+
+### PR 18 — `AttributeGenerator` is the last generator rendering by hand — **done, #2187**
+
+#2141 moved augmenters, spec attributes and processors onto the shared `Sections`
+abstraction; `AttributeGenerator` still rendered inline through `Renderer` methods that
+existed only for it. The entry framed the port as optional cleanup with a short life —
+classic is removed in v8 — and both halves of that framing turned out wrong.
+
+**The port had a decision inside it.** `AttributeGenerator` used five `Renderer` methods,
+not the two the entry named, and nothing else called any of them. Three were byte-identical
+to their section classes; two were not, so porting meant picking which rendering survives:
+`Renderer::parameters()` emitted a `<dl>` where `ParametersSection` emitted a markdown list,
+and `Renderer::references()` had no `↗` where `ReferencesSection` did.
+
+**The markdown list is broken, which settled it.** A blank line closes a list item, so every
+paragraph after the first renders outside the entry — unindented, detached from its
+parameter, taking the required flag with it. Classic descriptions are routinely
+multi-paragraph, so a naive port would have wrecked `attributes.md` and `annotations.md`.
+Types fail from the other side: `htmlentities()` output escaped again by the markdown code
+span, which is why `spec-attributes.md` rendered `list&lt;Schema&gt;` on screen. That one
+was live, not hypothetical.
+
+So **#2187** pivots everything to the definition list rather than the reverse: one
+parameters renderer, `Renderer` reduced to the page frame, and the spec pages restyled with
+the doubled entities gone. Side-by-side of the two renderings, generated through the docs
+site's own markdown renderer:
+https://claude.ai/code/artifact/213dce41-079b-4865-ac35-ef8cbf7092a8
+
+Two things the entry's cost estimate missed. It is **not** short-lived work — `Sections` and
+`ParametersSection` are shared with the spec pages, so only `AttributeGenerator` itself dies
+with v8. And the section-marker counts make the 2000-line docs diff reviewable: identical on
+every page, 522 list items in and 522 definition-list entries out.
 
 ### PR 44 — a `Changes` entry has no stated altitude — **done, #2188**
 
