@@ -106,7 +106,7 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
    `HybridBridge` carrying the new fields across. `Scratch/HeaderObject{,-spec}` pins all
    five in all three modes against **one shared expectation per version** — the fixture
    payoff, first data point.
-2. **Parameter content wiring** — gap 8 — **done on `fix/classic-parameter-content`**:
+2. **Parameter content wiring** — gap 8 — **in review, #2192**:
    the `$_nested` line, `Parameter` added to `MediaType::$_parents`, and the merge
    processors now set `mediaType` for parameter content too. The special case was a
    2020 workaround (`113c00a5`, "Improve OAS3 compatibility"): without the nested
