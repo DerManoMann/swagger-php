@@ -47,11 +47,14 @@ keeping it there means it can be read or reviewed at any point without checking 
 
 ## Where this stands
 
-**No known bugs; PR 40 is the active work** (2026-09-12). The two spec-side bugs Q3
-surfaced — the duplicate `$ref` (PR 42, **#2185**) and reversed trait property order
-(PR 43, **#2186**) — are merged, as are the docs pivot to definition lists (PR 18,
-**#2187**) and the `Utils/` audit (PR 23, **#2189**). The rest is improvement work in
-[planned.md](planned.md) and Q5.
+**PR 40 is fully in review** (2026-09-12): all five live batches of the classic
+spec-compliance work are open upstream — #2191 (Header), #2192 (Parameter content),
+#2193 (mutualTLS), #2194 (Info.summary), #2195 (Schema keywords). `jsonSchemaDialect`
+and `pathItems` are parked with triggers; the sweep, the findings, and the batch detail
+live in [classic-compliance/](classic-compliance/README.md). PR 45 (schema-iteration
+reach audit, spun out of batch 5) is new in [planned.md](planned.md). Note for the merge:
+#2191/#2192 touch adjacent lines in `MediaType::$_parents` and the content processors,
+so whichever merges second needs a trivial rebase.
 
 - **6.8.1** is the latest release, tagged at `08c8a2d2` (2026-09-09); the release-notes
   story behind that commit is in [archive.md](archive.md).
@@ -61,10 +64,9 @@ surfaced — the duplicate `$ref` (PR 42, **#2185**) and reversed trait property
   answering it unparks PR 22.
 - **PR 12** is ongoing by design — the next fixture comes from whatever the next
   coverage run shows thin.
-- **PR 40** is active: the classic sweep ran 2026-09-12 and found seven gaps, two of
-  them (`jsonSchemaDialect`, `contentSchema`) missing from the spec pipeline too — see
-  [classic-compliance/](classic-compliance/README.md) for the findings, the carve-out
-  reasoning and the packagist numbers, and [active.md](active.md) for the fix batches.
+- **PR 40**'s sweep found eight gaps, two also missing from the spec pipeline
+  (`jsonSchemaDialect`, `contentSchema`) — [classic-compliance/](classic-compliance/README.md)
+  has the findings, the carve-out reasoning and the packagist numbers.
 
 pcov is installed locally and CI runs `--coverage-text`, so coverage numbers are real
 rather than inferred. phpstan covers `tools/` since #2141.
