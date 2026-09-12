@@ -140,9 +140,27 @@ Each is one branch, smallest first; both pipelines wherever both lack the field:
    `License::$identifier` precedent classic-side and the spec compiler's own handling
    of `summary`; uniform drop diagnostics are PR 25's job. `Scratch/InfoObject{,-spec}`
    pins the full Info Object in all three modes; 3.0 omits `summary` (gap 4).
-5. **Schema keywords** — ten fields classic-side, `contentSchema` spec-side too;
-   3.0 handling per keyword follows the existing warn/drop table in PR 25's entry (gap 5).
-   **Scope grew (2026-09-12):** classic currently *leaks* `contentEncoding` and
+5. **Schema keywords** — **done on `fix/classic-schema-keywords`**: the ten keywords in
+   `JsonSchemaTrait` (and its constructor template + all six attribute constructors),
+   `contentSchema` on `Spec\Schema` with a 3.1 compiler emit, the bridge mapping the lot,
+   and a `SchemaKeywords` fixture with one component schema per keyword family, plus an
+   `envelope`/`decoded` pair pinning that a nested schema slot takes a class-string ref
+   like any other schema position — the spec `Walker` traverses new slots generically
+   (`get_object_vars`), so ref resolution needed no registration. 3.0
+   handling mirrors the spec compilers exactly: warn for `prefixItems`/`unevaluated*`/
+   `if`-`then`-`else` (shared log substrings), silent drop for the rest — including the
+   previously-leaking `contentMediaType`/`contentEncoding`. Three fixes were forced along
+   the way: `AbstractAnnotation::__construct()` now nests single annotation values (only
+   array *elements* were nested, so an `if:` schema was collected as a root and collided
+   with the class-named schema); the bridge gained `convertSchemaValue()` because classic
+   carries schema-valued keywords as plain arrays and `convertSchemaOrBool()` TypeErrored
+   on them (pre-existing, first exercised here); and the "array requires items" warning in
+   classic `validate()` and the 3.1 compiler now exempts schemas with `prefixItems` or
+   `contains` — a tuple is legitimately items-less in 3.1, while 3.0 still warns since the
+   keywords are dropped there. House style note: schema-valued keyword properties are
+   deliberately `@var mixed`/`@var array` (like `not` and `contains`), because
+   `ValidateRelationsTest` requires object-typed properties to appear in `$_nested`.
+   **Original scope note (2026-09-12):** classic currently *leaks* `contentEncoding` and
    `contentMediaType` into 3.0 documents — invalid keywords, emitted silently, since
    `Schema::jsonSerialize()`'s 3.0 branch strips only `examples` and `const`. The batch
    must add the missing 3.0 handling for the two existing siblings alongside the ten new

@@ -627,3 +627,34 @@ sample ranked 213 of ~3k repos, so other large ones may exist unseen.
 What done looks like: pick two or three, get their generation running locally, and record
 what falls out — warnings, patterns worth fixtures, timings. Measurements land in
 [performance/](performance/README.md) once there are numbers.
+
+### PR 45 — schema iteration in spec land: `Specification::$schemas` vs the Walker
+
+Two ways to iterate schemas, with different reach. `foreach ($specification->schemas)`
+sees the **shared components only**; `Walker::visit(Schema::class)` / `eachSchema()` sees
+**every schema including inline ones** — and, since PR 40 batch 5, the nested keyword
+slots (`if`/`then`/`else`, `prefixItems`, `dependentSchemas`, `contentSchema`), which the
+Walker picks up generically via `get_object_vars`. Each call site embodies a choice
+between the two, and today nothing records whether the choice was made or inherited.
+
+The split as of 2026-09-12 (line numbers from master):
+
+| `foreach ($x->schemas)` — components only | Walker — everything |
+|---|---|
+| `Docblocks` :40, `Enums` :59, `Inheritance\Schemas` :33, `Refs` :31 :48 :108 | `Shortcuts`, `MediaTypes`, `Cleanup`, `EnumDescriptions`, `Types`, `Enums` :114, `Refs` :72 :86 :131 :143, the compilers |
+
+`Enums` and `Refs` use both forms inside one class — either a deliberate
+components-pass/everything-pass distinction or drift; nothing on the call site says
+which. Wrong in one direction misses inline schemas — the `dedupAllOfRefs` shape, and
+#2185 was exactly an iteration-reach bug. Wrong in the other direction pays for a full
+graph traversal (the Walker builds a seen-set and walks every attribute per call) where
+the component map would do.
+
+The audit: for each site, state which reach the job needs and why; fix mismatches; and
+leave the reasoning at the call site — a one-line comment convention
+(`// components only: …` / `// every schema: …`) so the next augmenter has to make the
+choice explicitly. Worth checking at the same time whether hot paths stack multiple full
+walks that could share one traversal.
+
+Found in PR 40 batch 5, where "does X see inline schemas?" could only be answered by
+reading the Walker's implementation. No matching open issue (searched 2026-09-12).

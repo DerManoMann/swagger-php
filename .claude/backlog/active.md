@@ -25,6 +25,13 @@ meaningful with non-default schema dialects, which neither pipeline can express 
 sweep notes carry the reasoning and the revival trigger. `pathItems` stays parked behind
 Q5 with PR 22 Phase 4.
 
+**Batch 5 (Schema keywords) is done on `fix/classic-schema-keywords`, ready for review.**
+The ten keywords everywhere classic repeats its schema surface (trait, template, six
+attribute constructors), `contentSchema` spec-side, mirrored 3.0 warn/drop handling, and
+three forced fixes — single-annotation nesting in the classic constructor, the bridge
+tolerating array-form schema values, and an items-requirement exemption for 3.1 tuples.
+Details in [classic-compliance/README.md](classic-compliance/README.md).
+
 **Batch 4 (Info.summary) is in review — #2194, branch `fix/classic-info-summary`.**
 Property, attribute parameter, bridge, and a silent 3.0 drop matching the
 `License::$identifier` precedent — the warn-or-not question belongs to PR 25. New
