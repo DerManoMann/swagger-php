@@ -4,7 +4,7 @@ Entries in progress or in review — one per open branch or pull request. If thi
 grows past a handful of entries, that is itself the signal. Flow rules:
 [README.md](README.md).
 
-### PR 40 — classic spec-compliance gaps — **sweep done, fixes queued**
+### PR 40 — classic spec-compliance gaps — **sweep done, batch 1 in review, #2191**
 
 The completing sweep ran 2026-09-12: every classic annotation's fields diffed against the
 3.1 object tables, schema-first with the prose as tiebreak. Full findings, the cleared
@@ -22,7 +22,7 @@ Fix batches land one branch each, smallest first, both pipelines wherever both l
 field: Header → Parameter content wiring → mutualTLS → Info.summary → Schema keywords →
 jsonSchemaDialect; `pathItems` stays parked behind Q5 with PR 22 Phase 4.
 
-**Batch 1 (Header) is done on `fix/classic-header-fields`, ready for review.** The five
+**Batch 1 (Header) is in review — #2191, branch `fix/classic-header-fields`.** The five
 fields with a schema-XOR-content `validate()`, the merge processors accepting `Header`,
 the `HybridBridge` carrying the fields across, and `Scratch/HeaderObject{,-spec}` pinning
 all three modes against one shared expectation per version. Verifying it turned up gap 8

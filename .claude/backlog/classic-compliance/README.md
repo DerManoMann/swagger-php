@@ -100,7 +100,7 @@ Partial adoption is the story of #5: classic already has `const`, `contains`,
 Each is one branch, smallest first; both pipelines wherever both lack the field:
 
 1. **Header** — the five fields, `Examples::$_parents` + `Header::$_nested` wiring,
-   fixture in both modes (gaps 1-2) — **done on `fix/classic-header-fields`**: the five
+   fixture in both modes (gaps 1-2) — **in review, #2191**: the five
    properties with a schema-XOR-content `validate()`, the attribute constructor,
    `JsonContent`/`XmlContent` accepted under `Header` in both merge processors, and the
    `HybridBridge` carrying the new fields across. `Scratch/HeaderObject{,-spec}` pins all
