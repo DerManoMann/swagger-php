@@ -179,3 +179,36 @@ The reason for this is that `openapi` currently uses the [`error_log`](https://w
 function for all output.
 
 So if this is configured to write to a file, then it will seem like the command is broken.
+
+## Redocly warns `nullable-type-sibling` on OpenAPI 3.0 output
+
+OpenAPI 3.0.3 says that `nullable: true` adds `null` to the allowed values only if `type` is
+also specified. Redocly checks this with its `nullable-type-sibling` rule. The document is still
+valid, and the rule reports a warning.
+
+Two kinds of property produce `nullable` without `type` in 3.0 output, in every mode.
+
+A nullable reference to another schema, such as `?Owner $owner`, is wrapped in `oneOf`.
+A 3.0 `$ref` cannot have siblings, so `nullable` goes on the wrapper:
+
+```yaml
+owner:
+  oneOf:
+    - $ref: '#/components/schemas/Owner'
+  nullable: true
+```
+
+A nullable property with no type, such as `mixed $tag`, becomes `nullable: true` and nothing
+else.
+
+Most tools read `nullable` this way regardless of `type`. If yours does not, or the warning
+has to go:
+
+* Target OpenAPI 3.1 or later. Nullable values are written as a `null` type there, and the
+  rule does not apply.
+* Give an untyped property an explicit `type`.
+* In classic mode, declare the reference explicitly and add `type`, for example
+  `#[OA\Property(ref: Owner::class, type: 'object', nullable: true)]`. The `type` is kept on
+  the wrapper. Do not add `type` to a property whose reference is inferred from its PHP type,
+  because the explicit `type` then replaces the reference. Spec and hybrid modes drop `type`
+  from the wrapper, so this does not help there.
