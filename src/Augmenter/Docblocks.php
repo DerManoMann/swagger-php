@@ -150,11 +150,17 @@ class Docblocks implements PipeInterface
      */
     protected function augmentParameterDescription(OA\Parameter $parameter, array $parentParamTags = []): void
     {
+        $reflector = $parameter->getReflector();
+
+        // a parameter mapped from a class property, as a DTO of query parameters is
+        if (($reflector instanceof \ReflectionProperty || ($reflector instanceof \ReflectionParameter && $reflector->isPromoted()))
+            && ($docblock = $this->getDocComment($parameter)) !== null) {
+            $this->augmentFromPropertyDocblock($parameter, $parameter->schema ?? new OA\Schema(), $docblock);
+        }
+
         if (!Undefined::isDefault($parameter->description)) {
             return;
         }
-
-        $reflector = $parameter->getReflector();
 
         if ($reflector instanceof \ReflectionParameter) {
             $name = $reflector->getName();
@@ -219,28 +225,37 @@ class Docblocks implements PipeInterface
             $docblock = $this->getDocComment($property->schema) ?? $this->getDocComment($property);
 
             if ($docblock) {
-                if (Undefined::isDefault($property->schema->description)) {
-                    $content = $this->parser->parseDocblock($docblock);
-                    if ($content !== '' && !Undefined::isDefault($content)) {
-                        $property->schema->description = $content;
-                    } else {
-                        // parseDocblock() only extracts free text before tags;
-                        // descriptions embedded in @var tags (e.g. "@var string The name") need parseVarLine()
-                        $varLine = $this->parser->parseVarLine($docblock);
-                        if ($varLine['description'] !== null) {
-                            $property->schema->description = $varLine['description'];
-                        }
-                    }
-                }
+                $this->augmentFromPropertyDocblock($property->schema, $property->schema, $docblock);
+            }
+        }
+    }
 
-                if ($property->schema->deprecated === null && $this->parser->isDeprecated($docblock)) {
-                    $property->schema->deprecated = true;
-                }
-
-                if (Undefined::isDefault($property->schema->example)) {
-                    $property->schema->example = $this->extractExample($property->schema, $docblock);
+    /**
+     * Fill description, deprecated and example from a property's docblock, the example typed by `$schema`.
+     */
+    protected function augmentFromPropertyDocblock(OA\Schema|OA\Parameter $target, OA\Schema $schema, string $docblock): void
+    {
+        if (Undefined::isDefault($target->description)) {
+            $content = $this->parser->parseDocblock($docblock);
+            if ($content !== '' && !Undefined::isDefault($content)) {
+                $target->description = $content;
+            } else {
+                // parseDocblock() only extracts free text before tags;
+                // descriptions embedded in @var tags (e.g. "@var string The name") need parseVarLine()
+                $varLine = $this->parser->parseVarLine($docblock);
+                if ($varLine['description'] !== null) {
+                    $target->description = $varLine['description'];
                 }
             }
+        }
+
+        if ($target->deprecated === null && $this->parser->isDeprecated($docblock)) {
+            $target->deprecated = true;
+        }
+
+        // a parameter has `example` or `examples`, not both
+        if (Undefined::isDefault($target->example) && (!$target instanceof OA\Parameter || $target->examples === null)) {
+            $target->example = $this->extractExample($schema, $docblock);
         }
     }
 

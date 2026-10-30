@@ -10,6 +10,7 @@ use OpenApi\Augmenter;
 use OpenApi\Builder;
 use OpenApi\Builder\Mode;
 use OpenApi\Spec as OA;
+use OpenApi\Specification;
 use OpenApi\Tests\Concerns\AssemblesSpecification;
 use OpenApi\Tests\Concerns\GeneratesTestMatrix;
 use OpenApi\Tests\Fixtures;
@@ -59,6 +60,61 @@ final class DocblocksTest extends TestCase
         (new Augmenter\Docblocks())($spec);
 
         $this->assertSame('the thing identifier', $spec->operations[0]->parameters[0]->description);
+    }
+
+    /**
+     * @return iterable<string, array{\Reflector, OA\Schema, string|null, mixed, bool|null}>
+     */
+    public static function propertyParameterCases(): iterable
+    {
+        $query = Fixtures\Augmenter\DocblockQuery::class;
+
+        yield 'free text and example' => [new \ReflectionProperty($query, 'page'), new OA\Schema(type: 'integer'), 'The page to return.', 2, null];
+        yield '@var description' => [new \ReflectionProperty($query, 'term'), new OA\Schema(type: 'string'), 'the search term', Undefined::UNDEFINED, null];
+        yield 'deprecated' => [new \ReflectionProperty($query, 'offset'), new OA\Schema(type: 'integer'), null, Undefined::UNDEFINED, true];
+        yield 'promoted constructor parameter' => [new \ReflectionParameter([$query, '__construct'], 'sort'), new OA\Schema(type: 'string'), 'The sort order.', 'desc', null];
+    }
+
+    #[DataProvider('propertyParameterCases')]
+    public function testAugmentsAParameterBackedByAProperty(\Reflector $reflector, OA\Schema $schema, ?string $description, mixed $example, ?bool $deprecated): void
+    {
+        $spec = new Specification();
+        $spec->parameters[] = $parameter = (new OA\Parameter(name: 'p', in: 'query', schema: $schema))->setReflector($reflector);
+
+        (new Augmenter\Docblocks())($spec);
+
+        $this->assertSame($description ?? Undefined::UNDEFINED, $parameter->description);
+        $this->assertSame($example, $parameter->example);
+        $this->assertSame($deprecated, $parameter->deprecated);
+    }
+
+    public function testKeepsWhatAPropertyBackedParameterSetsItself(): void
+    {
+        $reflector = new \ReflectionProperty(Fixtures\Augmenter\DocblockQuery::class, 'limit');
+        $spec = new Specification();
+        $spec->parameters[] = $explicit = (new OA\Parameter(name: 'limit', in: 'query', description: 'Set here.', schema: new OA\Schema(type: 'integer'), example: 25))->setReflector($reflector);
+        $spec->parameters[] = $examples = (new OA\Parameter(name: 'limit', in: 'query', schema: new OA\Schema(type: 'integer'), examples: [new OA\Example(value: 5)]))->setReflector($reflector);
+
+        (new Augmenter\Docblocks())($spec);
+
+        $this->assertSame('Set here.', $explicit->description);
+        $this->assertSame(25, $explicit->example);
+        $this->assertSame('The page size.', $examples->description);
+        $this->assertSame(Undefined::UNDEFINED, $examples->example);
+    }
+
+    public function testAugmentsAPropertyBackedParameterOfAnOperation(): void
+    {
+        $spec = new Specification();
+        $spec->operations[] = new OA\Operation\Get(path: '/things', parameters: [
+            $parameter = (new OA\Parameter(name: 'page', in: 'query', schema: new OA\Schema(type: 'integer')))
+                ->setReflector(new \ReflectionProperty(Fixtures\Augmenter\DocblockQuery::class, 'page')),
+        ]);
+
+        (new Augmenter\Docblocks())($spec);
+
+        $this->assertSame('The page to return.', $parameter->description);
+        $this->assertSame(2, $parameter->example);
     }
 
     /**

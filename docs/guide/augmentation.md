@@ -156,6 +156,14 @@ Only spec attributes are read. Classic attributes and docblock annotations add n
 `summary` and `description` of certain attribute types (`OA\Operation`, `OA\Property`, `OA\Parameter` and `OA\Schema`) may be augmented
 by extracting the summary and description of the docblock (if any).
 
+::: info Mode difference
+In the spec pipeline, a parameter whose reflector is a class property, or a promoted constructor
+property, reads that property's docblock as an `OA\Property` does. It takes the description, an
+`@example` typed by the parameter's schema, and `deprecated` from `@deprecated`. This is the shape
+an integration produces when it maps the properties of a DTO to query parameters. A value set on
+the parameter takes precedence over the docblock.
+:::
+
 ## References
 
 OpenApi specs support references to allow reuse of elements and reduce duplication. One of the most common use cases is
