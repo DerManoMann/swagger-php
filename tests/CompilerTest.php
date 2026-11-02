@@ -656,7 +656,7 @@ final class CompilerTest extends TestCase
         $specDuplicateResponse->responses[] = new OA\Response(response: 'Dup', description: 'first');
         $specDuplicateResponse->responses[] = new OA\Response(response: 'Dup', description: 'second');
 
-        yield 'component key claimed twice' => [
+        yield 'component name claimed twice' => [
             new OpenApi31Compiler(),
             $specDuplicateResponse,
             'Response "Dup" is declared more than once in unknown',
@@ -702,7 +702,7 @@ final class CompilerTest extends TestCase
     // --- input validation ---
 
     /**
-     * In the `responses` bucket `Response::$response` is the component key, so
+     * In the `responses` bucket `Response::$response` is the component name, so
      * `components.responses.product` is a name rather than a malformed status code. Position
      * is the only thing that distinguishes the two — `isRoot()` is true for both.
      */
