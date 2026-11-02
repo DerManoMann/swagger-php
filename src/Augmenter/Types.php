@@ -367,7 +367,7 @@ class Types implements PipeInterface, LoggerAwareInterface
         return count($this->index?->findAllByKey(new ComponentKey(ltrim($class, '\\')), $bucket) ?? []);
     }
 
-    protected function schemaTypeToSchema(SchemaType $schemaType): OA\Schema
+    public function schemaTypeToSchema(SchemaType $schemaType): OA\Schema
     {
         $schema = new OA\Schema();
         $this->applySchemaType($schema, $schemaType);
@@ -415,7 +415,10 @@ class Types implements PipeInterface, LoggerAwareInterface
                 // a class is referenced only when it is a component, and never in place of an explicit enum
                 if ($schema->enum === null) {
                     $count = $this->countComponents($schemaType->type);
-                    if ($count === 1) {
+                    if ($count === 1 && $schemaType->typeArguments !== null) {
+                        // SPIKE: a use of a generic class asks for its specialisation by key
+                        $schema->ref = new OA\Schema\Ref(ref: $schemaType->type, qualifiers: ['types' => $schemaType->typeArguments]);
+                    } elseif ($count === 1) {
                         $schema->ref = $schemaType->type;
                     } else {
                         $subject = $this->subject instanceof \Reflector ? $this->typeResolver->describe($this->subject) : 'a schema';

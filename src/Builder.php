@@ -405,6 +405,12 @@ class Builder
         $this->getAugmenters()->get(Augmenter\Inheritance::class)?->setNamer($componentNamer);
         $this->getAugmenters()->get(Augmenter\Names::class)?->setNamer($componentNamer);
         $this->getAugmenters()->get(Augmenter\Enums::class)?->setNamer($componentNamer);
+        $this->getAugmenters()->get(Augmenter\Specialise::class)?->setNamer($componentNamer);
+        // SPIKE: the specialiser converts types the way the configured Types does
+        $types = $this->getAugmenters()->get(Augmenter\Types::class);
+        if ($types instanceof Augmenter\Types) {
+            $this->getAugmenters()->get(Augmenter\Specialise::class)?->setTypes($types);
+        }
 
         $this->getAugmenters()->setLogger($collecting);
         $this->getAugmenters()->process($specification);
@@ -514,6 +520,7 @@ class Builder
             new Augmenter\SecurityRequirements(),
             new Augmenter\PathItems(),
             new Augmenter\Types(),
+            new Augmenter\Specialise(),
             new Augmenter\Properties(),
             new Augmenter\Refs(),
             new Augmenter\Parameters(),

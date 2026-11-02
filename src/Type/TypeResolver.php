@@ -88,6 +88,17 @@ class TypeResolver implements LoggerAwareInterface
         return $result;
     }
 
+    /**
+     * SPIKE: a type-info type as a SchemaType, the way `resolve()` maps one read from a reflector.
+     */
+    public function resolveType(Type $type): SchemaType
+    {
+        $result = $this->mapType($type);
+        $this->applyNativeTypeMapping($result);
+
+        return $result;
+    }
+
     public function getDocblockType(\Reflector $reflector): ?Type
     {
         $docComment = match (true) {
@@ -217,7 +228,14 @@ class TypeResolver implements LoggerAwareInterface
         // type being parameterised is what is left. Last, so `array<...>` and `int<...>`
         // reach the arms above.
         if ($type instanceof GenericType) {
-            return $this->mapType($type->getWrappedType());
+            $result = $this->mapType($type->getWrappedType());
+            // SPIKE: keep the arguments of a generic class, for the key of its specialisation
+            // and only where the class declares templates, so there is something to specialise
+            if ($result->isRef() && (new TypeContextFactory(new SymfonyStringTypeResolver()))->createFromClassName($result->type)->templates !== []) {
+                $result->typeArguments = implode(', ', array_map(fn (Type $argument): string => ltrim((string) $argument, '\\'), $type->getVariableTypes()));
+            }
+
+            return $result;
         }
 
         return new SchemaType();

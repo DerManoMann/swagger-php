@@ -26,7 +26,10 @@ class ShortName implements ComponentNamerInterface
         $reflector = $component->getReflector();
 
         if ($reflector instanceof \ReflectionClass) {
-            return $this->className($reflector);
+            // SPIKE: a specialisation is named after its type arguments too
+            $types = $component->getComponentKey()?->qualifiers['types'] ?? null;
+
+            return $this->className($reflector) . (is_string($types) ? '_' . $this->typeName($types) : '');
         }
 
         $holder = $component->getClassReflector()?->getAttributes(OA\Components::class) ?? [];
@@ -35,6 +38,19 @@ class ShortName implements ComponentNamerInterface
         }
 
         return null;
+    }
+
+    /**
+     * SPIKE: type arguments as name segments, `App\Envelope<App\Customer>, int` as `Envelope_Customer_int`.
+     */
+    protected function typeName(string $types): string
+    {
+        preg_match_all('/[A-Za-z_][A-Za-z0-9_\\\\]*/', $types, $matches);
+
+        return implode('_', array_map(
+            fn (string $name): string => class_exists($name) || interface_exists($name) ? $this->className(new \ReflectionClass($name)) : $name,
+            $matches[0],
+        ));
     }
 
     /**
