@@ -95,6 +95,26 @@ its cases and `Types` references it. A backed enum's schema takes the backing ty
 the backing values, which is what a backed enum serialises to. A bare `#[OA\Schema]` on the enum
 lists the case names instead.
 
+### [Generics](https://github.com/zircote/swagger-php/tree/master/src/Augmenter/Generics.php)
+
+Adds a schema for each set of type arguments a generic class is used with.
+
+A class declaring `@template T` and used as `Envelope<Customer>` would otherwise be referenced
+as the plain `Envelope`, whose `T` says nothing. Here the class's schema is copied under the key
+`Envelope` with the type arguments `Customer`, and the augmenters after this one name, fill and
+reference the copy as they would any schema: `Names` names it, `Types` types its members with
+`T` as `Customer`, and a use of `Envelope<Customer>` references it.
+
+The uses are what properties and parameters are typed with, and a `Schema\Ref` qualified with
+type arguments. A copy can use another one (`Envelope<Envelope<Customer>>`), so this runs until
+no use is left without a schema, to a limit of nesting.
+
+A copy of a schema with an explicit name is named after that name rather than the class:
+`Wrapper-of.Customer` for `#[OA\Schema(component: 'Wrapper')]`.
+
+A generic class used without arguments, or with `mixed` only, keeps its plain schema. So does a
+class without a schema of its own: there is nothing to copy.
+
 ### [Names](https://github.com/zircote/swagger-php/tree/master/src/Augmenter/Names.php)
 
 Infers component names from PHP reflectors when not explicitly set.
@@ -202,7 +222,9 @@ Infers an object schema's `required` list and its properties' `default` from the
 A property is required when its PHP type is not nullable and it has no default, the rule a
 parameter follows, with the default counted too: a value exists when the field is left out. A
 promoted constructor property counts by its parameter's default. A property with no PHP type
-adds nothing to `required`.
+adds nothing to `required`. In a schema made for a generic class's type arguments, a property
+PHP declares `mixed` whose docblock type names a template counts by that type with the templates
+replaced, so `T` is required in `Envelope<int>`, and `T|null` is not.
 
 A default is taken where it is a value the document can hold: a scalar, an enum case or an array
 of them. An enum case gives the value its schema lists: a backed case's value, a unit case's

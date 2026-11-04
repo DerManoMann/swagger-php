@@ -6,6 +6,8 @@
 
 namespace OpenApi\Type;
 
+use OpenApi\Specification\ComponentKey;
+
 /**
  * Value object describing the resolved OpenAPI schema type for a PHP reflector.
  *
@@ -28,6 +30,7 @@ class SchemaType
      * @param int|float|null           $maximum              Numeric maximum
      * @param array<string, self>|null $properties           Named properties (from array shapes)
      * @param list<string>|null        $required             Required property names (from array shapes)
+     * @param string|null              $typeArguments        For a generic class: its type arguments, as one type string
      */
     public function __construct(
         public string|array|null $type = null,
@@ -43,6 +46,7 @@ class SchemaType
         public int|float|null $maximum = null,
         public ?array $properties = null,
         public ?array $required = null,
+        public ?string $typeArguments = null,
     ) {
     }
 
@@ -52,6 +56,22 @@ class SchemaType
     public function isRef(): bool
     {
         return is_string($this->type) && !$this->isNativeType();
+    }
+
+    /**
+     * The key of the component a class type references, with its type arguments where it has
+     * them, or null for a type that is no class.
+     */
+    public function componentKey(): ?ComponentKey
+    {
+        if (!$this->isRef()) {
+            return null;
+        }
+
+        return new ComponentKey(
+            ltrim($this->type, '\\'),
+            $this->typeArguments === null ? [] : [ComponentKey::TYPE_ARGUMENTS => $this->typeArguments],
+        );
     }
 
     protected function isNativeType(): bool

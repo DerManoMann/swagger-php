@@ -113,6 +113,11 @@ plain component, and the document kept only one of them.
 [Describing a class more than once](/guide/extension-points#describing-a-class-more-than-once)
 has the scheme.
 
+A property or parameter typed with a generic class and type arguments, such as
+`Envelope<Customer>`, references a schema made for those arguments, `Envelope-of.Customer`,
+rather than the plain `Envelope`. The class has to declare its templates with `@template`.
+[Generic classes](/guide/augmentation#generic-classes) has the details.
+
 ## Preparing for 8.0
 
 In 8.0 classic is removed, and so is `setMode()`. Spec attributes move from `OpenApi\Spec` to

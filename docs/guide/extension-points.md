@@ -76,7 +76,8 @@ something there.
 Once added, a contribution looks like any scanned attribute. If a later step needs to tell
 yours apart, such as a [merger](#mergers) deciding precedence or an augmenter that should leave
 them alone, mark them as you add them with `setMeta()` under a key you own. Read it back with
-`getMeta()` there. Keys that are the name of a swagger-php class belong to swagger-php.
+`getMeta()` there. Keys that are the name of a swagger-php class or interface belong to
+swagger-php, and that class or interface says what the value means.
 
 ## Resolvers
 
@@ -191,12 +192,17 @@ each qualifier follows in the key's order, with `-` before it, `.` between its n
 and `_` between values. `['groups' => ['summary', 'admin']]` gives `Author-groups.admin_summary`.
 A value that names a class is named like that class. Any other character a component name does
 not allow becomes `_`. Where that is not readable enough, give the description a name of its own
-with `component:`.
+with `component:`. To keep the qualifiers and change what they follow, set the base name with
+`setMeta(ComponentNamerInterface::class, 'Writer')`, which gives `Writer-groups.summary`.
 
 Qualifiers map a name to a scalar or a list of scalars, one level deep. Their order does not
 matter, and a list is compared as a set, so `['groups' => ['summary', 'admin']]` and
 `['groups' => ['admin', 'summary']]` are one key. A value whose order matters, such as type
 arguments, goes in as one string.
+
+`of` is swagger-php's own qualifier: it holds a generic class's type arguments, and swagger-php
+makes the schema for them ([Generic classes](/guide/augmentation#generic-classes)). Give your own
+qualifiers other names.
 
 A key names one component per bucket. Where two components share a key, a `$ref` given as that
 key resolves to neither and logs a warning naming both. A property typed with the class is left

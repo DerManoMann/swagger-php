@@ -8,6 +8,7 @@ namespace OpenApi\Tests\ComponentNamer;
 
 use OpenApi\ComponentNamer\QualifiedName;
 use OpenApi\ComponentNamer\ShortName;
+use OpenApi\Contracts\ComponentNamerInterface;
 use OpenApi\Spec as OA;
 use OpenApi\Specification\ComponentKey;
 use OpenApi\Tests\Fixtures\ClassDescriptions\Account;
@@ -29,7 +30,9 @@ final class ShortNameTest extends TestCase
         yield 'no values' => [['groups' => []], 'Author-groups'];
         yield 'scalars' => [['strict' => true, 'version' => 2], 'Author-strict.true-version.2'];
         yield 'characters a name does not allow' => [['groups' => ['user:read']], 'Author-groups.user_read'];
-        yield 'a class' => [['of' => Account::class], 'Author-of.Account'];
+        yield 'a class' => [['for' => Account::class], 'Author-for.Account'];
+        yield 'type arguments' => [['of' => Account::class . ', int'], 'Author-of.Account_int'];
+        yield 'nested type arguments' => [['of' => Author::class . '<' . Account::class . '>|null'], 'Author-of.Author_Account_null'];
     }
 
     /**
@@ -45,7 +48,15 @@ final class ShortNameTest extends TestCase
     {
         $namer = new QualifiedName(strip: 'OpenApi\Tests\Fixtures\\');
 
-        $this->assertSame('ClassDescriptions.Author-of.ClassDescriptions.Account', $namer->name($this->author(['of' => Account::class])));
+        $this->assertSame('ClassDescriptions.Author-for.ClassDescriptions.Account', $namer->name($this->author(['for' => Account::class])));
+    }
+
+    public function testBuildsOnABaseNameFromMeta(): void
+    {
+        $schema = $this->author(['of' => 'int'])->setMeta(ComponentNamerInterface::class, 'Writer');
+
+        $this->assertSame('Writer-of.int', (new ShortName())->name($schema));
+        $this->assertSame('Writer-of.int', (new QualifiedName())->name($schema));
     }
 
     public function testLeavesAComponentWithoutANameInline(): void

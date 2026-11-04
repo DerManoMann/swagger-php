@@ -84,6 +84,33 @@ final class ComponentKeyTest extends TestCase
         $this->assertSame($key, $schema->getComponentKey());
     }
 
+    public function testARefReadsTypeArgumentsInOneSpelling(): void
+    {
+        $key = (new OA\Schema\Ref(ref: Article::class, qualifiers: ['of' => 'string,\\' . Article::class]))->getRefKey();
+
+        $this->assertInstanceOf(ComponentKey::class, $key);
+        $this->assertSame('string, ' . Article::class, $key->qualifiers['of']);
+    }
+
+    /**
+     * A refined type is spelled as a property typed with it spells it, so both find one copy.
+     */
+    public function testARefKeepsARefinedTypeArgument(): void
+    {
+        $key = (new OA\Schema\Ref(ref: Article::class, qualifiers: ['of' => 'int<0,100>']))->getRefKey();
+
+        $this->assertInstanceOf(ComponentKey::class, $key);
+        $this->assertSame('int<0, 100>', $key->qualifiers['of']);
+    }
+
+    public function testARefKeepsTypeArgumentsTypeInfoCannotRead(): void
+    {
+        $key = (new OA\Schema\Ref(ref: Article::class, qualifiers: ['of' => 'Unknown']))->getRefKey();
+
+        $this->assertInstanceOf(ComponentKey::class, $key);
+        $this->assertSame('Unknown', $key->qualifiers['of']);
+    }
+
     public function testARefWithQualifiersHasAKey(): void
     {
         $ref = new OA\Schema\Ref(ref: Article::class, qualifiers: ['groups' => ['light']]);

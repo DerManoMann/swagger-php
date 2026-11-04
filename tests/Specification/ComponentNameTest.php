@@ -229,4 +229,10 @@ final class ComponentNameTest extends TestCase
     {
         $this->assertSame($root, $attribute->isRoot());
     }
+
+    public function testCleanKeepsWhatAComponentNameAllows(): void
+    {
+        $this->assertSame('Author-groups.user_read', ComponentName::clean('Author-groups.user_read'));
+        $this->assertSame('App_Author_read_write_', ComponentName::clean('App\\Author<read|write>'));
+    }
 }

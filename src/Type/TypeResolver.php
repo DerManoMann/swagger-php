@@ -6,6 +6,7 @@
 
 namespace OpenApi\Type;
 
+use OpenApi\Specification\ComponentKey;
 use PHPStan\PhpDocParser\Ast\PhpDoc\ParamTagValueNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\ReturnTagValueNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\VarTagValueNode;
@@ -20,6 +21,7 @@ use Psr\Log\LoggerAwareTrait;
 use Radebatz\TypeInfoExtras\Type\ExplicitType;
 use Radebatz\TypeInfoExtras\Type\IntRangeType;
 use Radebatz\TypeInfoExtras\TypeResolver\StringTypeResolver;
+use Symfony\Component\TypeInfo\Exception\InvalidArgumentException;
 use Symfony\Component\TypeInfo\Exception\UnsupportedException;
 use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\Type\ArrayShapeType;
@@ -30,6 +32,7 @@ use Symfony\Component\TypeInfo\Type\GenericType;
 use Symfony\Component\TypeInfo\Type\IntersectionType;
 use Symfony\Component\TypeInfo\Type\NullableType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
+use Symfony\Component\TypeInfo\Type\TemplateType;
 use Symfony\Component\TypeInfo\Type\UnionType;
 use Symfony\Component\TypeInfo\TypeContext\TypeContextFactory;
 use Symfony\Component\TypeInfo\TypeIdentifier;
@@ -48,6 +51,9 @@ class TypeResolver implements LoggerAwareInterface
 
     protected TypeMapper $typeMapper;
 
+    /** @var array<string, list<string>> the templates of each class asked about, by class */
+    protected array $templateNames = [];
+
     public function __construct()
     {
         $this->typeMapper = new TypeMapper();
@@ -60,8 +66,37 @@ class TypeResolver implements LoggerAwareInterface
      */
     public function resolve(\Reflector $reflector): ?SchemaType
     {
+        return $this->resolveWithTemplates($reflector, []);
+    }
+
+    /**
+     * Resolve the PHP type of a reflector, with each template its docblock names replaced by a type.
+     *
+     * A member of a generic class reads `T` where the class is used as `Envelope<Customer>`. With
+     * the templates from {@see templates()}, its type is the one that use means.
+     *
+     * @param \ReflectionProperty|\ReflectionParameter|\ReflectionMethod|\ReflectionClassConstant $reflector
+     * @param array<string, Type>                                                                 $templates by template name
+     */
+    public function resolveWithTemplates(\Reflector $reflector, array $templates): ?SchemaType
+    {
         $docblockType = $this->getDocblockType($reflector);
         $reflectionType = $this->getReflectionType($reflector);
+
+        if ($docblockType instanceof Type && $templates !== []) {
+            try {
+                $bound = $this->bindTemplates($docblockType, $templates);
+            } catch (InvalidArgumentException $exception) {
+                // an argument the type cannot take, such as `int` in `T&\Countable`
+                $this->logger?->warning(sprintf('Cannot use the type arguments in "%s" on %s, so its type is left out: %s', $docblockType, $this->describe($reflector), $exception->getMessage()));
+                $bound = Type::mixed();
+            }
+            // `mixed` is all PHP can declare for a template, and its `null` is not the argument's
+            if ((string) $bound !== (string) $docblockType && (string) $reflectionType === 'mixed') {
+                $reflectionType = null;
+            }
+            $docblockType = $bound;
+        }
 
         if (!$docblockType && !$reflectionType) {
             return null;
@@ -141,13 +176,36 @@ class TypeResolver implements LoggerAwareInterface
             ) {
                 try {
                     return (new StringTypeResolver())->resolve((string) $tagValue, $typeContext);
-                } catch (UnsupportedException) {
+                } catch (UnsupportedException|InvalidArgumentException) {
                     $this->logger?->warning(sprintf('Unsupported docblock type "%s" on %s', $tagValue->type, $this->describe($reflector)));
                 }
             }
         }
 
         return null;
+    }
+
+    /**
+     * The type arguments a key carries, by the name of the template each one fills, or none for
+     * a key without them.
+     *
+     * Templates are matched by position, as PHPStan and Psalm do. An argument without a template,
+     * or a template without an argument, is left out.
+     *
+     * @return array<string, Type>
+     */
+    public function templates(?ComponentKey $key): array
+    {
+        $arguments = $key?->qualifiers[ComponentKey::TYPE_ARGUMENTS] ?? null;
+        if (!$key instanceof ComponentKey || !is_string($arguments)) {
+            return [];
+        }
+
+        $variables = TypeArguments::parse($key->class, $arguments) ?? [];
+        $names = $this->templateNames($key->class);
+        $count = min(count($names), count($variables));
+
+        return array_combine(array_slice($names, 0, $count), array_slice($variables, 0, $count));
     }
 
     /**
@@ -213,14 +271,136 @@ class TypeResolver implements LoggerAwareInterface
             return $this->mapCollectionType($type);
         }
 
-        // `Foo<T>` on a class. OpenAPI can express nothing about the parameters, so the
-        // type being parameterised is what is left. Last, so `array<...>` and `int<...>`
-        // reach the arms above.
+        // `Foo<T>` on a class: the class, with its arguments kept where the class declares
+        // templates for them to fill, so the use can reference a schema made for them. Last,
+        // so `array<...>` and `int<...>` reach the arms above.
         if ($type instanceof GenericType) {
-            return $this->mapType($type->getWrappedType());
+            $result = $this->mapType($type->getWrappedType());
+            if ($result->isRef() && $this->templateNames($result->type) !== []) {
+                $result->typeArguments = $this->typeArguments($type);
+            }
+
+            return $result;
         }
 
         return new SchemaType();
+    }
+
+    /**
+     * The arguments as one type string, or null when every one is `mixed`, which says nothing a
+     * template does not, or when one is still a template, as in the class's own `Node<T>`.
+     *
+     * @param GenericType<ObjectType<class-string>> $type
+     */
+    protected function typeArguments(GenericType $type): ?string
+    {
+        $arguments = $type->getVariableTypes();
+        $mixed = array_filter($arguments, static fn (Type $argument): bool => (string) $argument === 'mixed');
+        $templates = array_filter($arguments, $this->mentionsTemplate(...));
+
+        return count($mixed) === count($arguments) || $templates !== [] ? null : TypeArguments::spell(...$arguments);
+    }
+
+    /**
+     * Whether a template occurs anywhere in the type. Type-info's own `traverse()` does not reach
+     * a generic type's arguments.
+     */
+    protected function mentionsTemplate(Type $type): bool
+    {
+        return match (true) {
+            $type instanceof TemplateType => true,
+            $type instanceof GenericType => array_filter($type->getVariableTypes(), $this->mentionsTemplate(...)) !== [],
+            $type instanceof CollectionType, $type instanceof NullableType => $this->mentionsTemplate($type->getWrappedType()),
+            $type instanceof CompositeTypeInterface => array_filter($type->getTypes(), $this->mentionsTemplate(...)) !== [],
+            default => false,
+        };
+    }
+
+    /**
+     * The templates a class declares, in declaration order.
+     *
+     * @return list<string>
+     */
+    protected function templateNames(string $class): array
+    {
+        if (!class_exists($class) && !interface_exists($class)) {
+            return [];
+        }
+
+        return $this->templateNames[$class] ??= array_keys((new TypeContextFactory(new SymfonyStringTypeResolver()))->createFromClassName($class)->templates);
+    }
+
+    /**
+     * The type with each template replaced by its argument. Type-info has no helper for this, so
+     * the type tree is rebuilt wherever a template occurs in it.
+     *
+     * @param array<string, Type> $templates
+     */
+    protected function bindTemplates(Type $type, array $templates): Type
+    {
+        return match (true) {
+            $type instanceof TemplateType => $templates[$type->getName()] ?? $type,
+            $type instanceof NullableType => Type::nullable($this->bindTemplates($type->getWrappedType(), $templates)),
+            $type instanceof ArrayShapeType => $this->bindArrayShape($type, $templates),
+            $type instanceof CollectionType => new CollectionType(
+                $type->getWrappedType() instanceof GenericType ? $this->bindGeneric($type->getWrappedType(), $templates) : $type->getWrappedType(),
+                $type->isList(),
+            ),
+            $type instanceof GenericType => $this->bindGeneric($type, $templates),
+            $type instanceof UnionType => $this->bindUnion($type, $templates),
+            $type instanceof IntersectionType => Type::intersection(...array_map(fn (Type $member): Type => $this->bindTemplates($member, $templates), $type->getTypes())),
+            default => $type,
+        };
+    }
+
+    /**
+     * An array shape with each template replaced. It extends a collection, whose rebuild would
+     * drop the shape.
+     *
+     * @param array<string, Type> $templates
+     */
+    protected function bindArrayShape(ArrayShapeType $type, array $templates): ArrayShapeType
+    {
+        $shape = array_map(fn (array $member): array => ['type' => $this->bindTemplates($member['type'], $templates), 'optional' => $member['optional']], $type->getShape());
+        $extraValueType = $type->getExtraValueType();
+
+        return new ArrayShapeType(
+            $shape,
+            $type->getExtraKeyType(),
+            $extraValueType instanceof Type ? $this->bindTemplates($extraValueType, $templates) : null,
+        );
+    }
+
+    /**
+     * A union with each template replaced. One that takes `mixed` is `mixed`, which type-info does
+     * not allow in a union.
+     *
+     * @param UnionType<Type>     $type
+     * @param array<string, Type> $templates
+     */
+    protected function bindUnion(UnionType $type, array $templates): Type
+    {
+        $members = array_map(fn (Type $member): Type => $this->bindTemplates($member, $templates), $type->getTypes());
+        foreach ($members as $member) {
+            if ($member->isIdentifiedBy(TypeIdentifier::MIXED)) {
+                return Type::mixed();
+            }
+        }
+
+        return Type::union(...$members);
+    }
+
+    /**
+     * @template T of BuiltinType<TypeIdentifier::ARRAY>|BuiltinType<TypeIdentifier::ITERABLE>|ObjectType<class-string>
+     *
+     * @param GenericType<T>      $type
+     * @param array<string, Type> $templates
+     *
+     * @return GenericType<T>
+     */
+    protected function bindGeneric(GenericType $type, array $templates): GenericType
+    {
+        return new GenericType($type->getWrappedType(), ...array_map(fn (Type $variable): Type => $this->bindTemplates($variable, $templates), $type->getVariableTypes()));
     }
 
     /**

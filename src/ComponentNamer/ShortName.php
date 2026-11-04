@@ -10,6 +10,7 @@ use OpenApi\Contracts\AttributeInterface;
 use OpenApi\Contracts\ComponentNamerInterface;
 use OpenApi\Spec as OA;
 use OpenApi\Specification\ComponentKey;
+use OpenApi\Specification\ComponentName;
 
 /**
  * Names a component after the class or holder member it is declared on.
@@ -23,6 +24,13 @@ use OpenApi\Specification\ComponentKey;
  * A component whose key has qualifiers adds them, so each description of a class gets a name of
  * its own: `-` before each qualifier, `.` between its name and its values, `_` between values.
  * `Author` with groups `admin` and `summary` is `Author-groups.admin_summary`.
+ *
+ * Type arguments are one value, with each class in them named as this namer names a class, its
+ * short name, and `_` between the parts: `Envelope<App\Customer>` is `Envelope-of.Customer`, and
+ * `Envelope<Envelope<App\Customer>, int>` is `Envelope-of.Envelope_Customer_int`.
+ *
+ * A base name the component carries under the meta key `ComponentNamerInterface::class` replaces
+ * the class's or member's name.
  */
 class ShortName implements ComponentNamerInterface
 {
@@ -38,6 +46,11 @@ class ShortName implements ComponentNamerInterface
 
     protected function baseName(AttributeInterface $component): ?string
     {
+        $base = $component->getMeta(ComponentNamerInterface::class);
+        if (is_string($base) && $base !== '') {
+            return $base;
+        }
+
         $reflector = $component->getReflector();
 
         if ($reflector instanceof \ReflectionClass) {
@@ -61,8 +74,10 @@ class ShortName implements ComponentNamerInterface
     {
         $suffix = '';
         foreach ($key->qualifiers as $name => $values) {
-            $values = array_map($this->qualifierValue(...), (array) $values);
-            $suffix .= '-' . $this->clean($name) . ($values === [] ? '' : '.' . implode('_', $values));
+            $values = $name === ComponentKey::TYPE_ARGUMENTS && is_string($values)
+                ? [$this->typeArguments($values)]
+                : array_map($this->qualifierValue(...), (array) $values);
+            $suffix .= '-' . ComponentName::clean($name) . ($values === [] ? '' : '.' . implode('_', $values));
         }
 
         return $suffix;
@@ -77,15 +92,17 @@ class ShortName implements ComponentNamerInterface
             return $this->className(new \ReflectionClass($value));
         }
 
-        return $this->clean(is_bool($value) ? var_export($value, true) : (string) $value);
+        return ComponentName::clean(is_bool($value) ? var_export($value, true) : (string) $value);
     }
 
     /**
-     * Anything a component name does not allow becomes `_`.
+     * The names in a type string, each class named like any other, joined by `_`.
      */
-    protected function clean(string $value): string
+    protected function typeArguments(string $types): string
     {
-        return (string) preg_replace('/[^a-zA-Z0-9._-]/', '_', $value);
+        preg_match_all('/[\w\\\\]+/', $types, $matches);
+
+        return implode('_', array_map($this->qualifierValue(...), $matches[0]));
     }
 
     /**

@@ -52,6 +52,17 @@ class ComponentName
     }
 
     /**
+     * A value made usable in a component name: every character OpenAPI does not allow there
+     * becomes `_`. The allowed ones are letters, digits, `.`, `-` and `_`.
+     *
+     * @see [Components Object](https://spec.openapis.org/oas/v3.1.0#components-object)
+     */
+    public static function clean(string $value): string
+    {
+        return (string) preg_replace('/[^a-zA-Z0-9._-]/', '_', $value);
+    }
+
+    /**
      * The constructor field a missing name is reported against, for diagnostics.
      */
     public static function keyField(AttributeInterface $item): ?string

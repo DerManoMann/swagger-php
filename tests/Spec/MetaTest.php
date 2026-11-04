@@ -50,7 +50,9 @@ final class MetaTest extends TestCase
      * annotations. `Augmenter\Properties` leaves those schemas alone, and `Augmenter\Types` keeps
      * classic's `required` rule for those parameters, so classic output does not change in hybrid.
      * `Augmenter\Cleanup` only reads: a component the caller marks with `false` under the
-     * configured key (`Cleanup::class` by default) is kept.
+     * configured key (`Cleanup::class` by default) is kept. `ComponentNamer\ShortName` builds a
+     * name on a base name under `ComponentNamerInterface::class`, which the caller can set, and
+     * `Augmenter\Generics` sets it on a copy of a schema with a name of its own unless it is set.
      */
     public function testNothingInTheCoreUsesMeta(): void
     {
@@ -69,6 +71,6 @@ final class MetaTest extends TestCase
 
         sort($users);
 
-        $this->assertSame(['AbstractAttribute.php', 'Cleanup.php', 'HybridBridge.php', 'Properties.php', 'Types.php'], $users, 'meta belongs to whoever extends swagger-php; core code using it is new behaviour');
+        $this->assertSame(['AbstractAttribute.php', 'Cleanup.php', 'Generics.php', 'HybridBridge.php', 'Properties.php', 'ShortName.php', 'Types.php'], $users, 'meta belongs to whoever extends swagger-php; core code using it is new behaviour');
     }
 }

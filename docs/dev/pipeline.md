@@ -230,7 +230,9 @@ runs. `DocblocksTest` pins both halves: that an absent value is inferred, and th
 
 Resolving unknown classes inside the augmenter pipeline would create an ordering problem: an
 augmenter that adds schemas runs after `Names` and `Types`, so it would have to re-invoke
-them on whatever it added. Running resolution between assembly and augmentation means every
+them on whatever it added. An augmenter that adds schemas has to run before them instead, as
+the ones in [Variants are made where their use is known](#variants-are-made-where-their-use-is-known)
+do. Running resolution between assembly and augmentation means every
 schema exists before the augmenters start their single pass.
 
 Discovery draws on two sources, both readable before any augmenter has run:
@@ -246,6 +248,114 @@ Resolution then runs as a convergence loop: discover, hand each key to the chain
 claims it, re-discover. A key with qualifiers only goes to a `KeyResolverInterface`. A resolver
 that knows the class alone would describe the plain class and claim the key for it. That is what handles transitive references. Resolving class A can
 introduce a schema referencing class B, which the next pass picks up.
+
+## Keys identify components, names come last
+
+Until `Augmenter\Names` runs, a component has no name to be found by. What identifies it is its
+`Specification\ComponentKey`: the class it describes, plus qualifiers that tell several
+descriptions of one class apart. A component declared on a class has the plain key, the class
+alone. `getComponentKey()` falls back to that, and `setComponentKey()` gives a component another.
+
+Everything that looks a component up before the names exist does it by key, through
+`ComponentIndex::findByKey()`, `findAllByKey()` and `hasKey()`. That covers the resolver chain,
+`Types` deciding whether a class type can be referenced, and `Refs` rewriting a class-name
+`$ref`. A `Schema\Ref` adds its qualifiers to the key it looks up.
+
+Names are set once, by `Names`, through the namer the builder holds. A name can be asked for
+before it is set and again afterwards, so `ComponentNamerInterface` requires the answer to
+depend on the component alone. `ComponentNamer\ShortName` builds it from the class's short name,
+or from a base name the component carries as meta under `ComponentNamerInterface::class`, and
+adds the key's qualifiers. `ComponentName::clean()` replaces what OpenAPI does not allow in a
+name.
+
+Qualifiers are the vocabulary of whoever makes the variant, with one exception.
+`ComponentKey::TYPE_ARGUMENTS`, `of`, is swagger-php's own, and holds a generic class's type
+arguments as one string, in one spelling: `TypeResolver` writes it through
+`Type\TypeArguments::spell()`, and `Schema\Ref::getRefKey()` puts a hand-written one into the
+same form, so a ref and an inferred type with the same arguments make the same key.
+
+## Variants are made where their use is known
+
+A component for a qualified key is made when something asks for it, in one of two places,
+depending on when the use becomes visible.
+
+- **The resolver chain**, before augmentation, for keys that a ref or a native property type
+  already shows. A key with qualifiers goes to a `KeyResolverInterface` only, as
+  [Why resolution is its own step](#why-resolution-is-its-own-step) describes.
+- **An augmenter in `Resolve`, before `Names`**, for keys that only a docblock type shows. Types
+  are read during augmentation, after the chain has finished, so the chain never sees them.
+  `Augmenter\ImpliedSchemas` adds a schema for an enum used as a type. `Augmenter\Generics`
+  adds a copy of a generic class's schema for each set of type arguments.
+
+Both augmenters run before `Names` and `Types`. What they add is named and typed in the same
+single pass as everything else, which is the ordering problem the resolver step avoids for
+classes.
+
+## How type arguments flow
+
+A generic class's members are read twice with their templates replaced, both times through
+`TypeResolver::resolveWithTemplates()`. The first time finds which copies are needed. The second
+writes the concrete types into the document.
+
+```text
+ scan, collect, resolve      the generic class gets its ordinary schema
+          │                  nothing reads the template yet
+          ▼
+ make the copies             a use typed with arguments gives a key: class + arguments
+          │                  no schema under that key → copy the class's schema
+          │ ↺                read each copy's members with the arguments in place,
+          │                  to find nested uses, until none is left
+          ▼
+ name them                   from the key: class, then its arguments
+          ▼
+ fill the types              ★ each template in a copy is replaced by its argument
+          │                  ★ each use points at the copy for its arguments
+          ▼
+ resolve refs                by key, as for any qualified reference
+          ▼
+ clean up, compile           the plain schema goes when nothing references it
+```
+
+1. **Making the copies.** `Generics` walks the document once. For each property and
+   parameter, `TypeResolver::mapType()` keeps a `GenericType`'s arguments on the `SchemaType`,
+   as `typeArguments`, when the class declares `@template`, the arguments are not all `mixed`,
+   and none is still a template, as in the class's own `Node<T>`. `SchemaType::componentKey()` turns that into a key with `of`. A `Schema\Ref`
+   qualified with `of` gives its key directly, and one whose arguments bind no template is
+   reported and left alone. For each key the index does not hold,
+   `Generics::specialise()` copies the plain schema and gives the copy the key. An explicit name
+   moves into the copy's meta as its base name, and `component` is cleared so `Names` names
+   it. A copy's own members are then read with its templates bound, which is how
+   `Envelope<Envelope<Customer>>` asks for `Envelope<Customer>`. Only the copies a round made
+   can ask for more, so each later round reads those and not the whole document. The loop
+   stops at a depth of ten. A member with a type or reference of its own is skipped, as
+   `Types` leaves it alone.
+2. **Naming.** `ShortName` adds the key's `of` value to the base name, each class in it named
+   by its short name: `Envelope-of.Customer`. An explicit name on that class's own schema does
+   not reach here, since a namer sees only the component it names.
+3. **Filling the types.** For each schema it walks, `Types` asks
+   `TypeResolver::templates()` for the bindings. That reads the `of` value back through
+   `TypeArguments::parse()`, takes the class's `@template` names in declaration order, and pairs
+   them by position. A plain schema gets none. For each member,
+   `TypeResolver::bindTemplates()` rebuilds the docblock type with every template replaced,
+   through nullable, union, intersection, collection, array shape and nested generic types. A template is
+   declared `mixed` in PHP, and that `mixed` no longer adds `null` once a template is bound. At
+   a use site, `Types::refTo()` sets a `Schema\Ref` with the key when a copy is filed under
+   it, and the plain class otherwise.
+4. **Resolving refs.** `Refs` finds the copy by key, as for any `Schema\Ref` with qualifiers.
+
+A copy carries nothing about generics except its key. Every augmenter after `Types` treats it
+as an ordinary schema.
+
+## Meta keys in the core
+
+`getMeta()` and `setMeta()` carry data for whoever writes it. A key that is the name of a
+swagger-php class or interface belongs to swagger-php, and that class or interface documents
+what it means. Core code reads or writes meta only on purpose:
+`MetaTest::testNothingInTheCoreUsesMeta()` lists every file in `src/` that does, with the
+reason for each in its docblock. A new use fails that test until it is added there.
+
+A caller that sets a core key first wins where the core only fills it when it is unset, as
+`Generics` does for the base name.
 
 ## Augmenter ordering lives in one place
 

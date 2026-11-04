@@ -23,6 +23,13 @@ use OpenApi\OpenApiException;
 final readonly class ComponentKey implements \Stringable
 {
     /**
+     * The qualifier swagger-php itself adds, and so a name no other producer should give one of
+     * its own: the type arguments of a generic class, as one type string, so `Envelope<Customer>`
+     * is `Envelope` with `of` set to `Customer`.
+     */
+    public const TYPE_ARGUMENTS = 'of';
+
+    /**
      * @var array<string, scalar|list<scalar>>
      */
     public array $qualifiers;

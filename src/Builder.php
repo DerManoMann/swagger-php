@@ -507,6 +507,7 @@ class Builder
             new Augmenter\Inheritance(),
             new Augmenter\OperationTags(),
             new Augmenter\ImpliedSchemas(),
+            new Augmenter\Generics(),
             new Augmenter\Names(),
             new Augmenter\Enums(),
             new Augmenter\Shortcuts(),

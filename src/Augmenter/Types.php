@@ -18,6 +18,7 @@ use OpenApi\Undefined;
 use OpenApi\Utils\PipeInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\TypeInfo\Type;
 
 /**
  * Infers schema type, format, nullable, items, etc. from PHP type declarations and docblocks.
@@ -40,6 +41,9 @@ class Types implements PipeInterface, LoggerAwareInterface
     /** @var \SplObjectStorage<OA\Schema, null> schemas whose `type` this augmenter inferred, not the author */
     protected \SplObjectStorage $inferredTypes;
 
+    /** @var array<string, Type> the templates of the schema being walked, from its key's type arguments */
+    protected array $templates = [];
+
     public function __construct(
         protected TypeResolver $typeResolver = new TypeResolver(),
     ) {
@@ -50,10 +54,13 @@ class Types implements PipeInterface, LoggerAwareInterface
         $this->index = $payload->buildComponentIndex();
         $this->inferredTypes = new \SplObjectStorage();
 
+        // a schema made for type arguments has its templates bound while its members are typed
         $payload->getWalker()->eachSchema(function (OA\Schema $schema): void {
+            $this->templates = $this->typeResolver->templates($schema->getComponentKey());
             $this->inferSchemaType($schema);
             $this->walkSchema($schema);
         });
+        $this->templates = [];
 
         foreach ($payload->operations as $operation) {
             $this->augmentOperationParameters($operation);
@@ -230,7 +237,7 @@ class Types implements PipeInterface, LoggerAwareInterface
             return;
         }
 
-        $resolved = $this->typeResolver->resolve($reflector);
+        $resolved = $this->typeResolver->resolveWithTemplates($reflector, $this->templates);
         if (!$resolved instanceof SchemaType) {
             return;
         }
@@ -264,7 +271,7 @@ class Types implements PipeInterface, LoggerAwareInterface
             return;
         }
 
-        $resolved = $this->typeResolver->resolve($method);
+        $resolved = $this->typeResolver->resolveWithTemplates($method, $this->templates);
         if (!$resolved instanceof SchemaType) {
             return;
         }
@@ -366,6 +373,22 @@ class Types implements PipeInterface, LoggerAwareInterface
         return count($this->index?->findAllByKey(new ComponentKey(ltrim($class, '\\')), $bucket) ?? []);
     }
 
+    /**
+     * A class as the ref to its schema: the one made for its type arguments where there is one,
+     * otherwise the plain one.
+     */
+    protected function refTo(SchemaType $schemaType): string|OA\Schema\Ref|null
+    {
+        $key = $schemaType->componentKey();
+        if (!$key instanceof ComponentKey) {
+            return null;
+        }
+
+        return !$key->isPlain() && $this->index?->hasKey($key)
+            ? new OA\Schema\Ref(ref: $key->class, qualifiers: $key->qualifiers)
+            : $key->class;
+    }
+
     protected function schemaTypeToSchema(SchemaType $schemaType): OA\Schema
     {
         $schema = new OA\Schema();
@@ -415,7 +438,7 @@ class Types implements PipeInterface, LoggerAwareInterface
                 if ($schema->enum === null) {
                     $count = $this->countComponents($schemaType->type);
                     if ($count === 1) {
-                        $schema->ref = $schemaType->type;
+                        $schema->ref = $this->refTo($schemaType);
                     } else {
                         $subject = $this->subject instanceof \Reflector ? $this->typeResolver->describe($this->subject) : 'a schema';
                         $this->logger?->warning($count === 0

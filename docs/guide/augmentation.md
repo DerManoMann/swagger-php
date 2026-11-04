@@ -111,6 +111,62 @@ The docblock tag read depends on the element:
 * a promoted constructor property: the constructor's `@param`
 * a method: `@return`
 
+### Generic classes
+
+A class that declares templates and is used with type arguments gets a schema for each set of
+arguments. Each template is replaced by its argument in that schema, so a property typed `T`
+documents a `Customer` in `Envelope<Customer>`, and an `int` in `Envelope<int>`:
+
+```php
+/**
+ * @template T
+ */
+#[OA\Schema]
+class Envelope
+{
+    /** @var T */
+    #[OA\Property] public mixed $data;
+
+    /** @var list<T> */
+    #[OA\Property] public array $history;
+}
+
+#[OA\Schema]
+class Holder
+{
+    /** @var Envelope<Customer> */
+    #[OA\Property] public Envelope $customer;   // $ref: Envelope-of.Customer
+
+    /** @var Envelope<int> */
+    #[OA\Property] public Envelope $number;     // $ref: Envelope-of.int
+}
+```
+
+The schema is a copy of the class's own, named after the class and its arguments. Each class in
+the arguments is named by its short name, and `_` separates the parts, so
+`Envelope<Envelope<Customer>>` is `Envelope-of.Envelope_Customer`. Where the class's schema has a
+name of its own, the copies build on it: `#[OA\Schema(component: 'Wrapper')]` gives
+`Wrapper-of.Customer`. A member typed with a template is required in a copy unless its docblock type
+takes `null`, as `T|null` does. A use with `mixed` only, or
+without arguments, references the class's plain schema. A class needs a schema of its own to be
+copied.
+
+A ref can ask for the same schema, with the arguments as one type string:
+
+```php
+#[OA\Property(schema: new OA\Schema\Ref(ref: Envelope::class, qualifiers: ['of' => Customer::class]))]
+```
+
+How the copies are made is in [Spec pipeline internals](/dev/pipeline#how-type-arguments-flow).
+
+OpenAPI 3.1 can also describe a generic schema once, with `$dynamicRef`. Few tools read it yet,
+so swagger-php does not write it.
+
+::: info Mode difference
+Classic references the plain schema. In `hybrid`, classic attributes get a schema per set of
+arguments too.
+:::
+
 ### Property examples
 
 ::: info Mode difference
