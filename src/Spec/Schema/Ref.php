@@ -8,6 +8,7 @@ namespace OpenApi\Spec\Schema;
 
 use OpenApi\Spec as OA;
 use OpenApi\Specification\ComponentKey;
+use OpenApi\Type\Generics\TypeArguments;
 
 /**
  * A reference-only schema — $ref is required, most other Schema properties are unavailable.
@@ -39,8 +40,11 @@ class Ref extends OA\Schema
      */
     protected array $qualifiers;
 
+    protected ?TypeArguments $of;
+
     /**
      * @param array<string, scalar|list<scalar>>|null $qualifiers Which description of the class to reference, when it has more than one
+     * @param TypeArguments|null                      $of         The type arguments a generic class is referenced with
      */
     public function __construct(
         string $ref,
@@ -50,8 +54,10 @@ class Ref extends OA\Schema
         ?array $attachables = null,
         ?OA\Fan $fan = null,
         ?array $qualifiers = null,
+        ?TypeArguments $of = null,
     ) {
         $this->qualifiers = $qualifiers ?? [];
+        $this->of = $of;
 
         parent::__construct(
             title: $title,
@@ -69,7 +75,7 @@ class Ref extends OA\Schema
     public function getRefKey(): ?ComponentKey
     {
         return is_string($this->ref) && !str_starts_with($this->ref, '#/')
-            ? new ComponentKey($this->ref, $this->qualifiers)
+            ? new ComponentKey($this->ref, $this->qualifiers, $this->of)
             : null;
     }
 }

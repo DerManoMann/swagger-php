@@ -101,6 +101,14 @@ class TypeResolver implements LoggerAwareInterface
     }
 
     /**
+     * The reader this resolver asks what a template stands for.
+     */
+    public function getTemplateReader(): TemplateReader
+    {
+        return $this->templateReader;
+    }
+
+    /**
      * Resolve the PHP type of a reflector into a SchemaType.
      *
      * A reflector is resolved once. Asking again gives a copy of the first answer, which the

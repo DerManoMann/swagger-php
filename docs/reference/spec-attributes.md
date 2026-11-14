@@ -2352,6 +2352,8 @@ have to match the qualifiers that description was registered with:
   <dd><p>No details available.</p></dd>
   <dt><strong>qualifiers</strong> : <span style="font-family: monospace;">array&lt;string, scalar|list&lt;scalar&gt;&gt;|null</span></dt>
   <dd><p>Which description of the class to reference, when it has more than one</p></dd>
+  <dt><strong>of</strong> : <span style="font-family: monospace;">TypeArguments|null</span></dt>
+  <dd><p>The type arguments a generic class is referenced with</p></dd>
 </dl>
 
 ### [Security\Requirement](https://github.com/zircote/swagger-php/tree/master/src/Spec/Security/Requirement.php)

@@ -37,6 +37,11 @@ final class ScratchTest extends OpenApiTestCase
             ['plain', 'nullablePlain', 'plainList', 'plainMap', 'plainShape', 'plainUnion'],
         );
 
+        // type arguments on a class without a template reference the plain schema, with a word
+        $docblockGenerics = static fn (string $suffix): array => [
+            "Type \"OpenApi\\Tests\\Fixtures\\Scratch\\DocblockGenericsTarget{$suffix}<string>\" has type arguments, but its class declares no @template, using the plain schema in OpenApi\\Tests\\Fixtures\\Scratch\\DocblockGenericsHolder{$suffix}::\$generic",
+        ];
+
         // Keyed `{fixture}-{version}`, applying to every mode, or `{fixture}-{version}-{mode}`
         // for a diagnostic only one mode raises. Both keys contribute when both are present.
         $expectedLogs = [
@@ -121,6 +126,12 @@ final class ScratchTest extends OpenApiTestCase
             'ClassRef-3.1.0-hybrid' => $classRef(''),
             'ClassRef-3.2.0-spec' => $classRef('Spec'),
             'ClassRef-3.2.0-hybrid' => $classRef(''),
+            'DocblockGenerics-3.0.0-spec' => $docblockGenerics('Spec'),
+            'DocblockGenerics-3.0.0-hybrid' => $docblockGenerics(''),
+            'DocblockGenerics-3.1.0-spec' => $docblockGenerics('Spec'),
+            'DocblockGenerics-3.1.0-hybrid' => $docblockGenerics(''),
+            'DocblockGenerics-3.2.0-spec' => $docblockGenerics('Spec'),
+            'DocblockGenerics-3.2.0-hybrid' => $docblockGenerics(''),
         ];
 
         foreach (self::discoverFixtures("{$basePath}/*.php") as $scratchName => $scratch) {

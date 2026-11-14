@@ -6,12 +6,17 @@
 
 namespace OpenApi\Augmenter;
 
+use OpenApi\Augmenter\Types\GenericCopies;
+use OpenApi\ComponentNamer;
+use OpenApi\Contracts\ComponentNamerAwareInterface;
+use OpenApi\Contracts\ComponentNamerInterface;
 use OpenApi\Contracts\TypeResolverAwareInterface;
 use OpenApi\HybridBridge;
 use OpenApi\Spec as OA;
 use OpenApi\Specification;
 use OpenApi\Specification\ComponentIndex;
 use OpenApi\Specification\ComponentKey;
+use OpenApi\Type\Generics\TypeArguments;
 use OpenApi\Type\SchemaType;
 use OpenApi\Type\TypeMapper;
 use OpenApi\Type\TypeResolver;
@@ -26,10 +31,17 @@ use Psr\Log\LoggerInterface;
  * Fills the schema of each property, parameter and request body that
  * `Specification\Walker::eachTypedAttribute()` lists, from its reflector's type information.
  *
+ * A generic class used with type arguments, such as `Envelope<Customer>`, references a schema made
+ * for those arguments: a copy of the class's own schema, whose properties read each template as
+ * its argument. `Types\GenericCopies` makes the copy and says when a use keeps the plain schema.
+ *
  * @implements PipeInterface<Specification>
  */
-class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInterface
+class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInterface, ComponentNamerAwareInterface
 {
+    /** how many times a schema made for type arguments can ask for another, so a class using itself with growing arguments ends */
+    protected const MAX_NESTING = 10;
+
     protected ?LoggerInterface $logger = null;
 
     /** the components a class type is looked up in, by its plain key, in the bucket its use means */
@@ -38,11 +50,15 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
     /** the member whose type is being applied, for the warning when a class in it has no schema */
     protected ?\Reflector $subject = null;
 
+    /** asked for the schema of a generic class used with type arguments */
+    protected ?GenericCopies $copies = null;
+
     /** @var \SplObjectStorage<OA\Schema, null> schemas whose `type` this augmenter inferred, not the author */
     protected \SplObjectStorage $inferredTypes;
 
     public function __construct(
         protected TypeResolver $typeResolver = new TypeResolver(),
+        protected ComponentNamerInterface $namer = new ComponentNamer\ShortName(),
     ) {
     }
 
@@ -51,18 +67,39 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         $this->index = $payload->buildComponentIndex();
         $this->inferredTypes = new \SplObjectStorage();
 
-        $walker = $payload->getWalker();
-        $walker->eachSchema($this->inferSchemaType(...));
-        $walker->eachTypedAttribute(function (OA\Property|OA\Parameter|OA\RequestBody $attribute, ?OA\Schema $schema): void {
-            match (true) {
-                // a property is read in the component it belongs to
-                $attribute instanceof OA\Property => $this->augmentProperty($attribute, $schema?->getComponentKey()),
-                $attribute instanceof OA\Parameter => $this->augmentParameter($attribute),
-                $attribute instanceof OA\RequestBody => $this->augmentRequestBody($attribute),
-            };
-        });
+        // before anything is typed, so a copy starts from the schema as its class declares it
+        $this->copies = new GenericCopies($payload, $this->index, $this->typeResolver->getTemplateReader(), $this->namer, $this->logger);
+
+        // types the document as written; a use with type arguments asks for its copy on the way
+        $this->augment($payload);
+
+        // The copies made so far have a name and a key, but their properties are still as the class
+        // declares them. Typing them is the same work as for any schema, so each round puts the new
+        // copies in a specification of their own, only for the walker to visit them and nothing
+        // else. Typing a copy can ask for further copies, as `Pair<A, B>` does with a property
+        // typed `Box<TSecond>`, and those are typed in the next round, until none is left.
+        $made = [];
+        for ($round = 1; ($pending = $this->copies->takePending()) !== []; ++$round) {
+            // a class using itself with growing arguments would never end: from here on a use
+            // asking for a copy keeps the plain schema, with a warning
+            if ($round === static::MAX_NESTING) {
+                $this->copies->stop();
+            }
+            $this->augment((new Specification())->add(...$pending));
+            $made = [...$made, ...$pending];
+        }
+
+        // every copy made in any round joins the document, typed
+        $payload->add(...$made);
 
         return null;
+    }
+
+    public function setNamer(ComponentNamerInterface $namer): static
+    {
+        $this->namer = $namer;
+
+        return $this;
     }
 
     public function setTypeResolver(TypeResolver $typeResolver): static
@@ -84,6 +121,23 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
     public function group(): string|\BackedEnum
     {
         return Group::Resolve;
+    }
+
+    /**
+     * Types every schema and typed attribute in the specification.
+     */
+    protected function augment(Specification $specification): void
+    {
+        $walker = $specification->getWalker();
+        $walker->eachSchema($this->inferSchemaType(...));
+        $walker->eachTypedAttribute(function (OA\Property|OA\Parameter|OA\RequestBody $attribute, ?OA\Schema $schema): void {
+            match (true) {
+                // a property is read in the component it belongs to
+                $attribute instanceof OA\Property => $this->augmentProperty($attribute, $schema?->getComponentKey()),
+                $attribute instanceof OA\Parameter => $this->augmentParameter($attribute),
+                $attribute instanceof OA\RequestBody => $this->augmentRequestBody($attribute),
+            };
+        });
     }
 
     protected function inferSchemaType(OA\Schema $schema): void
@@ -271,6 +325,23 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         return count($this->index?->findAllByKey(new ComponentKey(ltrim($class, '\\')), $bucket) ?? []);
     }
 
+    /**
+     * A class as the ref to its schema: the one made for the type arguments it is used with where
+     * there is one, otherwise the class's plain one.
+     */
+    protected function refTo(string $class, ?TypeArguments $typeArguments, string $subject): string|OA\Schema\Ref
+    {
+        if (!$typeArguments instanceof TypeArguments) {
+            return $class;
+        }
+
+        // the first use of these arguments makes the copy, every later one gets the same answer
+        $copy = $this->copies?->for(new ComponentKey(ltrim($class, '\\'), typeArguments: $typeArguments), $subject);
+
+        // a ref with the arguments, which `Refs` resolves to the copy's name; without a copy the class alone
+        return $copy instanceof OA\Schema ? new OA\Schema\Ref(ref: ltrim($class, '\\'), of: $typeArguments) : $class;
+    }
+
     protected function schemaTypeToSchema(SchemaType $schemaType): OA\Schema
     {
         $schema = new OA\Schema();
@@ -319,10 +390,10 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
                 // a class is referenced only when it is a component, and never in place of an explicit enum
                 if ($schema->enum === null) {
                     $count = $this->countComponents($schemaType->type);
+                    $subject = $this->subject instanceof \Reflector ? $this->typeResolver->describe($this->subject) : 'a schema';
                     if ($count === 1) {
-                        $schema->ref = $schemaType->type;
+                        $schema->ref = $this->refTo($schemaType->type, $schemaType->typeArguments, $subject);
                     } else {
-                        $subject = $this->subject instanceof \Reflector ? $this->typeResolver->describe($this->subject) : 'a schema';
                         $this->logger?->error($count === 0
                             ? "Type \"{$schemaType->type}\" in {$subject} matches no schema, omitted"
                             : "Type \"{$schemaType->type}\" in {$subject} matches several schemas, omitted; reference one by name");
@@ -355,12 +426,13 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         }
 
         if ($schemaType->oneOf !== null) {
-            $members = array_map($this->schemaTypeToSchema(...), $schemaType->oneOf);
             // a member typed with a class that is no component matches anything, and so does the union
             $unknown = array_filter(
                 $schemaType->oneOf,
                 fn (SchemaType $member): bool => $member->isRef() && is_string($member->type) && $this->countComponents($member->type) !== 1,
             );
+            // a dropped union references nothing, so only its unknown members are read, to report them
+            $members = array_map($this->schemaTypeToSchema(...), $unknown === [] ? $schemaType->oneOf : array_values($unknown));
             if ($unknown === []) {
                 $schema->oneOf = $members;
             }

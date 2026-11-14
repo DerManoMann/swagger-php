@@ -7,8 +7,10 @@
 namespace OpenApi\Tests\Spec;
 
 use OpenApi\Spec as OA;
+use OpenApi\Type\Generics\TypeArguments;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\TypeInfo\Type;
 
 final class AuthoredTest extends TestCase
 {
@@ -73,6 +75,7 @@ final class AuthoredTest extends TestCase
         foreach ($reflector->getConstructor()?->getParameters() ?? [] as $parameter) {
             $arguments[$parameter->getName()] = match ($parameter->getName()) {
                 'properties' => ['name' => new OA\Schema()],
+                'of' => new TypeArguments(Type::int()),
                 default => $this->valueFor($parameter->getType()),
             };
         }

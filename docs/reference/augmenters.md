@@ -195,6 +195,10 @@ Infers schema type, format, nullable, items, etc. from PHP type declarations and
 Fills the schema of each property, parameter and request body that
 `Specification\Walker::eachTypedAttribute()` lists, from its reflector's type information.
 
+A generic class used with type arguments, such as `Envelope<Customer>`, references a schema made
+for those arguments: a copy of the class's own schema, whose properties read each template as
+its argument. `Types\GenericCopies` makes the copy and says when a use keeps the plain schema.
+
 ### [Properties](https://github.com/zircote/swagger-php/tree/master/src/Augmenter/Properties.php)
 
 Infers an object schema's `required` list and its properties' `default` from the PHP declarations.

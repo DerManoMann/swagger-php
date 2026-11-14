@@ -119,6 +119,13 @@ class ImpliedSchemas implements PipeInterface, LoggerAwareInterface, TypeResolve
             $this->enums[$class] = true;
         }
 
+        // an enum a schema made for the type arguments reads a template as is one of the arguments
+        foreach ($type->typeArguments?->classes() ?? [] as $argument) {
+            if (is_a($argument, \UnitEnum::class, true)) {
+                $this->enums[$argument] = true;
+            }
+        }
+
         $this->collectFromType($type->items);
         $this->collectFromType($type->additionalProperties instanceof SchemaType ? $type->additionalProperties : null);
         foreach ([...$type->oneOf ?? [], ...$type->allOf ?? [], ...$type->anyOf ?? []] as $member) {
