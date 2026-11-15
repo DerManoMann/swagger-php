@@ -7,9 +7,12 @@
 namespace OpenApi\Tests\Augmenter\Types;
 
 use OpenApi\Augmenter;
+use OpenApi\Augmenter\Types\CopyRule;
 use OpenApi\Builder;
 use OpenApi\Builder\Mode;
 use OpenApi\Builder\Result;
+use OpenApi\Contracts\AttributeInterface;
+use OpenApi\Contracts\ComponentNamerInterface;
 use OpenApi\Tests\Concerns\ExpectsLogEntries;
 use OpenApi\Tests\Fixtures\Generics;
 use OpenApi\Utils\Pipeline;
@@ -113,26 +116,80 @@ final class GenericCopiesTest extends TestCase
 
     public function testCopiesAskingForCopiesEndWithAWarning(): void
     {
+        // one level past the limit is refused, from inside the deepest copy
         $node = Generics\Node::class;
-        $this->expectLogEntry('Type "' . $node . '<' . str_repeat('list<', 10) . 'int' . str_repeat('>', 10) . ">\" is nested too deep in schemas made for type arguments, using the plain schema in {$node}::\$next", 'warning');
+        $depth = CopyRule::MAX_DEPTH + 1;
+        $this->expectLogEntry('Type "' . $node . '<' . str_repeat('list<', $depth) . 'int' . str_repeat('>', $depth + 1) . "\" nests its type arguments more than 5 deep, using the plain schema in {$node}::\$next", 'warning');
 
         $schemas = $this->schemas(Generics\Deep::class, Generics\Node::class);
 
-        $this->assertCount(12, $schemas);
-        $this->assertArrayHasKey('Node-of.' . str_repeat('list-of.', 9) . 'int', $schemas);
+        // `Deep`, `Node`, `Node<int>` and one copy for each level up to the limit
+        $this->assertCount(3 + CopyRule::MAX_DEPTH, $schemas);
+        $this->assertArrayHasKey('Node-of.' . str_repeat('list-of.', CopyRule::MAX_DEPTH) . 'int', $schemas);
+    }
+
+    public function testACopyOfAClassNamedByHandIsNamedAfterIt(): void
+    {
+        $schemas = $this->schemas(Generics\NamedUse::class, Generics\Named::class, Generics\Customer::class);
+
+        $this->assertSame(['Customer', 'NamedUse', 'Parcel', 'Parcel-of.Customer'], $this->sorted(array_keys($schemas)));
+        $this->assertSame('#/components/schemas/Parcel-of.Customer', $schemas['NamedUse']['properties']['parcel']['$ref']);
+        $this->assertSame(['$ref' => '#/components/schemas/Customer'], $schemas['Parcel-of.Customer']['properties']['content']);
     }
 
     /**
-     * @param class-string ...$classes
+     * A namer that leaves the type arguments out would give the copy the plain schema's name, and
+     * the copy would replace it.
+     */
+    public function testACopyNamedAsThePlainSchemaIsRefused(): void
+    {
+        $box = Generics\Box::class;
+        $collides = Generics\Collides::class;
+        $this->expectLogEntry("Type \"{$box}<" . Generics\Customer::class . ">\" would be named as the schema of its class, using the plain schema in {$collides}::\$customer", 'warning');
+        $this->expectLogEntry("Type \"{$box}<" . Generics\Billing\Customer::class . ">\" would be named as the schema of its class, using the plain schema in {$collides}::\$billingCustomer", 'warning');
+
+        $namer = new class () implements ComponentNamerInterface {
+            public function name(AttributeInterface $component): ?string
+            {
+                $reflector = $component->getReflector();
+
+                return $reflector instanceof \ReflectionClass ? $reflector->getShortName() : null;
+            }
+        };
+        $schemas = $this->schemas([Generics\Collides::class, Generics\Box::class, Generics\Customer::class, Generics\Billing\Customer::class], $namer);
+
+        $this->assertSame(['BillingCustomer', 'Box', 'Collides', 'Customer'], $this->sorted(array_keys($schemas)));
+        // the plain schema, with its template unbound
+        $this->assertSame([], (array) $schemas['Box']['properties']['value']);
+        $this->assertSame('#/components/schemas/Box', $schemas['Collides']['properties']['customer']['$ref']);
+    }
+
+    /**
+     * @param class-string|list<class-string> $classes
+     * @param class-string                    ...$more
      *
      * @return array<string, array<string, mixed>>
      */
-    private function schemas(string ...$classes): array
+    private function schemas(string|array $classes, string|ComponentNamerInterface ...$more): array
     {
+        // a list of classes can be followed by a namer
+        $namer = null;
+        if (is_array($classes)) {
+            $namer = $more[0] ?? null;
+            $more = [];
+        }
+        /** @var list<class-string> $classes */
+        $classes = [...(array) $classes, ...$more];
+
         // only schemas are built
         $this->allowLogEntry('Document is missing info');
 
-        $result = (new Builder())
+        $builder = new Builder();
+        if ($namer instanceof ComponentNamerInterface) {
+            $builder->setComponentNamer($namer);
+        }
+
+        $result = $builder
             ->setMode(Mode::SPEC)
             ->setLogger($this->trackingLogger())
             // keep what no operation references

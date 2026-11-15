@@ -6,6 +6,7 @@
 
 namespace OpenApi\Augmenter;
 
+use OpenApi\Augmenter\Types\CopyRule;
 use OpenApi\Augmenter\Types\GenericCopies;
 use OpenApi\ComponentNamer;
 use OpenApi\Contracts\ComponentNamerAwareInterface;
@@ -39,9 +40,6 @@ use Psr\Log\LoggerInterface;
  */
 class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInterface, ComponentNamerAwareInterface
 {
-    /** how many times a schema made for type arguments can ask for another, so a class using itself with growing arguments ends */
-    protected const MAX_NESTING = 10;
-
     protected ?LoggerInterface $logger = null;
 
     /** the components a class type is looked up in, by its plain key, in the bucket its use means */
@@ -68,7 +66,8 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         $this->inferredTypes = new \SplObjectStorage();
 
         // before anything is typed, so a copy starts from the schema as its class declares it
-        $this->copies = new GenericCopies($payload, $this->index, $this->typeResolver->getTemplateReader(), $this->namer, $this->logger);
+        $templateReader = $this->typeResolver->getTemplateReader();
+        $this->copies = new GenericCopies($payload, $this->index, $templateReader, new CopyRule($templateReader, $this->namer), $this->logger);
 
         // types the document as written; a use with type arguments asks for its copy on the way
         $this->augment($payload);
@@ -77,14 +76,11 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         // declares them. Typing them is the same work as for any schema, so each round puts the new
         // copies in a specification of their own, only for the walker to visit them and nothing
         // else. Typing a copy can ask for further copies, as `Pair<A, B>` does with a property
-        // typed `Box<TSecond>`, and those are typed in the next round, until none is left.
+        // typed `Box<TSecond>`, and those are typed in the next round, until none is left. That
+        // ends: `CopyRule` refuses arguments nested too deep, so a class using itself with growing
+        // arguments runs out of copies.
         $made = [];
-        for ($round = 1; ($pending = $this->copies->takePending()) !== []; ++$round) {
-            // a class using itself with growing arguments would never end: from here on a use
-            // asking for a copy keeps the plain schema, with a warning
-            if ($round === static::MAX_NESTING) {
-                $this->copies->stop();
-            }
+        while (($pending = $this->copies->takePending()) !== []) {
             $this->augment((new Specification())->add(...$pending));
             $made = [...$made, ...$pending];
         }

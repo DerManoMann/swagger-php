@@ -6,16 +6,12 @@
 
 namespace OpenApi\Augmenter\Types;
 
-use OpenApi\Contracts\ComponentNamerInterface;
 use OpenApi\Spec as OA;
 use OpenApi\Specification;
 use OpenApi\Specification\ComponentIndex;
 use OpenApi\Specification\ComponentKey;
-use OpenApi\Type\Generics\TemplateBinder;
 use OpenApi\Type\Generics\TemplateReader;
-use OpenApi\Type\Generics\TypeArguments;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\TypeInfo\Type;
 
 /**
  * Makes the schema for a generic class used with type arguments, as a copy of the class's own.
@@ -25,14 +21,11 @@ use Symfony\Component\TypeInfo\Type;
  * references the use, and then types the copy's properties, which read `T` as `Customer`.
  *
  * The copy is taken from the schema as it was before `Types` typed anything in it, and is named
- * here, by the namer every component is named by. It is not added to the document here: `Types`
- * takes each copy with `takePending()`, types it and adds it.
+ * here. It is not added to the document here: `Types` takes each copy with `takePending()`, types
+ * it and adds it.
  *
- * A use keeps the class's plain schema where a copy would say nothing more: without arguments,
- * with `mixed` only, or with a template left in the arguments, as in the class's own `Node<T>`. It
- * keeps the plain schema with a warning where no copy can be made: the class declares no
- * template, there is not one argument for each template, the namer gives the copy no name, or
- * copies ask for copies too many times.
+ * Whether a use gets a copy, and its name, is `CopyRule`'s to say. A use the rule refuses keeps
+ * the class's plain schema, with the warning the `Refusal` gives.
  */
 class GenericCopies
 {
@@ -45,20 +38,13 @@ class GenericCopies
     /** @var list<OA\Schema> the copies made and not handed out yet, their properties still to be typed */
     protected array $pending = [];
 
-    /** whether copies are still made */
-    protected bool $making = true;
-
-    protected TemplateBinder $templateBinder;
-
     public function __construct(
         Specification $specification,
         protected ComponentIndex $index,
         protected TemplateReader $templateReader,
-        protected ComponentNamerInterface $namer,
+        protected CopyRule $rule,
         protected ?LoggerInterface $logger = null,
     ) {
-        $this->templateBinder = new TemplateBinder();
-
         // Keep the schema of every generic class now. `Types` is about to type the document, and a
         // copy of `Box` taken after that would carry what `Types` made of the unbound `T`, such
         // as `nullable` from a property declared `mixed`.
@@ -105,89 +91,40 @@ class GenericCopies
         return $copies;
     }
 
-    /**
-     * Make no more copies. A use asking for one from here on keeps the plain schema, and is
-     * reported.
-     */
-    public function stop(): void
-    {
-        $this->making = false;
-    }
-
     protected function make(ComponentKey $key, string $subject): ?OA\Schema
     {
-        $typeArguments = $key->typeArguments;
-        if (!$typeArguments instanceof TypeArguments) {
-            return null;
-        }
-
-        // the use as it is written, for the messages: `App\Box<App\Customer>`
-        $use = $key->class . '<' . $typeArguments . '>';
-
-        // a wrong docblock more than anything else, and the author may expect a schema named for the arguments
-        if ($this->templateReader->templateNames($key->class) === []) {
-            $this->logger?->warning(sprintf('Type "%s" has type arguments, but its class declares no @template, using the plain schema in %s', $use, $subject));
-
-            return null;
-        }
-
-        // `Box<int, string>` for a class with one template: no telling which argument is meant
-        if (!$this->templateReader->accepts($key->class, $typeArguments)) {
-            $this->logger?->warning(sprintf('Type "%s" does not match the templates of its class, using the plain schema in %s', $use, $subject));
-
-            return null;
-        }
+        // first what the class and the arguments say, which needs no schema
+        $refusal = $this->rule->refusal($key);
 
         // nothing was kept for a class with more than one schema, or none: `Types` references neither
         $declared = $this->declared[$key->class] ?? null;
-        if (!$declared instanceof OA\Schema) {
-            return null;
+        if (!$refusal instanceof Refusal && $declared instanceof OA\Schema) {
+            // then the name, which needs the schema the copy is made from
+            $name = $this->rule->name($key, $declared);
+            if (is_string($name)) {
+                // The copy is the declared schema under the key with the arguments. The key is what
+                // tells the resolver to read `T` as its argument when `Types` types the copy's
+                // properties.
+                $copy = $declared->copy();
+                $copy->setComponentKey($key);
+                $copy->component = $name;
+                // its properties are still as declared: `Types` takes it from here and types them
+                $this->pending[] = $copy;
+
+                return $copy;
+            }
+
+            $refusal = $name;
         }
 
-        // no warning: `Box<mixed>` and the class's own `Box<T>` are the plain schema, said another way
-        if ($this->saysNothing($typeArguments)) {
-            return null;
+        if ($refusal instanceof Refusal) {
+            // the use as it is written, for the message: `App\Box<App\Customer>`
+            $message = $refusal->message($key->class . '<' . $key->typeArguments . '>', $subject);
+            if ($message !== null) {
+                $this->logger?->warning($message);
+            }
         }
 
-        // checked last, so only a use that would have got a copy is reported as nested too deep
-        if (!$this->making) {
-            $this->logger?->warning(sprintf('Type "%s" is nested too deep in schemas made for type arguments, using the plain schema in %s', $use, $subject));
-
-            return null;
-        }
-
-        // The copy is the declared schema under the key with the arguments. The key is what tells
-        // the resolver to read `T` as its argument when `Types` types the copy's properties.
-        $copy = $declared->copy();
-        $copy->setComponentKey($key);
-
-        // named from its key, not with the name the declared schema has
-        $copy->component = null;
-        $name = $this->namer->name($copy);
-        // a namer that cannot write one of the arguments, such as a union, gives no name
-        if ($name === null) {
-            $this->logger?->warning(sprintf('Type "%s" has type arguments a schema cannot be named for, using the plain schema in %s', $use, $subject));
-
-            return null;
-        }
-
-        $copy->component = $name;
-        // its properties are still as declared: `Types` takes it from here and types them
-        $this->pending[] = $copy;
-
-        return $copy;
-    }
-
-    /**
-     * Whether the arguments say nothing the class's templates do not: all are `mixed`, or one
-     * still holds a template.
-     */
-    protected function saysNothing(TypeArguments $typeArguments): bool
-    {
-        // `Pair<mixed, int>` does say something, so only all of them count
-        $mixed = array_filter($typeArguments->types, static fn (Type $argument): bool => (string) $argument === 'mixed');
-        $templates = array_filter($typeArguments->types, $this->templateBinder->hasTemplate(...));
-
-        return count($mixed) === count($typeArguments->types) || $templates !== [];
+        return null;
     }
 }
