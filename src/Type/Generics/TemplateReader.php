@@ -57,7 +57,12 @@ class TemplateReader
             return [];
         }
 
-        return $this->templateNames[$class] ??= array_keys($this->contexts->createFromClassName($class)->templates);
+        // Asked for every schema's class in a build. Type-info reads the class's file for its use
+        // statements before it reads the templates, so a class whose docblock does not mention one
+        // is answered without that. Templates are read from the class's own docblock only.
+        return $this->templateNames[$class] ??= str_contains((string) (new \ReflectionClass($class))->getDocComment(), 'template')
+            ? array_keys($this->contexts->createFromClassName($class)->templates)
+            : [];
     }
 
     /**

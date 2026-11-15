@@ -8,12 +8,8 @@ namespace OpenApi\Type\Generics;
 
 use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\Type\ArrayShapeType;
-use Symfony\Component\TypeInfo\Type\CollectionType;
-use Symfony\Component\TypeInfo\Type\CompositeTypeInterface;
 use Symfony\Component\TypeInfo\Type\GenericType;
-use Symfony\Component\TypeInfo\Type\NullableType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
-use Symfony\Component\TypeInfo\Type\WrappingTypeInterface;
 
 /**
  * The type arguments a generic class is used with, such as `Customer` in `Envelope<Customer>`.
@@ -58,25 +54,17 @@ readonly class TypeArguments implements \Stringable
     }
 
     /**
-     * Type-info's own `traverse()` does not reach a generic type's arguments.
-     *
      * @return list<string>
      */
     protected function classesIn(Type ...$types): array
     {
+        $inner = new InnerTypes();
         $classes = [];
         foreach ($types as $type) {
-            $classes = [...$classes, ...match (true) {
-                $type instanceof ArrayShapeType => $this->classesIn(
-                    ...array_column($type->getShape(), 'type'),
-                    ...array_filter([$type->getExtraValueType()]),
-                ),
-                $type instanceof GenericType => $this->classesIn($type->getWrappedType(), ...$type->getVariableTypes()),
-                $type instanceof WrappingTypeInterface => $this->classesIn($type->getWrappedType()),
-                $type instanceof CompositeTypeInterface => $this->classesIn(...$type->getTypes()),
-                $type instanceof ObjectType => [ltrim($type->getClassName(), '\\')],
-                default => [],
-            }];
+            if ($type instanceof ObjectType) {
+                $classes[] = ltrim($type->getClassName(), '\\');
+            }
+            $classes = [...$classes, ...$this->classesIn(...$inner->of($type))];
         }
 
         return $classes;
@@ -92,19 +80,10 @@ readonly class TypeArguments implements \Stringable
 
     protected function depthOf(Type $type): int
     {
-        return match (true) {
-            // a shape before a collection, which it is too: its members are the level below
-            $type instanceof ArrayShapeType => 1 + $this->deepest([
-                ...array_column($type->getShape(), 'type'),
-                ...array_filter([$type->getExtraValueType()]),
-            ]),
-            // `list<int>` is a collection around `array<int, int>`: one level, read off the key and value
-            $type instanceof CollectionType => 1 + $this->deepest([$type->getCollectionKeyType(), $type->getCollectionValueType()]),
-            $type instanceof GenericType => 1 + $this->deepest($type->getVariableTypes()),
-            // `?T` and `A|B` add no level of their own
-            $type instanceof NullableType => $this->depthOf($type->getWrappedType()),
-            $type instanceof CompositeTypeInterface => $this->deepest($type->getTypes()),
-            default => 0,
-        };
+        // a shape and a type with arguments are a level, and what is inside them the level below.
+        // `list<int>` is a collection around `array<int, int>`, so it is one level, not two
+        $level = $type instanceof ArrayShapeType || $type instanceof GenericType ? 1 : 0;
+
+        return $level + $this->deepest((new InnerTypes())->of($type));
     }
 }

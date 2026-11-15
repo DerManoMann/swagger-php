@@ -11,7 +11,6 @@ use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\Type\ArrayShapeType;
 use Symfony\Component\TypeInfo\Type\BuiltinType;
 use Symfony\Component\TypeInfo\Type\CollectionType;
-use Symfony\Component\TypeInfo\Type\CompositeTypeInterface;
 use Symfony\Component\TypeInfo\Type\GenericType;
 use Symfony\Component\TypeInfo\Type\IntersectionType;
 use Symfony\Component\TypeInfo\Type\NullableType;
@@ -28,6 +27,11 @@ use Symfony\Component\TypeInfo\TypeIdentifier;
  */
 class TemplateBinder
 {
+    public function __construct(
+        protected InnerTypes $innerTypes = new InnerTypes(),
+    ) {
+    }
+
     /**
      * The type with each template replaced by the type it is bound to. A template without a
      * binding stays as it is.
@@ -55,32 +59,16 @@ class TemplateBinder
     }
 
     /**
-     * Whether a template occurs anywhere in the type. Type-info's own `traverse()` does not reach
-     * a generic type's arguments.
+     * Whether a template occurs anywhere in the type.
      */
     public function hasTemplate(Type $type): bool
     {
-        return match (true) {
-            $type instanceof TemplateType => true,
-            $type instanceof NullableType => $this->hasTemplate($type->getWrappedType()),
-            $type instanceof ArrayShapeType => $this->anyHasTemplate([
-                ...array_column($type->getShape(), 'type'),
-                ...array_filter([$type->getExtraValueType()]),
-            ]),
-            $type instanceof CollectionType => $this->hasTemplate($type->getWrappedType()),
-            $type instanceof GenericType => $this->anyHasTemplate($type->getVariableTypes()),
-            $type instanceof CompositeTypeInterface => $this->anyHasTemplate($type->getTypes()),
-            default => false,
-        };
-    }
+        if ($type instanceof TemplateType) {
+            return true;
+        }
 
-    /**
-     * @param array<Type> $types
-     */
-    protected function anyHasTemplate(array $types): bool
-    {
-        foreach ($types as $type) {
-            if ($this->hasTemplate($type)) {
+        foreach ($this->innerTypes->of($type) as $inner) {
+            if ($this->hasTemplate($inner)) {
                 return true;
             }
         }

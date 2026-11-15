@@ -15,6 +15,7 @@ use OpenApi\Type\TypeResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\TypeInfo\Type;
+use Symfony\Component\TypeInfo\TypeResolver\StringTypeResolver;
 
 final class TypeArgumentsTest extends TestCase
 {
@@ -82,6 +83,44 @@ final class TypeArgumentsTest extends TestCase
     public function testOnlyAReferencedClassKeepsTypeArguments(string $property): void
     {
         $this->assertNull($this->resolve($property)->typeArguments);
+    }
+
+    /**
+     * @return iterable<string, array{string, int}>
+     */
+    public static function depthCases(): iterable
+    {
+        yield 'a scalar' => ['int', 0];
+        yield 'an array without types' => ['array', 0];
+        yield 'a list' => ['list<int>', 1];
+        yield 'a map' => ['array<string, int>', 1];
+        yield 'a shape' => ['array{id: int}', 1];
+        yield 'a class with arguments' => ['\ArrayObject<int, string>', 1];
+        yield 'a list in a class with arguments' => ['\ArrayObject<int, list<string>>', 2];
+        yield 'a list in a shape' => ['array{ids: list<int>}', 2];
+        yield 'a nullable list' => ['?list<int>', 1];
+        yield 'the deepest member of a union' => ['int|list<list<int>>', 2];
+    }
+
+    #[DataProvider('depthCases')]
+    public function testEachTypeTakingTypesIsALevel(string $type, int $depth): void
+    {
+        $this->assertSame($depth, (new TypeArguments(Type::int(), $this->type($type)))->depth());
+    }
+
+    public function testTheClassesAreFoundAnywhereInTheArguments(): void
+    {
+        $arguments = new TypeArguments(
+            $this->type('?\ArrayObject<int, \DateTime>'),
+            $this->type('array{a: list<\Countable>, b: \Countable|\Stringable}'),
+        );
+
+        $this->assertSame(['ArrayObject', 'DateTime', 'Countable', 'Stringable'], $arguments->classes());
+    }
+
+    private function type(string $type): Type
+    {
+        return (new StringTypeResolver())->resolve($type);
     }
 
     private function resolve(string $property): SchemaType

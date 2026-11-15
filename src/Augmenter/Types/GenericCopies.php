@@ -31,7 +31,7 @@ class GenericCopies
     /** @var array<string, OA\Schema> the schema of each generic class as the class declares it, before `Types` types anything in it, by class */
     protected array $declared = [];
 
-    /** @var array<string, OA\Schema|string|Refusal|null> what each key was decided: a schema registered under it, the name of its copy, why it keeps the plain schema, or null where nothing was kept for its class */
+    /** @var array<string, OA\Schema|string|Refusal> what each key was decided: a schema registered under it, the name of its copy, or why it keeps the plain schema */
     protected array $decided = [];
 
     /** @var array<string, OA\Schema> the copy made for each key, by its string */
@@ -60,9 +60,9 @@ class GenericCopies
 
     /**
      * The schema for the key's class used with the key's type arguments, made the first time it is
-     * asked for. A `Refusal` or null where the use keeps the class's plain schema.
+     * asked for. A `Refusal` where the use keeps the class's plain schema.
      */
-    public function for(ComponentKey $key): OA\Schema|Refusal|null
+    public function for(ComponentKey $key): OA\Schema|Refusal
     {
         $decision = $this->decide($key);
         if (!is_string($decision)) {
@@ -102,7 +102,7 @@ class GenericCopies
      * What the key gets, decided once for each key: a schema registered under it, the name of its
      * copy, or why it keeps the plain schema.
      */
-    protected function decide(ComponentKey $key): OA\Schema|string|Refusal|null
+    protected function decide(ComponentKey $key): OA\Schema|string|Refusal
     {
         $id = (string) $key;
         if (array_key_exists($id, $this->decided)) {
@@ -121,18 +121,15 @@ class GenericCopies
             return $this->decided[$id] = $refusal;
         }
 
-        // nothing was kept for a class with more than one schema, or none: `Types` references neither
-        $declared = $this->declared[$key->class] ?? null;
-
-        // then the name, which needs the schema the copy is made from
-        return $this->decided[$id] = $declared instanceof OA\Schema ? $this->rule->name($key, $declared) : null;
+        // then the name, which needs the schema the copy is made from. One was kept for every
+        // generic class with one schema, and `Types` asks about no other
+        return $this->decided[$id] = $this->rule->name($key, $this->declared[$key->class]);
     }
 
     protected function make(ComponentKey $key, string $name): OA\Schema
     {
         // The copy is the declared schema under the key with the arguments. The key is what tells
-        // the resolver to read `T` as its argument when `Types` types the copy's properties. A
-        // name is decided only where a schema was kept for the class.
+        // the resolver to read `T` as its argument when `Types` types the copy's properties.
         $copy = $this->declared[$key->class]->copy();
         $copy->setComponentKey($key);
         $copy->component = $name;

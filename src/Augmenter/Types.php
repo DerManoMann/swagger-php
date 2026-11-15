@@ -94,6 +94,10 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         // every copy made in any round joins the document, typed
         $payload->add(...$made);
 
+        // kept for one run only: the copies hold schemas of this document
+        $this->copies = null;
+        $this->reported = [];
+
         return null;
     }
 
