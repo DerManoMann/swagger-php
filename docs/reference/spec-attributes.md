@@ -2335,6 +2335,12 @@ have to match the qualifiers that description was registered with:
 #[OA\Property(schema: new OA\Schema\Ref(ref: Author::class, qualifiers: ['groups' => ['light']]))]
 ```
 
+A generic class can be referenced with type arguments, one type for each template, written as
+in a docblock with class names fully qualified. The schema made for them is referenced:
+```php
+#[OA\Property(schema: new OA\Schema\Ref(ref: Envelope::class, of: [Customer::class]))]
+```
+
 #### Allowed in
 ---
 <a href="#components">Components</a>
@@ -2352,8 +2358,8 @@ have to match the qualifiers that description was registered with:
   <dd><p>No details available.</p></dd>
   <dt><strong>qualifiers</strong> : <span style="font-family: monospace;">array&lt;string, scalar|list&lt;scalar&gt;&gt;|null</span></dt>
   <dd><p>Which description of the class to reference, when it has more than one</p></dd>
-  <dt><strong>of</strong> : <span style="font-family: monospace;">TypeArguments|null</span></dt>
-  <dd><p>The type arguments a generic class is referenced with</p></dd>
+  <dt><strong>of</strong> : <span style="font-family: monospace;">list&lt;string&gt;|TypeArguments|null</span></dt>
+  <dd><p>The type arguments a generic class is referenced with, one type for each template</p></dd>
 </dl>
 
 ### [Security\Requirement](https://github.com/zircote/swagger-php/tree/master/src/Spec/Security/Requirement.php)

@@ -145,6 +145,38 @@ final class GenericCopiesTest extends TestCase
     }
 
     /**
+     * A ref written by hand with type arguments makes the copy itself, as a use in a PHP type does.
+     */
+    public function testAHandWrittenRefWithTypeArgumentsReferencesASchemaMadeForThem(): void
+    {
+        $this->allowLogEntry(Generics\Written::class . '::');
+
+        $schemas = $this->schemas(Generics\Written::class, Generics\Box::class, Generics\Pair::class, Generics\Customer::class);
+        $written = $schemas['Written']['properties'];
+
+        $this->assertSame('#/components/schemas/Box-of.Customer', $written['customer']['$ref']);
+        $this->assertSame('#/components/schemas/Pair-of.string_Customer', $written['pair']['$ref']);
+        $this->assertSame('#/components/schemas/Box-of.int', $written['numbers']['items']['$ref']);
+        $this->assertSame(['$ref' => '#/components/schemas/Customer'], $schemas['Box-of.Customer']['properties']['value']);
+    }
+
+    public function testAHandWrittenRefThatGetsNoCopyKeepsThePlainSchemaAndIsReported(): void
+    {
+        $box = Generics\Box::class;
+        $written = Generics\Written::class;
+        $this->expectLogEntry("Reference \"{$box}\" has type arguments that cannot be read (Cannot resolve \"Unknown\"), using the plain schema in {$written}::\$unreadable", 'warning');
+        $this->expectLogEntry("Type \"{$box}<int, string>\" does not match the templates of its class, using the plain schema in {$written}::\$mismatch", 'warning');
+        $this->expectLogEntry("Reference \"#/components/schemas/Box\" is a pointer, its type arguments are ignored in {$written}::\$pointer", 'warning');
+
+        $schemas = $this->schemas(Generics\Written::class, Generics\Box::class, Generics\Pair::class, Generics\Customer::class);
+        $properties = $schemas['Written']['properties'];
+
+        foreach (['unreadable', 'mismatch', 'pointer'] as $property) {
+            $this->assertSame('#/components/schemas/Box', $properties[$property]['$ref']);
+        }
+    }
+
+    /**
      * Two classes with one short name give two copies one name, as they would give their own schemas.
      */
     public function testTwoCopiesWithOneNameAreReported(): void

@@ -27,6 +27,7 @@ use OpenApi\Utils\PipeInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use Symfony\Component\TypeInfo\Exception\UnsupportedException;
 
 /**
  * Infers schema type, format, nullable, items, etc. from PHP type declarations and docblocks.
@@ -135,8 +136,24 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
     protected function augment(Specification $specification): void
     {
         $walker = $specification->getWalker();
-        $walker->eachSchema($this->inferSchemaType(...));
-        $walker->eachTypedAttribute(function (OA\Property|OA\Parameter|OA\RequestBody $attribute, ?OA\Schema $schema): void {
+
+        // hand-written refs, collected on the way and answered once both walks are done
+        $refs = [];
+        $walker->eachSchema(function (OA\Schema $schema) use (&$refs): void {
+            $this->inferSchemaType($schema);
+            if ($schema instanceof OA\Schema\Ref) {
+                $refs[] = $schema;
+            }
+        });
+
+        /** @var \WeakMap<OA\Schema\Ref, string> $where where each ref that is a property's or a parameter's schema is, for its messages */
+        $where = new \WeakMap();
+        $walker->eachTypedAttribute(function (OA\Property|OA\Parameter|OA\RequestBody $attribute, ?OA\Schema $schema) use ($where): void {
+            $reflector = $attribute->getReflector();
+            if (!$attribute instanceof OA\RequestBody && $attribute->schema instanceof OA\Schema\Ref && $reflector instanceof \Reflector) {
+                $where[$attribute->schema] = $this->typeResolver->describe($reflector);
+            }
+
             match (true) {
                 // a property is read in the component it belongs to
                 $attribute instanceof OA\Property => $this->augmentProperty($attribute, $schema?->getComponentKey()),
@@ -144,6 +161,51 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
                 $attribute instanceof OA\RequestBody => $this->augmentRequestBody($attribute),
             };
         });
+
+        foreach ($refs as $ref) {
+            $this->augmentRef($ref, $where[$ref] ?? 'a schema');
+        }
+    }
+
+    /**
+     * Asks for the copy a hand-written ref with type arguments means, as for a use in a PHP type. A
+     * ref whose arguments cannot be read, or whose use keeps the plain schema, is reported and
+     * references the plain schema.
+     */
+    protected function augmentRef(OA\Schema\Ref $ref, string $subject): void
+    {
+        // a ref set to an attribute names no class
+        $name = $ref->ref;
+        if (!is_string($name)) {
+            return;
+        }
+
+        try {
+            $typeArguments = $ref->getTypeArguments();
+        } catch (UnsupportedException $exception) {
+            $this->report(LogLevel::WARNING, sprintf('Reference "%s" has type arguments that cannot be read (%s), using the plain schema in %s', $name, rtrim($exception->getMessage(), '.'), $subject));
+            $ref->setTypeArguments(null);
+
+            return;
+        }
+
+        if (!$typeArguments instanceof TypeArguments) {
+            return;
+        }
+
+        $key = $ref->getRefKey();
+        if (!$key instanceof ComponentKey) {
+            // a pointer names one component, made already or not
+            $this->report(LogLevel::WARNING, "Reference \"{$name}\" is a pointer, its type arguments are ignored in {$subject}");
+            $ref->setTypeArguments(null);
+
+            return;
+        }
+
+        // a class with no schema, or several, is reported by `Refs`, which finds none to reference
+        if ($this->countComponents($key->class) === 1 && !$this->referencesCopy($key, $subject)) {
+            $ref->setTypeArguments(null);
+        }
     }
 
     protected function inferSchemaType(OA\Schema $schema): void
@@ -343,9 +405,22 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
             return $class;
         }
 
+        $key = new ComponentKey(ltrim($class, '\\'), typeArguments: $typeArguments);
+
+        // a ref with the arguments, which `Refs` resolves to the copy's name; without a copy the class alone
+        return $this->referencesCopy($key, $subject, $dropped) ? new OA\Schema\Ref(ref: $key->class, of: $typeArguments) : $class;
+    }
+
+    /**
+     * Whether a use of the key's class with the key's arguments references a copy. A use that keeps
+     * the plain schema is reported.
+     *
+     * @param bool $dropped whether nothing will reference it, as a member of a dropped union
+     */
+    protected function referencesCopy(ComponentKey $key, string $subject, bool $dropped = false): bool
+    {
         // The first use of these arguments makes the copy, every later one gets the same answer. A
         // member of a dropped union is referenced by nothing, so it is only checked.
-        $key = new ComponentKey(ltrim($class, '\\'), typeArguments: $typeArguments);
         $answer = $dropped ? $this->copies?->check($key) : $this->copies?->for($key);
 
         // reported at each use that keeps the plain schema, not only at the first
@@ -354,8 +429,7 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
             $this->report(LogLevel::WARNING, $answer->message($key->class . '<' . $key->typeArguments . '>', $subject));
         }
 
-        // a ref with the arguments, which `Refs` resolves to the copy's name; without a copy the class alone
-        return $answer instanceof OA\Schema ? new OA\Schema\Ref(ref: $key->class, of: $typeArguments) : $class;
+        return $answer instanceof OA\Schema;
     }
 
     /**

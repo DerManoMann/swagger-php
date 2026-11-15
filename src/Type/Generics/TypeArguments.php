@@ -6,6 +6,8 @@
 
 namespace OpenApi\Type\Generics;
 
+use Radebatz\TypeInfoExtras\TypeResolver\StringTypeResolver;
+use Symfony\Component\TypeInfo\Exception\UnsupportedException;
 use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\Type\ArrayShapeType;
 use Symfony\Component\TypeInfo\Type\GenericType;
@@ -31,6 +33,19 @@ readonly class TypeArguments implements \Stringable
     {
         // nested ones too, so `list<\App\Customer>` and `list<App\Customer>` are one spelling
         return (string) preg_replace('/(?<![\w\\\\])\\\\/', '', implode(', ', array_map(strval(...), $this->types)));
+    }
+
+    /**
+     * The arguments written as strings, one type per string, as in a docblock: `Customer::class`,
+     * `int`, `list<App\Customer>`. A class name is read as fully qualified.
+     *
+     * @throws UnsupportedException where a string cannot be read as a type, such as a class that does not exist
+     */
+    public static function fromStrings(string $type, string ...$types): self
+    {
+        $resolver = new StringTypeResolver();
+
+        return new self(...array_map($resolver->resolve(...), [$type, ...array_values($types)]));
     }
 
     /**

@@ -14,6 +14,7 @@ use OpenApi\Type\SchemaType;
 use OpenApi\Type\TypeResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\TypeInfo\Exception\UnsupportedException;
 use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\TypeResolver\StringTypeResolver;
 
@@ -33,6 +34,21 @@ final class TypeArgumentsTest extends TestCase
 
         $this->assertSame('App\Customer, list<App\Order>', (string) $arguments);
         $this->assertSame((string) $arguments, (string) new TypeArguments(Type::object('App\Customer'), Type::list(Type::object('App\Order'))));
+    }
+
+    public function testStringsAreReadAsDocblockTypes(): void
+    {
+        $arguments = TypeArguments::fromStrings('int<0, 100>', 'list<' . Number::class . '>', '\\' . Number::class);
+
+        $this->assertSame('int<0, 100>, list<' . Number::class . '>, ' . Number::class, (string) $arguments);
+    }
+
+    public function testAStringThatIsNoTypeIsRefused(): void
+    {
+        $this->expectException(UnsupportedException::class);
+
+        // a class name is read as fully qualified
+        TypeArguments::fromStrings('Unknown');
     }
 
     /**
