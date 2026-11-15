@@ -8,6 +8,7 @@ namespace OpenApi\Augmenter;
 
 use OpenApi\Augmenter\Types\CopyRule;
 use OpenApi\Augmenter\Types\GenericCopies;
+use OpenApi\Augmenter\Types\Refusal;
 use OpenApi\ComponentNamer;
 use OpenApi\Contracts\ComponentNamerAwareInterface;
 use OpenApi\Contracts\ComponentNamerInterface;
@@ -25,6 +26,7 @@ use OpenApi\Undefined;
 use OpenApi\Utils\PipeInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
+use Psr\Log\LogLevel;
 
 /**
  * Infers schema type, format, nullable, items, etc. from PHP type declarations and docblocks.
@@ -51,6 +53,12 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
     /** asked for the schema of a generic class used with type arguments */
     protected ?GenericCopies $copies = null;
 
+    /** whether the members of a dropped union are being read, which only reports what is wrong in them */
+    protected bool $inDroppedUnion = false;
+
+    /** @var array<string, true> the messages logged in this run, so typing a copy does not log its class's again */
+    protected array $reported = [];
+
     /** @var \SplObjectStorage<OA\Schema, null> schemas whose `type` this augmenter inferred, not the author */
     protected \SplObjectStorage $inferredTypes;
 
@@ -64,10 +72,11 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
     {
         $this->index = $payload->buildComponentIndex();
         $this->inferredTypes = new \SplObjectStorage();
+        $this->reported = [];
 
         // before anything is typed, so a copy starts from the schema as its class declares it
         $templateReader = $this->typeResolver->getTemplateReader();
-        $this->copies = new GenericCopies($payload, $this->index, $templateReader, new CopyRule($templateReader, $this->namer), $this->logger);
+        $this->copies = new GenericCopies($payload, $this->index, $templateReader, new CopyRule($templateReader, $this->namer));
 
         // types the document as written; a use with type arguments asks for its copy on the way
         $this->augment($payload);
@@ -331,11 +340,33 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
             return $class;
         }
 
-        // the first use of these arguments makes the copy, every later one gets the same answer
-        $copy = $this->copies?->for(new ComponentKey(ltrim($class, '\\'), typeArguments: $typeArguments), $subject);
+        // The first use of these arguments makes the copy, every later one gets the same answer. A
+        // member of a dropped union is referenced by nothing, so it is only checked.
+        $key = new ComponentKey(ltrim($class, '\\'), typeArguments: $typeArguments);
+        $answer = $this->inDroppedUnion ? $this->copies?->check($key) : $this->copies?->for($key);
+
+        // reported at each use that keeps the plain schema, not only at the first
+        if ($answer instanceof Refusal) {
+            // the use as it is written, for the message: `App\Box<App\Customer>`
+            $this->report(LogLevel::WARNING, $answer->message($key->class . '<' . $key->typeArguments . '>', $subject));
+        }
 
         // a ref with the arguments, which `Refs` resolves to the copy's name; without a copy the class alone
-        return $copy instanceof OA\Schema ? new OA\Schema\Ref(ref: ltrim($class, '\\'), of: $typeArguments) : $class;
+        return $answer instanceof OA\Schema ? new OA\Schema\Ref(ref: $key->class, of: $typeArguments) : $class;
+    }
+
+    /**
+     * Logs a message once in a run. A copy's properties are those of its class, typed again, and
+     * what is wrong in them was reported for the class.
+     */
+    protected function report(string $level, ?string $message): void
+    {
+        if ($message === null || isset($this->reported[$message])) {
+            return;
+        }
+
+        $this->reported[$message] = true;
+        $this->logger?->log($level, $message);
     }
 
     protected function schemaTypeToSchema(SchemaType $schemaType): OA\Schema
@@ -390,7 +421,7 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
                     if ($count === 1) {
                         $schema->ref = $this->refTo($schemaType->type, $schemaType->typeArguments, $subject);
                     } else {
-                        $this->logger?->error($count === 0
+                        $this->report(LogLevel::ERROR, $count === 0
                             ? "Type \"{$schemaType->type}\" in {$subject} matches no schema, omitted"
                             : "Type \"{$schemaType->type}\" in {$subject} matches several schemas, omitted; reference one by name");
                     }
@@ -427,10 +458,16 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
                 $schemaType->oneOf,
                 fn (SchemaType $member): bool => $member->isRef() && is_string($member->type) && $this->countComponents($member->type) !== 1,
             );
-            // a dropped union references nothing, so only its unknown members are read, to report them
-            $members = array_map($this->schemaTypeToSchema(...), $unknown === [] ? $schemaType->oneOf : array_values($unknown));
             if ($unknown === []) {
-                $schema->oneOf = $members;
+                $schema->oneOf = array_map($this->schemaTypeToSchema(...), $schemaType->oneOf);
+            } else {
+                // A dropped union references nothing, but every member is still read, to report
+                // what is wrong in it, nested members too. A use with type arguments in it makes no
+                // copy, which nothing would reference.
+                $inDroppedUnion = $this->inDroppedUnion;
+                $this->inDroppedUnion = true;
+                array_map($this->schemaTypeToSchema(...), $schemaType->oneOf);
+                $this->inDroppedUnion = $inDroppedUnion;
             }
         }
 

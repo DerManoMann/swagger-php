@@ -22,6 +22,10 @@ class Refused
     #[OA\Property]
     public Customer $noTemplates;
 
+    /** @var Customer<int> */
+    #[OA\Property]
+    public Customer $noTemplatesAgain;
+
     /** @var Box<int|string> */
     #[OA\Property]
     public Box $unnamed;

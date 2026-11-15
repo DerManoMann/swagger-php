@@ -11,7 +11,6 @@ use OpenApi\Specification;
 use OpenApi\Specification\ComponentIndex;
 use OpenApi\Specification\ComponentKey;
 use OpenApi\Type\Generics\TemplateReader;
-use Psr\Log\LoggerInterface;
 
 /**
  * Makes the schema for a generic class used with type arguments, as a copy of the class's own.
@@ -25,15 +24,18 @@ use Psr\Log\LoggerInterface;
  * it and adds it.
  *
  * Whether a use gets a copy, and its name, is `CopyRule`'s to say. A use the rule refuses keeps
- * the class's plain schema, with the warning the `Refusal` gives.
+ * the class's plain schema, and is given the `Refusal`, for `Types` to report where the use is.
  */
 class GenericCopies
 {
     /** @var array<string, OA\Schema> the schema of each generic class as the class declares it, before `Types` types anything in it, by class */
     protected array $declared = [];
 
-    /** @var array<string, OA\Schema|null> what each key was answered with, by its string, null for the plain schema */
-    protected array $answers = [];
+    /** @var array<string, OA\Schema|string|Refusal|null> what each key was decided: a schema registered under it, the name of its copy, why it keeps the plain schema, or null where nothing was kept for its class */
+    protected array $decided = [];
+
+    /** @var array<string, OA\Schema> the copy made for each key, by its string */
+    protected array $made = [];
 
     /** @var list<OA\Schema> the copies made and not handed out yet, their properties still to be typed */
     protected array $pending = [];
@@ -43,7 +45,6 @@ class GenericCopies
         protected ComponentIndex $index,
         protected TemplateReader $templateReader,
         protected CopyRule $rule,
-        protected ?LoggerInterface $logger = null,
     ) {
         // Keep the schema of every generic class now. `Types` is about to type the document, and a
         // copy of `Box` taken after that would carry what `Types` made of the unbound `T`, such
@@ -58,23 +59,29 @@ class GenericCopies
     }
 
     /**
-     * The schema for the key's class used with the key's type arguments, or null where the use
-     * keeps the class's plain schema.
-     *
-     * @param string $subject where the use is, for a log message
+     * The schema for the key's class used with the key's type arguments, made the first time it is
+     * asked for. A `Refusal` or null where the use keeps the class's plain schema.
      */
-    public function for(ComponentKey $key, string $subject): ?OA\Schema
+    public function for(ComponentKey $key): OA\Schema|Refusal|null
     {
-        // answered once for each key, so `Box<Customer>` used in ten places is one copy, and a
-        // use that keeps the plain schema is reported once
-        $id = (string) $key;
-        if (!array_key_exists($id, $this->answers)) {
-            // a schema registered under this key by hand, or by a plugin, is the one referenced
-            $existing = $this->index->findByKey($key, 'schemas');
-            $this->answers[$id] = $existing instanceof OA\Schema ? $existing : $this->make($key, $subject);
+        $decision = $this->decide($key);
+        if (!is_string($decision)) {
+            return $decision;
         }
 
-        return $this->answers[$id];
+        // made once for each key, so `Box<Customer>` used in ten places is one copy
+        return $this->made[(string) $key] ??= $this->make($key, $decision);
+    }
+
+    /**
+     * Why a use keeps the class's plain schema, or null where it would not. Makes no copy: for a
+     * use nothing will reference, such as a member of a union `Types` drops.
+     */
+    public function check(ComponentKey $key): ?Refusal
+    {
+        $decision = $this->decide($key);
+
+        return $decision instanceof Refusal ? $decision : null;
     }
 
     /**
@@ -91,40 +98,47 @@ class GenericCopies
         return $copies;
     }
 
-    protected function make(ComponentKey $key, string $subject): ?OA\Schema
+    /**
+     * What the key gets, decided once for each key: a schema registered under it, the name of its
+     * copy, or why it keeps the plain schema.
+     */
+    protected function decide(ComponentKey $key): OA\Schema|string|Refusal|null
     {
+        $id = (string) $key;
+        if (array_key_exists($id, $this->decided)) {
+            return $this->decided[$id];
+        }
+
+        // a schema registered under this key by hand, or by a plugin, is the one referenced
+        $existing = $this->index->findByKey($key, 'schemas');
+        if ($existing instanceof OA\Schema) {
+            return $this->decided[$id] = $existing;
+        }
+
         // first what the class and the arguments say, which needs no schema
         $refusal = $this->rule->refusal($key);
+        if ($refusal instanceof Refusal) {
+            return $this->decided[$id] = $refusal;
+        }
 
         // nothing was kept for a class with more than one schema, or none: `Types` references neither
         $declared = $this->declared[$key->class] ?? null;
-        if (!$refusal instanceof Refusal && $declared instanceof OA\Schema) {
-            // then the name, which needs the schema the copy is made from
-            $name = $this->rule->name($key, $declared);
-            if (is_string($name)) {
-                // The copy is the declared schema under the key with the arguments. The key is what
-                // tells the resolver to read `T` as its argument when `Types` types the copy's
-                // properties.
-                $copy = $declared->copy();
-                $copy->setComponentKey($key);
-                $copy->component = $name;
-                // its properties are still as declared: `Types` takes it from here and types them
-                $this->pending[] = $copy;
 
-                return $copy;
-            }
+        // then the name, which needs the schema the copy is made from
+        return $this->decided[$id] = $declared instanceof OA\Schema ? $this->rule->name($key, $declared) : null;
+    }
 
-            $refusal = $name;
-        }
+    protected function make(ComponentKey $key, string $name): OA\Schema
+    {
+        // The copy is the declared schema under the key with the arguments. The key is what tells
+        // the resolver to read `T` as its argument when `Types` types the copy's properties. A
+        // name is decided only where a schema was kept for the class.
+        $copy = $this->declared[$key->class]->copy();
+        $copy->setComponentKey($key);
+        $copy->component = $name;
+        // its properties are still as declared: `Types` takes it from here and types them
+        $this->pending[] = $copy;
 
-        if ($refusal instanceof Refusal) {
-            // the use as it is written, for the message: `App\Box<App\Customer>`
-            $message = $refusal->message($key->class . '<' . $key->typeArguments . '>', $subject);
-            if ($message !== null) {
-                $this->logger?->warning($message);
-            }
-        }
-
-        return null;
+        return $copy;
     }
 }

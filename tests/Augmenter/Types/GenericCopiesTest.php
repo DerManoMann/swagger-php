@@ -93,6 +93,8 @@ final class GenericCopiesTest extends TestCase
         $refused = Generics\Refused::class;
         $this->expectLogEntry("Type \"{$box}<int, string>\" does not match the templates of its class, using the plain schema in {$refused}::\$tooMany", 'warning');
         $this->expectLogEntry("Type \"{$customer}<int>\" has type arguments, but its class declares no @template, using the plain schema in {$refused}::\$noTemplates", 'warning');
+        // at each use, not only at the first with these arguments
+        $this->expectLogEntry("Type \"{$customer}<int>\" has type arguments, but its class declares no @template, using the plain schema in {$refused}::\$noTemplatesAgain", 'warning');
         $this->expectLogEntry("Type \"{$box}<int|string>\" has type arguments a schema cannot be named for, using the plain schema in {$refused}::\$unnamed", 'warning');
 
         $schemas = $this->schemas(Generics\Refused::class, Generics\Box::class, Generics\Customer::class);
@@ -101,6 +103,45 @@ final class GenericCopiesTest extends TestCase
         $this->assertSame('#/components/schemas/Box', $schemas['Refused']['properties']['tooMany']['$ref']);
         $this->assertSame('#/components/schemas/Customer', $schemas['Refused']['properties']['noTemplates']['$ref']);
         $this->assertSame('#/components/schemas/Box', $schemas['Refused']['properties']['unnamed']['$ref']);
+    }
+
+    /**
+     * A union with a class that is no component is dropped, and every member is still reported,
+     * nested ones too. A use with type arguments in it makes no copy, which nothing would reference.
+     */
+    public function testADroppedUnionReportsEveryMemberAndMakesNoCopy(): void
+    {
+        $generics = 'OpenApi\\Tests\\Fixtures\\Generics';
+        $reported = Generics\Reported::class;
+        foreach (['nested', 'refused', 'copied'] as $property) {
+            $this->expectLogEntry("Type \"{$generics}\\Unlisted\" in {$reported}::\${$property} matches no schema, omitted", 'error');
+        }
+        $this->expectLogEntry("Type \"{$generics}\\AlsoUnlisted\" in {$reported}::\$nested matches no schema, omitted", 'error');
+        $this->expectLogEntry('Type "' . Generics\Customer::class . "<int>\" has type arguments, but its class declares no @template, using the plain schema in {$reported}::\$refused", 'warning');
+        // `Flawed`'s own members, below
+        $this->allowLogEntry(Generics\Flawed::class . '::');
+
+        $schemas = $this->schemas(Generics\Reported::class, Generics\Flawed::class, Generics\Box::class, Generics\Customer::class);
+
+        $this->assertArrayNotHasKey('Box-of.Customer', $schemas);
+        $this->assertSame([], (array) $schemas['Reported']['properties']['copied']);
+    }
+
+    /**
+     * A copy's members are its class's, typed again, and what is wrong in them is reported once.
+     */
+    public function testAMemberOfAGenericClassIsReportedOnceForAllItsCopies(): void
+    {
+        $flawed = Generics\Flawed::class;
+        $this->expectLogEntry("Type \"OpenApi\\Tests\\Fixtures\\Generics\\Unlisted\" in {$flawed}::\$missing matches no schema, omitted", 'error');
+        $this->expectLogEntry('Type "' . Generics\Customer::class . "<int>\" has type arguments, but its class declares no @template, using the plain schema in {$flawed}::\$refused", 'warning');
+        // the dropped unions, above
+        $this->allowLogEntry(Generics\Reported::class . '::');
+
+        $schemas = $this->schemas(Generics\Reported::class, Generics\Flawed::class, Generics\Box::class, Generics\Customer::class);
+
+        $this->assertArrayHasKey('Flawed-of.int', $schemas);
+        $this->assertArrayHasKey('Flawed-of.string', $schemas);
     }
 
     /**
