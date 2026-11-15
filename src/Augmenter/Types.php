@@ -53,9 +53,6 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
     /** asked for the schema of a generic class used with type arguments */
     protected ?GenericCopies $copies = null;
 
-    /** whether the members of a dropped union are being read, which only reports what is wrong in them */
-    protected bool $inDroppedUnion = false;
-
     /** @var array<string, true> the messages logged in this run, so typing a copy does not log its class's again */
     protected array $reported = [];
 
@@ -214,7 +211,7 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         $this->subject = $reflector;
 
         if (!$property->schema instanceof OA\Schema) {
-            $property->schema = $this->schemaTypeToSchema($resolved);
+            $property->schema = $this->applySchemaType($resolved);
         } else {
             $this->mergeIntoSchema($property->schema, $resolved);
         }
@@ -248,7 +245,7 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         $this->subject = $method;
 
         if (!$property->schema instanceof OA\Schema) {
-            $property->schema = $this->schemaTypeToSchema($resolved);
+            $property->schema = $this->applySchemaType($resolved);
         } else {
             $this->mergeIntoSchema($property->schema, $resolved);
         }
@@ -283,7 +280,7 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         $this->subject = $reflector;
 
         if (!$parameter->schema instanceof OA\Schema) {
-            $parameter->schema = $this->schemaTypeToSchema($resolved);
+            $parameter->schema = $this->applySchemaType($resolved);
         } else {
             $this->mergeIntoSchema($parameter->schema, $resolved);
         }
@@ -333,8 +330,10 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
     /**
      * A class as the ref to its schema: the one made for the type arguments it is used with where
      * there is one, otherwise the class's plain one.
+     *
+     * @param bool $dropped whether nothing will reference it, as a member of a dropped union
      */
-    protected function refTo(string $class, ?TypeArguments $typeArguments, string $subject): string|OA\Schema\Ref
+    protected function refTo(string $class, ?TypeArguments $typeArguments, string $subject, bool $dropped = false): string|OA\Schema\Ref
     {
         if (!$typeArguments instanceof TypeArguments) {
             return $class;
@@ -343,7 +342,7 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         // The first use of these arguments makes the copy, every later one gets the same answer. A
         // member of a dropped union is referenced by nothing, so it is only checked.
         $key = new ComponentKey(ltrim($class, '\\'), typeArguments: $typeArguments);
-        $answer = $this->inDroppedUnion ? $this->copies?->check($key) : $this->copies?->for($key);
+        $answer = $dropped ? $this->copies?->check($key) : $this->copies?->for($key);
 
         // reported at each use that keeps the plain schema, not only at the first
         if ($answer instanceof Refusal) {
@@ -369,18 +368,10 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
         $this->logger?->log($level, $message);
     }
 
-    protected function schemaTypeToSchema(SchemaType $schemaType): OA\Schema
-    {
-        $schema = new OA\Schema();
-        $this->applySchemaType($schema, $schemaType);
-
-        return $schema;
-    }
-
     protected function mergeIntoSchema(OA\Schema $schema, SchemaType $schemaType): void
     {
         if ($schema->type === null && $schema->oneOf === null && $schema->allOf === null && $schema->anyOf === null) {
-            $this->applySchemaType($schema, $schemaType);
+            $this->applySchemaType($schemaType, $schema);
         }
 
         // a type the author wrote out is the whole type, so the PHP type's `null` is not added to it
@@ -406,8 +397,17 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
             && !$this->inferredTypes->offsetExists($schema);
     }
 
-    protected function applySchemaType(OA\Schema $schema, SchemaType $schemaType): void
+    /**
+     * Applies a type to a schema, a new one unless one is given, and returns the schema.
+     *
+     * @param bool $dropped whether the type is read only to report what is wrong in it, as a member
+     *                      of a dropped union: a use with type arguments in it makes no copy
+     */
+    protected function applySchemaType(SchemaType $schemaType, OA\Schema $schema = new OA\Schema(), bool $dropped = false): OA\Schema
     {
+        // the members of the type, read the way the type is
+        $member = fn (SchemaType $type): OA\Schema => $this->applySchemaType($type, dropped: $dropped);
+
         if ($schemaType->nullable !== null && $schema->nullable === null) {
             $schema->nullable = $schemaType->nullable;
         }
@@ -419,7 +419,7 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
                     $count = $this->countComponents($schemaType->type);
                     $subject = $this->subject instanceof \Reflector ? $this->typeResolver->describe($this->subject) : 'a schema';
                     if ($count === 1) {
-                        $schema->ref = $this->refTo($schemaType->type, $schemaType->typeArguments, $subject);
+                        $schema->ref = $this->refTo($schemaType->type, $schemaType->typeArguments, $subject, $dropped);
                     } else {
                         $this->report(LogLevel::ERROR, $count === 0
                             ? "Type \"{$schemaType->type}\" in {$subject} matches no schema, omitted"
@@ -443,11 +443,11 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
 
         if ($schemaType->items instanceof SchemaType) {
             $schema->type = 'array';
-            $schema->items ??= $this->schemaTypeToSchema($schemaType->items);
+            $schema->items ??= $member($schemaType->items);
         }
 
         if ($schemaType->additionalProperties instanceof SchemaType) {
-            $schema->additionalProperties ??= $this->schemaTypeToSchema($schemaType->additionalProperties);
+            $schema->additionalProperties ??= $member($schemaType->additionalProperties);
         } elseif ($schemaType->additionalProperties === true) {
             $schema->additionalProperties ??= true;
         }
@@ -459,33 +459,33 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
                 fn (SchemaType $member): bool => $member->isRef() && is_string($member->type) && $this->countComponents($member->type) !== 1,
             );
             if ($unknown === []) {
-                $schema->oneOf = array_map($this->schemaTypeToSchema(...), $schemaType->oneOf);
+                $schema->oneOf = array_map($member, $schemaType->oneOf);
             } else {
                 // A dropped union references nothing, but every member is still read, to report
                 // what is wrong in it, nested members too. A use with type arguments in it makes no
                 // copy, which nothing would reference.
-                $inDroppedUnion = $this->inDroppedUnion;
-                $this->inDroppedUnion = true;
-                array_map($this->schemaTypeToSchema(...), $schemaType->oneOf);
-                $this->inDroppedUnion = $inDroppedUnion;
+                foreach ($schemaType->oneOf as $type) {
+                    $this->applySchemaType($type, dropped: true);
+                }
             }
         }
 
         if ($schemaType->allOf !== null) {
-            $schema->allOf = array_map($this->schemaTypeToSchema(...), $schemaType->allOf);
+            $schema->allOf = array_map($member, $schemaType->allOf);
         }
 
         if ($schemaType->properties !== null) {
             $schema->type = 'object';
             $schema->properties = [];
             foreach ($schemaType->properties as $name => $propType) {
-                $propSchema = $this->schemaTypeToSchema($propType);
-                $property = new OA\Property(property: $name, schema: $propSchema);
+                $property = new OA\Property(property: $name, schema: $member($propType));
                 $schema->properties[] = $property;
             }
             if ($schemaType->required !== null) {
                 $schema->required = $schemaType->required;
             }
         }
+
+        return $schema;
     }
 }
