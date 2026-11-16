@@ -13,6 +13,7 @@ use OpenApi\Specification\ComponentKey;
 use OpenApi\Tests\Fixtures\Augmenter\BackedStringEnum;
 use OpenApi\Tests\Fixtures\ClassDescriptions\Account;
 use OpenApi\Tests\Fixtures\ClassDescriptions\Author;
+use OpenApi\Tests\Fixtures\Generics\Billing\Customer as BillingCustomer;
 use OpenApi\Type\Generics\TypeArguments;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -61,6 +62,7 @@ final class ShortNameTest extends TestCase
         yield 'a class' => [new TypeArguments($account), 'Author-of.Account'];
         yield 'a class written with a leading backslash' => [new TypeArguments(Type::object('\\' . Account::class)), 'Author-of.Account'];
         yield 'an enum' => [new TypeArguments(Type::enum(BackedStringEnum::class)), 'Author-of.BackedStringEnum'];
+        yield 'a class named by hand' => [new TypeArguments(Type::object(BillingCustomer::class)), 'Author-of.BillingCustomer'];
         yield 'a scalar' => [new TypeArguments(Type::int()), 'Author-of.int'];
         yield 'several, in the order given' => [new TypeArguments(Type::string(), $account, Type::mixed()), 'Author-of.string_Account_mixed'];
         yield 'a list' => [new TypeArguments(Type::list($account)), 'Author-of.list-of.Account'];

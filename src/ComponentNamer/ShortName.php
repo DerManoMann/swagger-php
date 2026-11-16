@@ -37,8 +37,10 @@ use Symfony\Component\TypeInfo\TypeIdentifier;
  * `Envelope-of.Customer` and `Pair<string, Customer>` is `Pair-of.string_Customer`. An argument
  * can be a class, `int`, `float`, `string`, `bool` or `mixed`, a list of one of these, or a class
  * with type arguments of its own: `Envelope<list<Customer>>` is `Envelope-of.list-of.Customer`.
- * A component with any other argument gets no name. Two different sets of arguments can come out
- * as the same name, as two classes with the same short name do.
+ * A component with any other argument gets no name. A class whose `#[OA\Schema]` gives its
+ * component a name by hand is written with that name: `Envelope<Billing\Customer>` for a class
+ * named `BillingCustomer` is `Envelope-of.BillingCustomer`. Two different sets of arguments can
+ * still come out as the same name, as two classes with the same short name do.
  */
 class ShortName implements ComponentNamerInterface
 {
@@ -127,7 +129,7 @@ class ShortName implements ComponentNamerInterface
         if ($type instanceof ObjectType) {
             $class = $type->getClassName();
 
-            return class_exists($class) || interface_exists($class) ? $this->className(new \ReflectionClass($class)) : null;
+            return class_exists($class) || interface_exists($class) ? $this->argumentName(new \ReflectionClass($class)) : null;
         }
 
         $scalars = [TypeIdentifier::INT, TypeIdentifier::FLOAT, TypeIdentifier::STRING, TypeIdentifier::BOOL, TypeIdentifier::MIXED];
@@ -136,6 +138,30 @@ class ShortName implements ComponentNamerInterface
         }
 
         return null;
+    }
+
+    /**
+     * A class as a type argument: the name its schema is given by hand, where it has one, so two
+     * classes named apart give copies named apart. Otherwise named like any other class.
+     *
+     * The name is read from the class's one `#[OA\Schema]`. One given anywhere else, such as by a
+     * plugin or a classic annotation, is not seen here, and the class is named as usual.
+     *
+     * @param \ReflectionClass<object> $class
+     */
+    protected function argumentName(\ReflectionClass $class): string
+    {
+        $schemas = $class->getAttributes(OA\Schema::class, \ReflectionAttribute::IS_INSTANCEOF);
+        if (count($schemas) === 1) {
+            // read off the arguments, not an instance, which would report `schema:` as deprecated again
+            $arguments = $schemas[0]->getArguments();
+            $name = $arguments['component'] ?? $arguments['schema'] ?? null;
+            if (is_string($name)) {
+                return $this->clean($name);
+            }
+        }
+
+        return $this->className($class);
     }
 
     /**

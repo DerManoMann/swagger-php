@@ -177,14 +177,29 @@ final class GenericCopiesTest extends TestCase
     }
 
     /**
-     * Two classes with one short name give two copies one name, as they would give their own schemas.
+     * Two classes with one short name give two copies one name, as they give their own schemas.
      */
     public function testTwoCopiesWithOneNameAreReported(): void
     {
         $box = Generics\Box::class;
-        $this->expectLogEntry("Schema \"Box-of.Customer\" is declared more than once, the last one kept; they describe {$box}<" . Generics\Customer::class . "> and {$box}<" . Generics\Billing\Customer::class . '>, give one a name of its own or name components with QualifiedName', 'warning');
+        $customer = Generics\Customer::class;
+        $shippingCustomer = Generics\Shipping\Customer::class;
+        $this->expectLogEntry("Schema \"Customer\" is declared more than once, the last one kept; they describe {$customer} and {$shippingCustomer}", 'warning');
+        $this->expectLogEntry("Schema \"Box-of.Customer\" is declared more than once, the last one kept; they describe {$box}<{$customer}> and {$box}<{$shippingCustomer}>, give one a name of its own or name components with QualifiedName", 'warning');
 
-        $this->schemas(Generics\Collides::class, Generics\Box::class, Generics\Customer::class, Generics\Billing\Customer::class);
+        $this->schemas(Generics\Clash::class, Generics\Box::class, Generics\Customer::class, Generics\Shipping\Customer::class);
+    }
+
+    /**
+     * A class whose schema is named by hand gives the copies it is an argument of that name.
+     */
+    public function testAnArgumentNamedByHandNamesTheCopy(): void
+    {
+        $schemas = $this->schemas(Generics\Collides::class, Generics\Box::class, Generics\Customer::class, Generics\Billing\Customer::class);
+
+        $this->assertSame('#/components/schemas/Box-of.Customer', $schemas['Collides']['properties']['customer']['$ref']);
+        $this->assertSame('#/components/schemas/Box-of.BillingCustomer', $schemas['Collides']['properties']['billingCustomer']['$ref']);
+        $this->assertSame(['$ref' => '#/components/schemas/BillingCustomer'], $schemas['Box-of.BillingCustomer']['properties']['value']);
     }
 
     public function testCopiesAskingForCopiesEndWithAWarning(): void

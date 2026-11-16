@@ -9,7 +9,8 @@ namespace OpenApi\Tests\Fixtures\Generics;
 use OpenApi\Spec as OA;
 
 /**
- * Two uses whose schemas come out with the same name.
+ * Two uses with two classes of one short name, one of them named by hand, so the default namer
+ * names their schemas apart and a namer that leaves the arguments out does not.
  */
 #[OA\Schema]
 class Collides
