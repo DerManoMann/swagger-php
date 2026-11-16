@@ -182,8 +182,8 @@ class Types implements PipeInterface, LoggerAwareInterface, TypeResolverAwareInt
 
         try {
             $typeArguments = $ref->getTypeArguments();
-        } catch (UnsupportedException $exception) {
-            $this->report(LogLevel::WARNING, sprintf('Reference "%s" has type arguments that cannot be read (%s), using the plain schema in %s', $name, rtrim($exception->getMessage(), '.'), $subject));
+        } catch (UnsupportedException $unsupportedException) {
+            $this->report(LogLevel::WARNING, sprintf('Reference "%s" has type arguments that cannot be read (%s), using the plain schema in %s', $name, rtrim($unsupportedException->getMessage(), '.'), $subject));
             $ref->setTypeArguments(null);
 
             return;
